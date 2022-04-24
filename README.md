@@ -9,8 +9,15 @@ The lock entity is updated whenever the look changes state (via Nuki App, HA, or
 
 ## How to use
 Add the following to the ESPHome yaml file:
-external_components:
+
 ```
+esphome:
+
+  libraries:
+  - Preferences
+  - https://github.com/nkolban/ESP32_BLE_Arduino/
+  - https://github.com/I-Connect/NukiBleEsp32
+
 external_components:
   - source: github://uriyacovy/ESPHome_nuki_lock
 
@@ -38,7 +45,7 @@ To unpair Nuki, add the following to ESPHome yaml file below `platform: nuki_loc
 ## Dependencies
 The module depends on the work done by https://github.com/I-Connect, https://github.com/I-Connect/NukiBleEsp32
 
-This library requires also https://github.com/nkolban/ESP32_BLE_Arduino/
+This library requires also https://github.com/nkolban/ESP32_BLE_Arduino/ and Arduino library Preferences.
 
 ## Tested Hardware
 - ESP32 wroom
