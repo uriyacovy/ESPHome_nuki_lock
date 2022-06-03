@@ -16,7 +16,7 @@ esphome:
   libraries:
   - Preferences
   - https://github.com/nkolban/ESP32_BLE_Arduino/
-  - https://github.com/I-Connect/NukiBleEsp32
+  - https://github.com/I-Connect/NukiBleEsp32#v0.0.4
 
 external_components:
   - source: github://uriyacovy/ESPHome_nuki_lock
@@ -43,7 +43,7 @@ To unpair Nuki, add the following to ESPHome yaml file below `platform: nuki_loc
 ```
 
 ## Dependencies
-The module depends on the work done by https://github.com/I-Connect, https://github.com/I-Connect/NukiBleEsp32
+The module depends on the work done by [I-Connect](https://github.com/I-Connect), https://github.com/I-Connect/NukiBleEsp32
 
 This library requires also https://github.com/nkolban/ESP32_BLE_Arduino/ and Arduino library Preferences.
 
