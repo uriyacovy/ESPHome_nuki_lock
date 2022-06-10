@@ -30,6 +30,8 @@ class NukiLock : public lock::Lock, public PollingComponent {
         const uint32_t deviceId_ = 2020002;
         const std::string deviceName_ = "Nuki ESPHome"; 
 
+        explicit NukiLock() : Lock(), unpair_(false), open_latch_(false) { this->traits.set_supports_open(true); }
+
         void setup() override;
         void update() override;
 
@@ -47,6 +49,7 @@ class NukiLock : public lock::Lock, public PollingComponent {
     protected:
         void control(const lock::LockCall &call) override;
         void update_status();
+        void open_latch() override { this->open_latch_ = true; unlock();}
 
         binary_sensor::BinarySensor *is_paired_;
         binary_sensor::BinarySensor *battery_critical_;
@@ -56,7 +59,8 @@ class NukiLock : public lock::Lock, public PollingComponent {
         Nuki::KeyTurnerState retrievedKeyTurnerState_;
         Handler *handler_;
         bool status_update_;
-        bool unpair_ = false;
+        bool unpair_;
+        bool open_latch_;
 };
 
 } //namespace nuki_lock

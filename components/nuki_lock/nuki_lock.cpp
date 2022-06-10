@@ -101,7 +101,8 @@ void NukiLock::control(const lock::LockCall &call) {
         if (state == lock::LOCK_STATE_LOCKED) {
             result = this->nukiBle_->lockAction(Nuki::LockAction::Lock);
         } else if (state == lock::LOCK_STATE_UNLOCKED) {
-            result = this->nukiBle_->lockAction(Nuki::LockAction::Unlock);
+            result = this->nukiBle_->lockAction(this->open_latch_ ? Nuki::LockAction::Unlatch : Nuki::LockAction::Unlock);
+            this->open_latch_ = false;
         }
         else {
             ESP_LOGE(TAG, "lockAction unsupported state");
