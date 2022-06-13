@@ -16,7 +16,7 @@ esphome:
   libraries:
   - Preferences
   - https://github.com/nkolban/ESP32_BLE_Arduino/
-  - https://github.com/I-Connect/NukiBleEsp32#v0.0.4
+  - https://github.com/uriyacovy/NukiBleEsp32
 
 external_components:
   - source: github://uriyacovy/ESPHome_nuki_lock
