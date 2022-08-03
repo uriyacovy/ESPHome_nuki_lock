@@ -7,6 +7,8 @@ This module builds an ESPHome lock platform for Nuki Smartlock (nuki_lock) that 
 
 The lock entity is updated whenever the look changes state (via Nuki App, HA, or manually) using Nuki BT advertisement mechanism.
 
+![image](https://user-images.githubusercontent.com/74111540/182619954-930b6c6c-99c8-4ece-a4e3-5fc43460110a.png)
+
 ## How to use
 Add the following to the ESPHome yaml file:
 
