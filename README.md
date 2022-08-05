@@ -32,6 +32,10 @@ lock:
       name: "Nuki Battery Critical"
     battery_level:
       name: "Nuki Battery Level"
+    door_sensor:
+      name: "Nuki Door Sensor"
+    door_sensor_state:
+      name: "Nuki Door Sensor State"
 ```
 
 After running ESPHome (esphome run <yamlfile.yaml>), the module will actively try to pair to Nuki.
