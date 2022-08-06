@@ -61,10 +61,14 @@ void NukiLock::update_status()
           this->retrievedKeyTurnerState_.currentTimeMinute, 
           this->retrievedKeyTurnerState_.currentTimeSecond);
         this->publish_state(this->nuki_to_lock_state(this->retrievedKeyTurnerState_.lockState));
-        this->battery_critical_->publish_state(this->nukiBle_->isBatteryCritical());
-        this->battery_level_->publish_state(this->nukiBle_->getBatteryPerc());
-        this->door_sensor_->publish_state(this->nuki_doorsensor_to_binary(this->retrievedKeyTurnerState_.doorSensorState));
-        this->door_sensor_state_->publish_state(this->nuki_doorsensor_to_string(this->retrievedKeyTurnerState_.doorSensorState));
+        if (this->battery_critical_ != nullptr)
+            this->battery_critical_->publish_state(this->nukiBle_->isBatteryCritical());
+        if (this->battery_level_ != nullptr)
+            this->battery_level_->publish_state(this->nukiBle_->getBatteryPerc());
+        if (this->door_sensor_ != nullptr)
+            this->door_sensor_->publish_state(this->nuki_doorsensor_to_binary(this->retrievedKeyTurnerState_.doorSensorState));
+        if (this->door_sensor_state_ != nullptr)
+            this->door_sensor_state_->publish_state(this->nuki_doorsensor_to_string(this->retrievedKeyTurnerState_.doorSensorState));
     } else {
         ESP_LOGE(TAG, "requestKeyTurnerState failed: %d", result);
     }  

@@ -56,11 +56,11 @@ class NukiLock : public lock::Lock, public PollingComponent {
         void update_status();
         void open_latch() override { this->open_latch_ = true; unlock();}
 
-        binary_sensor::BinarySensor *is_paired_;
-        binary_sensor::BinarySensor *battery_critical_;
-        binary_sensor::BinarySensor *door_sensor_;
-        text_sensor::TextSensor *door_sensor_state_;
-        sensor::Sensor *battery_level_;
+        binary_sensor::BinarySensor *is_paired_{nullptr};
+        binary_sensor::BinarySensor *battery_critical_{nullptr};
+        binary_sensor::BinarySensor *door_sensor_{nullptr};
+        text_sensor::TextSensor *door_sensor_state_{nullptr};
+        sensor::Sensor *battery_level_{nullptr};
         Nuki::NukiBle *nukiBle_;
         BleScanner scanner_;
         Nuki::KeyTurnerState retrievedKeyTurnerState_;
