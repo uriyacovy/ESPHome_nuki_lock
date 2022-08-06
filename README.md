@@ -3,7 +3,9 @@ This module builds an ESPHome lock platform for Nuki Smartlock (nuki_lock) that 
 - Lock 
 - Binary Sensor: Critical Battery 
 - Sensor: Battery Level
-- Binary Sensor: Is Paired 
+- Binary Sensor: Is Paired
+- Binary Sensor: Door Sensor
+- Text Sensor: Door Sensor State
 
 The lock entity is updated whenever the look changes state (via Nuki App, HA, or manually) using Nuki BT advertisement mechanism.
 
