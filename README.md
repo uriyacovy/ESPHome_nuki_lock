@@ -1,9 +1,9 @@
 # Nuki Lock for ESPHome (ESP32)
-This module builds an ESPHome lock platform for Nuki Smartlock (nuki_lock) that creates 4 new entities in Home Assistant:
+This module builds an ESPHome lock platform for Nuki Smartlock (nuki_lock) that creates 6 new entities in Home Assistant:
 - Lock 
+- Binary Sensor: Is Paired
 - Binary Sensor: Critical Battery 
 - Sensor: Battery Level
-- Binary Sensor: Is Paired
 - Binary Sensor: Door Sensor
 - Text Sensor: Door Sensor State
 
@@ -26,10 +26,12 @@ external_components:
   - source: github://uriyacovy/ESPHome_nuki_lock
 
 lock:
+  # Required:
   - platform: nuki_lock
     name: Nuki Lock
     is_paired: 
       name: "Nuki Paired"
+  # Optional:
     battery_critical:
       name: "Nuki Battery Critical"
     battery_level:
@@ -58,4 +60,6 @@ This library requires also https://github.com/nkolban/ESP32_BLE_Arduino/ and Ard
 ## Tested Hardware
 - ESP32 wroom
 - Nuki smart lock v3
+- Nuki smart lock v2
+- Nuki door sensor
 
