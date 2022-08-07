@@ -3,11 +3,13 @@ This module builds an ESPHome lock platform for Nuki Smartlock (nuki_lock) that 
 - Lock 
 - Binary Sensor: Critical Battery 
 - Sensor: Battery Level
-- Binary Sensor: Is Paired 
+- Binary Sensor: Is Paired
+- Binary Sensor: Door Sensor
+- Text Sensor: Door Sensor State
 
 The lock entity is updated whenever the look changes state (via Nuki App, HA, or manually) using Nuki BT advertisement mechanism.
 
-![image](https://user-images.githubusercontent.com/74111540/182619954-930b6c6c-99c8-4ece-a4e3-5fc43460110a.png)
+![screenshot](https://user-images.githubusercontent.com/1754967/183266065-d1a6e9fe-d7f7-4295-9c0d-4bf9235bf4cd.png)
 
 ## How to use
 Add the following to the ESPHome yaml file:
@@ -32,6 +34,10 @@ lock:
       name: "Nuki Battery Critical"
     battery_level:
       name: "Nuki Battery Level"
+    door_sensor:
+      name: "Nuki Door Sensor"
+    door_sensor_state:
+      name: "Nuki Door Sensor State"
 ```
 
 After running ESPHome (esphome run <yamlfile.yaml>), the module will actively try to pair to Nuki.

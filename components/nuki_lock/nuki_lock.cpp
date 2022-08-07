@@ -21,6 +21,34 @@ lock::LockState NukiLock::nuki_to_lock_state(Nuki::LockState nukiLockState) {
     }
 }
 
+bool NukiLock::nuki_doorsensor_to_binary(Nuki::DoorSensorState nukiDoorSensorState) {
+    switch(nukiDoorSensorState) {
+        case Nuki::DoorSensorState::DoorClosed:
+            return false;
+        default:
+            return true;
+    }
+}
+
+std::string NukiLock::nuki_doorsensor_to_string(Nuki::DoorSensorState nukiDoorSensorState) {
+    switch(nukiDoorSensorState) {
+        case Nuki::DoorSensorState::Unavailable:
+            return "unavailable";
+        case Nuki::DoorSensorState::Deactivated:
+            return "deactivated";
+        case Nuki::DoorSensorState::DoorClosed:
+            return "closed";
+        case Nuki::DoorSensorState::DoorOpened:
+            return "opened";
+        case Nuki::DoorSensorState::DoorStateUnknown:
+            return "unknown";
+        case Nuki::DoorSensorState::Calibrating:
+            return "calibrating";
+        default:
+            return "undefined";
+    }
+}
+
 void NukiLock::update_status()
 {
     this->status_update_ = false;
@@ -33,8 +61,14 @@ void NukiLock::update_status()
           this->retrievedKeyTurnerState_.currentTimeMinute, 
           this->retrievedKeyTurnerState_.currentTimeSecond);
         this->publish_state(this->nuki_to_lock_state(this->retrievedKeyTurnerState_.lockState));
-        this->battery_critical_->publish_state(this->nukiBle_->isBatteryCritical());
-        this->battery_level_->publish_state(this->nukiBle_->getBatteryPerc());
+        if (this->battery_critical_ != nullptr)
+            this->battery_critical_->publish_state(this->nukiBle_->isBatteryCritical());
+        if (this->battery_level_ != nullptr)
+            this->battery_level_->publish_state(this->nukiBle_->getBatteryPerc());
+        if (this->door_sensor_ != nullptr)
+            this->door_sensor_->publish_state(this->nuki_doorsensor_to_binary(this->retrievedKeyTurnerState_.doorSensorState));
+        if (this->door_sensor_state_ != nullptr)
+            this->door_sensor_state_->publish_state(this->nuki_doorsensor_to_string(this->retrievedKeyTurnerState_.doorSensorState));
     } else {
         ESP_LOGE(TAG, "requestKeyTurnerState failed: %d", result);
     }  
@@ -124,6 +158,8 @@ void NukiLock::dump_config(){
     LOG_LOCK(TAG, "Nuki Lock", this);    
     LOG_BINARY_SENSOR(TAG, "Is Paired", this->is_paired_);
     LOG_BINARY_SENSOR(TAG, "Battery Critical", this->battery_critical_);
+    LOG_BINARY_SENSOR(TAG, "Door Sensor", this->door_sensor_);
+    LOG_TEXT_SENSOR(TAG, "Door Sensor State", this->door_sensor_state_);
     LOG_SENSOR(TAG, "Battery Level", this->battery_level_);
     ESP_LOGCONFIG(TAG, "Unpair request is %s", this->unpair_? "true":"false");
 }
