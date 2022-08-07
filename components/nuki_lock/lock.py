@@ -17,7 +17,7 @@ NukiLock = nuki_lock_ns.class_('NukiLock', lock.Lock, switch.Switch, cg.Componen
 
 CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
     cv.GenerateID(): cv.declare_id(NukiLock),
-    cv.Optional(CONF_IS_PAIRED): binary_sensor.binary_sensor_schema(
+    cv.Required(CONF_IS_PAIRED): binary_sensor.binary_sensor_schema(
                     device_class=DEVICE_CLASS_CONNECTIVITY,
                 ),
     cv.Optional(CONF_BATTERY_CRITICAL): binary_sensor.binary_sensor_schema(
