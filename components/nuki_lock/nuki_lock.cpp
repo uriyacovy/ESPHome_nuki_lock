@@ -81,8 +81,8 @@ void NukiLockComponent::update_status()
 
 void NukiLockComponent::setup() {
 
-    ESP_LOGI(TAG, "Starting NUKI BLE...");
-    this->nukiBle_ = new Nuki::NukiBle(this->deviceName_, this->deviceId_);
+    ESP_LOGI(TAG, "Starting NUKI Lock...");
+    this->nukiLock_ = new NukiLock::NukiLock(this->deviceName_, this->deviceId_);
     this->handler_ = new nuki_lock::Handler(&(this->status_update_));
 
     this->traits.set_supported_states(std::set<lock::LockState> {lock::LOCK_STATE_NONE, lock::LOCK_STATE_LOCKED, 
