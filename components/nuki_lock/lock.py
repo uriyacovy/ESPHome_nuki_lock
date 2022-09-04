@@ -5,6 +5,7 @@ from esphome.const import CONF_ID, CONF_BATTERY_LEVEL, DEVICE_CLASS_CONNECTIVITY
 
 AUTO_LOAD = ["binary_sensor", "text_sensor", "sensor", "switch"]
 
+CONF_IS_CONNECTED = "is_connected"
 CONF_IS_PAIRED = "is_paired"
 CONF_UNPAIR = "unpair"
 CONF_BATTERY_CRITICAL = "battery_critical"
@@ -13,10 +14,13 @@ CONF_DOOR_SENSOR = "door_sensor"
 CONF_DOOR_SENSOR_STATE = "door_sensor_state"
 
 nuki_lock_ns = cg.esphome_ns.namespace('nuki_lock')
-NukiLock = nuki_lock_ns.class_('NukiLock', lock.Lock, switch.Switch, cg.Component)
+NukiLock = nuki_lock_ns.class_('NukiLockComponent', lock.Lock, switch.Switch, cg.Component)
 
 CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
     cv.GenerateID(): cv.declare_id(NukiLock),
+    cv.Required(CONF_IS_CONNECTED): binary_sensor.binary_sensor_schema(
+                    device_class=DEVICE_CLASS_CONNECTIVITY,
+                ),
     cv.Required(CONF_IS_PAIRED): binary_sensor.binary_sensor_schema(
                     device_class=DEVICE_CLASS_CONNECTIVITY,
                 ),
@@ -39,6 +43,10 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     await lock.register_lock(var, config)
+
+    if CONF_IS_CONNECTED in config:
+        sens = await binary_sensor.new_binary_sensor(config[CONF_IS_CONNECTED])
+        cg.add(var.set_is_connected(sens))
 
     if CONF_IS_PAIRED in config:
         sens = await binary_sensor.new_binary_sensor(config[CONF_IS_PAIRED])
