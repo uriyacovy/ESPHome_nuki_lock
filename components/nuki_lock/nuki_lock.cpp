@@ -1,5 +1,4 @@
 #include "esphome/core/log.h"
-#include "esphome.h"
 #include "nuki_lock.h"
 
 namespace esphome {
