@@ -26,7 +26,7 @@ class Handler: public Nuki::SmartlockEventHandler {
         bool *notified_p_;
 };
 
-class NukiLock : public lock::Lock, public PollingComponent {
+class NukiLock : public lock::Lock, public PollingComponent, public CustomAPIDevice {
     public:
         const uint32_t deviceId_ = 2020002;
         const std::string deviceName_ = "Nuki ESPHome"; 
@@ -35,6 +35,7 @@ class NukiLock : public lock::Lock, public PollingComponent {
 
         void setup() override;
         void update() override;
+        void lock_n_go();
 
         void set_is_paired(binary_sensor::BinarySensor *is_paired) { this->is_paired_ = is_paired; }
         void set_battery_critical(binary_sensor::BinarySensor *battery_critical) { this->battery_critical_ = battery_critical; }

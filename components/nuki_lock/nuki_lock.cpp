@@ -104,6 +104,29 @@ void NukiLock::setup() {
     }
 
     this->publish_state(lock::LOCK_STATE_NONE);
+
+    ESP_LOGI(TAG, "Declaring service");
+    register_service(&NukiLock::lock_n_go, "lock_n_go");
+}
+
+void NukiLock::lock_n_go() {
+    if (this->nukiBle_->isPairedWithLock()) {
+        uint8_t result;
+
+        if (state == lock::LOCK_STATE_UNLOCKED) {
+            result = this->nukiBle_->lockAction(Nuki::LockAction::LockNgo);
+        }
+
+        if (result == Nuki::CmdResult::Success) {
+            this->publish_state(state);
+        }
+        else {
+            ESP_LOGE(TAG, "lockAction failed: %d", result);
+        }
+    }
+    else {
+        ESP_LOGE(TAG, "Lock N Go service called for unpaired Nuki");
+    }
 }
 
 void NukiLock::update() {
