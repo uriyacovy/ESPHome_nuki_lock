@@ -6,6 +6,7 @@
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/text_sensor/text_sensor.h"
 #include "esphome/components/api/custom_api_device.h"
+#include "esphome.h"
 
 #include "NukiBle.h"
 #include "NukiConstants.h"
