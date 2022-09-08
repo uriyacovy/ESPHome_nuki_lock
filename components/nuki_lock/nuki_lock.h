@@ -28,7 +28,7 @@ class Handler: public Nuki::SmartlockEventHandler {
         bool *notified_p_;
 };
 
-class NukiLock : public lock::Lock, public PollingComponent, public CustomAPIDevice {
+class NukiLock : public lock::Lock, public PollingComponent, public api::CustomAPIDevice {
     public:
         const uint32_t deviceId_ = 2020002;
         const std::string deviceName_ = "Nuki ESPHome"; 
