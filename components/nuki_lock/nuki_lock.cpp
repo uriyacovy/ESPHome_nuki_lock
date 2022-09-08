@@ -106,7 +106,6 @@ void NukiLock::setup() {
 
     this->publish_state(lock::LOCK_STATE_NONE);
 
-    ESP_LOGI(TAG, "Declaring service");
     register_service(&NukiLock::lock_n_go, "lock_n_go");
 }
 
@@ -122,11 +121,11 @@ void NukiLock::lock_n_go() {
             this->publish_state(state);
         }
         else {
-            ESP_LOGE(TAG, "lockAction failed: %d", result);
+            ESP_LOGE(TAG, "lock_n_go failed: %d", result);
         }
     }
     else {
-        ESP_LOGE(TAG, "Lock N Go service called for unpaired Nuki");
+        ESP_LOGE(TAG, "lock_n_go service called for unpaired Nuki");
     }
 }
 
