@@ -5,6 +5,7 @@
 #include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/text_sensor/text_sensor.h"
+#include "esphome/components/api/custom_api_device.h"
 
 #include "NukiLock.h"
 #include "NukiConstants.h"
@@ -27,7 +28,7 @@ class Handler: public Nuki::SmartlockEventHandler {
         bool *notified_p_;
 };
 
-class NukiLockComponent : public lock::Lock, public PollingComponent {
+class NukiLockComponent : public lock::Lock, public PollingComponent, public api::CustomAPIDevice {
     static const uint8_t BLE_CONNECT_TIMEOUT_SEC = 3;
     static const uint8_t BLE_CONNECT_TIMEOUT_RETRIES = 1;
 
@@ -35,7 +36,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent {
         const uint32_t deviceId_ = 2020002;
         const std::string deviceName_ = "Nuki ESPHome"; 
 
-        explicit NukiLockComponent() : Lock(), unpair_(false), open_latch_(false) { this->traits.set_supports_open(true); }
+        explicit NukiLockComponent() : Lock(), unpair_(false), open_latch_(false), lock_n_go_(false) { this->traits.set_supports_open(true); }
 
         void setup() override;
         void update() override;
@@ -74,6 +75,10 @@ class NukiLockComponent : public lock::Lock, public PollingComponent {
         bool status_update_;
         bool unpair_;
         bool open_latch_;
+        bool lock_n_go_;
+
+    private:
+        void lock_n_go();
 };
 
 } //namespace nuki_lock
