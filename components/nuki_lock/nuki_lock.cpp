@@ -158,6 +158,7 @@ void NukiLockComponent::control(const lock::LockCall &call) {
 
             if(this->lock_n_go_){
                 action = NukiLock::LockAction::LockNgo;
+                state = lock::LockState::LOCK_STATE_LOCKING;
             }
 
             result = this->nukiLock_->lockAction(action);
