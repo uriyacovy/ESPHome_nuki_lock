@@ -190,7 +190,7 @@ void NukiLockComponent::lock_n_go(){
 
 void NukiLockComponent::dump_config(){
     LOG_LOCK(TAG, "Nuki Lock", this);    
-    LOG_BINARY_SENSOR(TAG, "Is Connecte", this->is_connected_);
+    LOG_BINARY_SENSOR(TAG, "Is Connected", this->is_connected_);
     LOG_BINARY_SENSOR(TAG, "Is Paired", this->is_paired_);
     LOG_BINARY_SENSOR(TAG, "Battery Critical", this->battery_critical_);
     LOG_BINARY_SENSOR(TAG, "Door Sensor", this->door_sensor_);
