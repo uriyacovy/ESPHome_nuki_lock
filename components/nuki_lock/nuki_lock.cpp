@@ -111,6 +111,8 @@ void NukiLockComponent::setup() {
     }
 
     this->publish_state(lock::LOCK_STATE_NONE);
+
+    register_service(&NukiLockComponent::lock_n_go, "lock_n_go");
 }
 
 void NukiLockComponent::update() {
@@ -134,38 +136,62 @@ void NukiLockComponent::update() {
 }
 
 void NukiLockComponent::control(const lock::LockCall &call) {
-    if (this->nukiLock_->isPairedWithLock()) {
-        auto state = *call.get_state();
-        uint8_t result;
+    if (!this->nukiLock_->isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock/Unlock action called for unpaired nuki");
+        return;
+    }
 
-        if (state == lock::LOCK_STATE_LOCKED) {
+    auto state = *call.get_state();
+    uint8_t result;
+
+    switch(state){
+        case lock::LOCK_STATE_LOCKED:
             result = this->nukiLock_->lockAction(NukiLock::LockAction::Lock);
-        } else if (state == lock::LOCK_STATE_UNLOCKED) {
-            result = this->nukiLock_->lockAction(this->open_latch_ ? NukiLock::LockAction::Unlatch : NukiLock::LockAction::Unlock);
+            break;
+
+        case lock::LOCK_STATE_UNLOCKED:{
+            NukiLock::LockAction action = NukiLock::LockAction::Unlock;
+
+            if(this->open_latch_){
+                action = NukiLock::LockAction::Unlatch;
+            }
+
+            if(this->lock_n_go_){
+                action = NukiLock::LockAction::LockNgo;
+                state = lock::LockState::LOCK_STATE_LOCKING;
+            }
+
+            result = this->nukiLock_->lockAction(action);
+
             this->open_latch_ = false;
+            this->lock_n_go_ = false;
+            break;
         }
-        else {
+
+        default:
             ESP_LOGE(TAG, "lockAction unsupported state");
             return;
-        }      
-        if (result == Nuki::CmdResult::Success) {
-            this->publish_state(state);
-        }
-        else {
-            ESP_LOGE(TAG, "lockAction failed: %d", result);
-            this->is_connected_->publish_state(false);
-            this->publish_state(lock::LOCK_STATE_NONE);
-            this->status_update_ = true;
-        }
+    }
+
+    if (result == Nuki::CmdResult::Success) {
+        this->publish_state(state);
     }
     else {
-        ESP_LOGE(TAG, "Lock/Unlock action called for unpaired nuki");
+        ESP_LOGE(TAG, "lockAction failed: %d", result);
+        this->is_connected_->publish_state(false);
+        this->publish_state(lock::LOCK_STATE_NONE);
+        this->status_update_ = true;
     }
+}
+
+void NukiLockComponent::lock_n_go(){
+    this->lock_n_go_ = true;
+    this->unlock();
 }
 
 void NukiLockComponent::dump_config(){
     LOG_LOCK(TAG, "Nuki Lock", this);    
-    LOG_BINARY_SENSOR(TAG, "Is Connecte", this->is_connected_);
+    LOG_BINARY_SENSOR(TAG, "Is Connected", this->is_connected_);
     LOG_BINARY_SENSOR(TAG, "Is Paired", this->is_paired_);
     LOG_BINARY_SENSOR(TAG, "Battery Critical", this->battery_critical_);
     LOG_BINARY_SENSOR(TAG, "Door Sensor", this->door_sensor_);

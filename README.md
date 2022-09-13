@@ -16,14 +16,19 @@ Add the following to the ESPHome yaml file:
 
 ```
 esphome:
-
   libraries:
   - Preferences
-  - https://github.com/nkolban/ESP32_BLE_Arduino/
   - https://github.com/uriyacovy/NukiBleEsp32
 
 external_components:
   - source: github://uriyacovy/ESPHome_nuki_lock
+
+esp32:
+  board: "esp32dev"  # Or whatever other board you're using
+  framework:
+    type: arduino
+    version: 2.0.3
+    platform_version: 4.4.0
 
 lock:
   # Required:
