@@ -2,6 +2,7 @@
 This module builds an ESPHome lock platform for Nuki Smartlock (nuki_lock) that creates 6 new entities in Home Assistant:
 - Lock 
 - Binary Sensor: Is Paired
+- Binary Sensor: Is Connected
 - Binary Sensor: Critical Battery 
 - Sensor: Battery Level
 - Binary Sensor: Door Sensor
@@ -11,17 +12,17 @@ The lock entity is updated whenever the look changes state (via Nuki App, HA, or
 
 ![screenshot](https://user-images.githubusercontent.com/1754967/183266065-d1a6e9fe-d7f7-4295-9c0d-4bf9235bf4cd.png)
 
-## How to use
+## How to use -- Dev Branch --
 Add the following to the ESPHome yaml file:
 
 ```
 esphome:
   libraries:
   - Preferences
-  - https://github.com/uriyacovy/NukiBleEsp32
+  - https://github.com/uriyacovy/NukiBleEsp32#dev
 
 external_components:
-  - source: github://uriyacovy/ESPHome_nuki_lock
+  - source: github://uriyacovy/ESPHome_nuki_lock@dev
 
 esp32:
   board: "esp32dev"  # Or whatever other board you're using
@@ -34,8 +35,10 @@ lock:
   # Required:
   - platform: nuki_lock
     name: Nuki Lock
+    is_connected: 
+      name: "Nuki Connected"
     is_paired: 
-      name: "Nuki Paired"
+      name: "Nuki Paired"      
   # Optional:
     battery_critical:
       name: "Nuki Battery Critical"
@@ -51,6 +54,14 @@ After running ESPHome (esphome run <yamlfile.yaml>), the module will actively tr
 To set Nuki for paring mode, press the button for 5 seconds until the led turns on.
 Once Nuki is paired, the new ESPHome entities will get the updated state.
 
+## Supported Services ##
+### Lock and Go
+To run lock and go, call this service from Home Assistant: 
+```
+service: esphome.<NODE_NAME>_lock_n_go
+data: {}
+```
+
 ## Unparing Nuki
 To unpair Nuki, add the following to ESPHome yaml file below `platform: nuki_lock` section and run ESPHome again:
 ```
@@ -59,8 +70,6 @@ To unpair Nuki, add the following to ESPHome yaml file below `platform: nuki_loc
 
 ## Dependencies
 The module depends on the work done by [I-Connect](https://github.com/I-Connect), https://github.com/I-Connect/NukiBleEsp32
-
-This library requires also https://github.com/nkolban/ESP32_BLE_Arduino/ and Arduino library Preferences.
 
 ## Tested Hardware
 - ESP32 wroom
