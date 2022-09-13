@@ -1,0 +1,37 @@
+---
+esphome:
+  name: test-nuki
+
+  libraries:
+    - Preferences
+    - https://github.com/uriyacovy/NukiBleEsp32#dev
+
+esp32:
+  board: "esp32dev"
+  framework:
+    type: arduino
+    version: 2.0.3
+    platform_version: 4.4.0
+
+wifi:
+  ssid: "My Network"
+  password: "My Password"
+
+api:
+
+external_components:
+  - source:
+      type: local
+      path: "../components/"
+
+lock:
+  - platform: nuki_lock
+    name: My Nuki Lock
+    is_paired:
+      name: "Nuki Paired"
+    battery_critical:
+      name: "Nuki Battery Critical"
+    battery_level:
+      name: "Nuki Battery Level"
+    is_connected:
+      name: "Nuki Connected"
