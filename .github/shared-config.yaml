@@ -2,11 +2,6 @@
 esphome:
   name: test-nuki
 
-  libraries:
-    - Preferences
-    - https://github.com/nkolban/ESP32_BLE_Arduino/
-    - https://github.com/uriyacovy/NukiBleEsp32
-
 esp32:
   board: "esp32dev"
 

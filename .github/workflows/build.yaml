@@ -13,16 +13,14 @@
         - name: Checkout
           uses: actions/checkout@v3
 
-        - name: Use dev dependencies
-          if: github.ref != 'refs/heads/main'
-          uses: jacobtomlinson/gha-find-replace@v2
-          with:
-            include: ".github/example-project.yaml"
-            find: "https://github.com/uriyacovy/NukiBleEsp32"
-            replace: "https://github.com/uriyacovy/NukiBleEsp32#dev"
-            regex: false
-
-        - name: Compile
+        - name: Compile for main
+          if: github.ref == 'refs/heads/main'
           uses: esphome/build-action@v1
           with:
-            yaml_file: .github/example-project.yaml
+            yaml_file: .github/example-project-main.yaml
+
+        - name: Compile for dev
+          if: github.ref != 'refs/heads/main'
+          uses: esphome/build-action@v1
+          with:
+            yaml_file: .github/example-project-dev.yaml

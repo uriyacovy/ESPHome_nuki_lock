@@ -1,0 +1,11 @@
+---
+esphome:
+  name: test-nuki
+
+  libraries:
+    - Preferences
+    - https://github.com/nkolban/ESP32_BLE_Arduino
+    - https://github.com/uriyacovy/NukiBleEsp32
+
+packages:
+  common: !include shared-config.yaml
