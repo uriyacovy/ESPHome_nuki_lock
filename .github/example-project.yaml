@@ -9,9 +9,6 @@ esphome:
 
 esp32:
   board: "esp32dev"
-  framework:
-    type: arduino
-    version: 2.0.3
 
 wifi:
   ssid: "My Network"
