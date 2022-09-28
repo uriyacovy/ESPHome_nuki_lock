@@ -32,3 +32,7 @@ lock:
       name: "Nuki Battery Level"
     is_connected:
       name: "Nuki Connected"
+    door_sensor:
+      name: "Nuki Door Sensor"
+    door_sensor_state:
+      name: "Nuki Door Sensor State"
