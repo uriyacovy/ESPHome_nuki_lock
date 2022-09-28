@@ -4,14 +4,14 @@ esphome:
 
   libraries:
     - Preferences
-    - https://github.com/uriyacovy/NukiBleEsp32#dev
+    - https://github.com/nkolban/ESP32_BLE_Arduino/
+    - https://github.com/uriyacovy/NukiBleEsp32
 
 esp32:
   board: "esp32dev"
   framework:
     type: arduino
     version: 2.0.3
-    platform_version: 4.4.0
 
 wifi:
   ssid: "My Network"
