@@ -1,0 +1,26 @@
+---
+  name: Build Component
+
+  on:
+    push:
+    pull_request:
+
+  jobs:
+    build:
+      name: Build
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v3
+
+        - name: Compile for main
+          if: github.ref == 'refs/heads/main'
+          uses: esphome/build-action@v1
+          with:
+            yaml_file: .github/example-project-main.yaml
+
+        - name: Compile for dev
+          if: github.ref != 'refs/heads/main'
+          uses: esphome/build-action@v1
+          with:
+            yaml_file: .github/example-project-dev.yaml

@@ -1,0 +1,33 @@
+---
+esphome:
+  name: test-nuki
+
+esp32:
+  board: "esp32dev"
+
+wifi:
+  ssid: "My Network"
+  password: "My Password"
+
+api:
+
+external_components:
+  - source:
+      type: local
+      path: "../components/"
+
+lock:
+  - platform: nuki_lock
+    name: My Nuki Lock
+    is_paired:
+      name: "Nuki Paired"
+    battery_critical:
+      name: "Nuki Battery Critical"
+    battery_level:
+      name: "Nuki Battery Level"
+    is_connected:
+      name: "Nuki Connected"
+    door_sensor:
+      name: "Nuki Door Sensor"
+    door_sensor_state:
+      name: "Nuki Door Sensor State"
