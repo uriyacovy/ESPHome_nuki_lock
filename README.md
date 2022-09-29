@@ -1,4 +1,6 @@
 # Nuki Lock for ESPHome (ESP32)
+[![Build Component](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml/badge.svg)](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml)
+
 This module builds an ESPHome lock platform for Nuki Smartlock (nuki_lock) that creates 6 new entities in Home Assistant:
 - Lock 
 - Binary Sensor: Is Paired
@@ -15,7 +17,7 @@ The lock entity is updated whenever the look changes state (via Nuki App, HA, or
 ## How to use -- Dev Branch --
 Add the following to the ESPHome yaml file:
 
-```
+```yaml
 esphome:
   libraries:
   - Preferences
@@ -57,14 +59,14 @@ Once Nuki is paired, the new ESPHome entities will get the updated state.
 ## Supported Services ##
 ### Lock and Go
 To run lock and go, call this service from Home Assistant: 
-```
+```yaml
 service: esphome.<NODE_NAME>_lock_n_go
 data: {}
 ```
 
 ## Unparing Nuki
 To unpair Nuki, add the following to ESPHome yaml file below `platform: nuki_lock` section and run ESPHome again:
-```
+```yaml
     unpair: true
 ```
 
