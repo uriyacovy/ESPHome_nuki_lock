@@ -17,7 +17,7 @@ The lock entity is updated whenever the look changes state (via Nuki App, HA, or
 ## How to use -- Dev Branch --
 Add the following to the ESPHome yaml file:
 
-```
+```yaml
 esphome:
   libraries:
   - Preferences
@@ -59,14 +59,14 @@ Once Nuki is paired, the new ESPHome entities will get the updated state.
 ## Supported Services ##
 ### Lock and Go
 To run lock and go, call this service from Home Assistant: 
-```
+```yaml
 service: esphome.<NODE_NAME>_lock_n_go
 data: {}
 ```
 
 ## Unparing Nuki
 To unpair Nuki, add the following to ESPHome yaml file below `platform: nuki_lock` section and run ESPHome again:
-```
+```yaml
     unpair: true
 ```
 
