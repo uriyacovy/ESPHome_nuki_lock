@@ -24,7 +24,7 @@ esphome:
   - https://github.com/uriyacovy/NukiBleEsp32#dev
 
 external_components:
-  - source: github://uriyacovy/ESPHome_nuki_lock@dev
+  - source: github://uriyacovy/ESPHome_nuki_lock
 
 esp32:
   board: "esp32dev"  # Or whatever other board you're using
