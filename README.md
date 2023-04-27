@@ -58,6 +58,15 @@ To set Nuki for paring mode, press the button for 5 seconds until the led turns 
 Once Nuki is paired, the new ESPHome entities will get the updated state.
 
 ## Supported Services ##
+### Unlatch ###
+To unlatch doors without a handle, call open service from Home Assistant:
+```yaml
+service: lock.open
+data: {}
+target:
+  entity_id: lock.<NODE_NAME>
+```
+
 ### Lock and Go
 To run lock and go, call this service from Home Assistant: 
 ```yaml
