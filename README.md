@@ -14,24 +14,25 @@ The lock entity is updated whenever the look changes state (via Nuki App, HA, or
 
 ![screenshot](https://user-images.githubusercontent.com/1754967/183266065-d1a6e9fe-d7f7-4295-9c0d-4bf9235bf4cd.png)
 
-## How to use -- Dev Branch --
+## How to use
 Add the following to the ESPHome yaml file:
 
 ```yaml
 esphome:
   libraries:
   - Preferences
-  - https://github.com/uriyacovy/NukiBleEsp32#dev
+  - https://github.com/vinmenn/Crc16.git
+  - https://github.com/uriyacovy/NukiBleEsp32
 
 external_components:
-  - source: github://uriyacovy/ESPHome_nuki_lock@dev
+  - source: github://uriyacovy/ESPHome_nuki_lock
 
 esp32:
   board: "esp32dev"  # Or whatever other board you're using
   framework:
     type: arduino
     version: 2.0.3
-    platform_version: 4.4.0
+    platform_version: 5.3.0
 
 lock:
   # Required:
@@ -57,6 +58,15 @@ To set Nuki for paring mode, press the button for 5 seconds until the led turns 
 Once Nuki is paired, the new ESPHome entities will get the updated state.
 
 ## Supported Services ##
+### Unlatch ###
+To unlatch doors without a handle, call open service from Home Assistant:
+```yaml
+service: lock.open
+data: {}
+target:
+  entity_id: lock.<NODE_NAME>
+```
+
 ### Lock and Go
 To run lock and go, call this service from Home Assistant: 
 ```yaml
