@@ -52,7 +52,7 @@ std::string NukiLockComponent::nuki_doorsensor_to_string(Nuki::DoorSensorState n
 void NukiLockComponent::update_status()
 {
     this->status_update_ = false;
-    Nuki::CmdResult result = this->nukiLock.requestKeyTurnerState(&(this->retrievedKeyTurnerState_));
+    Nuki::CmdResult result = this->nukiLock_.requestKeyTurnerState(&(this->retrievedKeyTurnerState_));
 
     if (result == Nuki::CmdResult::Success) {
         ESP_LOGI(TAG, "Bat state: %#x, Bat crit: %d, Bat perc:%d lock state: %d %d:%d:%d",
