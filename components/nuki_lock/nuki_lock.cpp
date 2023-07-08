@@ -84,7 +84,7 @@ void NukiLockComponent::update_status()
         keypad_paired_ = config.hasKeypad;
     }
     else {
-        ESP_LOGE(TAG, "print_keypad_entries: requestConfig failed (result %d)", result);
+        ESP_LOGE(TAG, "update_status: requestConfig failed (result %d)", result);
         return;
     }
 }
