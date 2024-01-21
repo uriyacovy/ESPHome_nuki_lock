@@ -187,6 +187,9 @@ void NukiLockComponent::update() {
         // Execute (all) actions first, then status updates, then config updates.
         // Only one command (action, status, or config) is executed per update() call.
         if (this->actionAttempts_ > 0) {
+            // Terminate stale Bluetooth connections
+            this->nukiLock_.updateConnectionState();
+
             if (millis() - lastCommandExecutedTime_ < COMMANDS_COOLDOWN_MILLIS) {
                 // Let the lock terminate the previous command
                 ESP_LOGD(TAG, "Too early for action, skipping...");
@@ -218,6 +221,9 @@ void NukiLockComponent::update() {
             }
 
         } else if (this->status_update_) {
+            // Terminate stale Bluetooth connections
+            this->nukiLock_.updateConnectionState();
+
             if (millis() - lastCommandExecutedTime_ < COMMANDS_COOLDOWN_MILLIS) {
                 // Let the lock terminate the previous command
                 ESP_LOGD(TAG, "Too early for status update, skipping...");
@@ -228,6 +234,9 @@ void NukiLockComponent::update() {
             }
 
         } else if (this->config_update_) {
+            // Terminate stale Bluetooth connections
+            this->nukiLock_.updateConnectionState();
+
             if (millis() - lastCommandExecutedTime_ < COMMANDS_COOLDOWN_MILLIS) {
                 // Let the lock terminate the previous command
                 ESP_LOGD(TAG, "Too early for config update, skipping...");
