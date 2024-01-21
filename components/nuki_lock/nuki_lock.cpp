@@ -86,6 +86,10 @@ void NukiLockComponent::update_status()
         this->publish_state(lock::LOCK_STATE_NONE);
         this->status_update_ = true;
     }
+}
+
+void NukiLockComponent::update_config() {
+    this->config_update_ = false;
 
     NukiLock::Config config;
     Nuki::CmdResult confReqResult = this->nukiLock_.requestConfig(&config);
@@ -95,10 +99,43 @@ void NukiLockComponent::update_status()
     if (confReqResult == Nuki::CmdResult::Success) {
         ESP_LOGD(TAG, "requestConfig has resulted in %s (%d)", confReqResultAsString, confReqResult);
         keypad_paired_ = config.hasKeypad;
-    }
-    else {
+
+    } else {
         ESP_LOGE(TAG, "requestConfig has resulted in %s (%d)", confReqResultAsString, confReqResult);
-        return;
+        this->config_update_ = true;
+    }
+}
+
+bool NukiLockComponent::executeLockAction(NukiLock::LockAction lockAction) {
+    // Publish the assumed transitional lock state
+    switch (lockAction) {
+        case NukiLock::LockAction::Unlatch:
+        case NukiLock::LockAction::Unlock: {
+            this->publish_state(lock::LOCK_STATE_UNLOCKING);
+            break;
+        }
+        case NukiLock::LockAction::FullLock:
+        case NukiLock::LockAction::Lock:
+        case NukiLock::LockAction::LockNgo: {
+            this->publish_state(lock::LOCK_STATE_LOCKING);
+            break;
+        }
+    }
+
+    // Execute the action
+    Nuki::CmdResult result = this->nukiLock_.lockAction(lockAction);
+
+    char lockActionAsString[30];
+    NukiLock::lockactionToString(lockAction, lockActionAsString);
+    char resultAsString[30];
+    NukiLock::cmdResultToString(result, resultAsString);
+
+    if (result == Nuki::CmdResult::Success) {
+        ESP_LOGI(TAG, "lockAction %s (%d) has resulted in %s (%d)", lockActionAsString, lockAction, resultAsString, result);
+        return true;
+    } else {
+        ESP_LOGE(TAG, "lockAction %s (%d) has resulted in %s (%d)", lockActionAsString, lockAction, resultAsString, result);
+        return false;
     }
 }
 
@@ -141,12 +178,46 @@ void NukiLockComponent::setup() {
 
 void NukiLockComponent::update() {
 
+    // Check for new advertisements
     this->scanner_.update();
 
     if (this->nukiLock_.isPairedWithLock()) {
         this->is_paired_->publish_state(true);
-        if (this->status_update_) {
+
+        // Execute (all) actions first, then status updates, then config updates.
+        // Only one command (action, status, or config) is executed per update() call.
+        if (this->actionAttempts_ > 0) {
+            this->actionAttempts_--;
+
+            NukiLock::LockAction currentLockAction = this->lockAction_;
+            char currentLockActionAsString[30];
+            NukiLock::lockactionToString(currentLockAction, currentLockActionAsString);
+            ESP_LOGD(TAG, "Executing lock action %s (%d)... (%d attempts left)", currentLockActionAsString, currentLockAction, this->actionAttempts_);
+
+            bool isExecutionSuccessful = this->executeLockAction(currentLockAction);
+
+            if (isExecutionSuccessful) {
+                if(this->lockAction_ == currentLockAction) {
+                    // Stop action attempts only if no new action was received in the meantime.
+                    // Otherwise, the new action won't be executed.
+                    this->actionAttempts_ = 0;
+                }
+            } else if (this->actionAttempts_ == 0) {
+                // Publish failed state only when no attempts are left
+                this->is_connected_->publish_state(false);
+                this->publish_state(lock::LOCK_STATE_NONE);
+            }
+
+            // Schedule a status update without waiting for the next advertisement for a faster feedback
+            this->status_update_ = true;
+
+        } else if (this->status_update_) {
+            ESP_LOGD(TAG, "Update present, getting data...");
             this->update_status();
+
+        } else if (this->config_update_) {
+            ESP_LOGD(TAG, "Update present, getting config...");
+            this->update_config();
         }
     }
     else if (! this->unpair_) {
@@ -159,33 +230,30 @@ void NukiLockComponent::update() {
     }
 }
 
+/**
+ * @brief Add a new lock action that will be executed on the next update() call.
+ */
 void NukiLockComponent::control(const lock::LockCall &call) {
-    if (!this->nukiLock_.isPairedWithLock()) {
-        ESP_LOGE(TAG, "Lock/Unlock action called for unpaired nuki");
-        return;
-    }
 
-    auto state = *call.get_state();
-    Nuki::CmdResult result;
+    lock::LockState state = *call.get_state();
 
     switch(state){
         case lock::LOCK_STATE_LOCKED:
-            result = this->nukiLock_.lockAction(NukiLock::LockAction::Lock);
+            this->actionAttempts_ = MAX_ACTION_ATTEMPTS;
+            this->lockAction_ = NukiLock::LockAction::Lock;
             break;
 
         case lock::LOCK_STATE_UNLOCKED:{
-            NukiLock::LockAction action = NukiLock::LockAction::Unlock;
+            this->actionAttempts_ = MAX_ACTION_ATTEMPTS;
+            this->lockAction_ = NukiLock::LockAction::Unlock;
 
             if(this->open_latch_){
-                action = NukiLock::LockAction::Unlatch;
+                this->lockAction_ = NukiLock::LockAction::Unlatch;
             }
 
             if(this->lock_n_go_){
-                action = NukiLock::LockAction::LockNgo;
-                state = lock::LockState::LOCK_STATE_LOCKING;
+                this->lockAction_ = NukiLock::LockAction::LockNgo;
             }
-
-            result = this->nukiLock_.lockAction(action);
 
             this->open_latch_ = false;
             this->lock_n_go_ = false;
@@ -197,15 +265,9 @@ void NukiLockComponent::control(const lock::LockCall &call) {
             return;
     }
 
-    if (result == Nuki::CmdResult::Success) {
-        this->publish_state(state);
-    }
-    else {
-        ESP_LOGE(TAG, "lockAction failed: %d", result);
-        this->is_connected_->publish_state(false);
-        this->publish_state(lock::LOCK_STATE_NONE);
-        this->status_update_ = true;
-    }
+    char lockActionAsString[30];
+    NukiLock::lockactionToString(this->lockAction_, lockActionAsString);
+    ESP_LOGI(TAG, "New lock action received: %s (%d)", lockActionAsString, this->lockAction_);
 }
 
 void NukiLockComponent::lock_n_go(){
@@ -349,6 +411,7 @@ void NukiLockComponent::dump_config(){
 
 void NukiLockComponent::notify(Nuki::EventType eventType) {
     this->status_update_ = true;
+    this->config_update_ = true;
     ESP_LOGI(TAG, "event notified %d", eventType);
 }
 
