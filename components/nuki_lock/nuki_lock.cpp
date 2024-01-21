@@ -70,6 +70,7 @@ void NukiLockComponent::update_status()
           this->retrievedKeyTurnerState_.currentTimeHour,
           this->retrievedKeyTurnerState_.currentTimeMinute,
           this->retrievedKeyTurnerState_.currentTimeSecond);
+
         this->publish_state(this->nuki_to_lock_state(this->retrievedKeyTurnerState_.lockState));
         this->is_connected_->publish_state(true);
         if (this->battery_critical_ != nullptr)
@@ -80,6 +81,15 @@ void NukiLockComponent::update_status()
             this->door_sensor_->publish_state(this->nuki_doorsensor_to_binary(this->retrievedKeyTurnerState_.doorSensorState));
         if (this->door_sensor_state_ != nullptr)
             this->door_sensor_state_->publish_state(this->nuki_doorsensor_to_string(this->retrievedKeyTurnerState_.doorSensorState));
+
+        if (
+            this->retrievedKeyTurnerState_.lockState == NukiLock::LockState::Locking
+            || this->retrievedKeyTurnerState_.lockState == NukiLock::LockState::Unlocking
+        ) {
+            // Schedule a status update without waiting for the next advertisement because the lock
+            // is in a transition state. This will speed up the feedback.
+            this->status_update_ = true;
+        }
     } else {
         ESP_LOGE(TAG, "requestKeyTurnerState failed with error %s (%d)", cmdResultAsString, cmdResult);
         this->is_connected_->publish_state(false);
