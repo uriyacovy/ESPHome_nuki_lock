@@ -52,12 +52,21 @@ std::string NukiLockComponent::nuki_doorsensor_to_string(Nuki::DoorSensorState n
 void NukiLockComponent::update_status()
 {
     this->status_update_ = false;
-    Nuki::CmdResult result = this->nukiLock_.requestKeyTurnerState(&(this->retrievedKeyTurnerState_));
+    Nuki::CmdResult cmdResult = this->nukiLock_.requestKeyTurnerState(&(this->retrievedKeyTurnerState_));
+    char cmdResultAsString[30];
+    NukiLock::cmdResultToString(cmdResult, cmdResultAsString);
 
-    if (result == Nuki::CmdResult::Success) {
-        ESP_LOGI(TAG, "Bat state: %#x, Bat crit: %d, Bat perc:%d lock state: %d %d:%d:%d",
+    if (cmdResult == Nuki::CmdResult::Success) {
+        NukiLock::LockState currentLockState = this->retrievedKeyTurnerState_.lockState;
+        char currentLockStateAsString[30];
+        NukiLock::lockstateToString(currentLockState, currentLockStateAsString);
+
+        ESP_LOGI(TAG, "Bat state: %#x, Bat crit: %d, Bat perc:%d lock state: %s (%d) %d:%d:%d",
           this->retrievedKeyTurnerState_.criticalBatteryState,
-          this->nukiLock_.isBatteryCritical(), this->nukiLock_.getBatteryPerc(), this->retrievedKeyTurnerState_.lockState,
+          this->nukiLock_.isBatteryCritical(),
+          this->nukiLock_.getBatteryPerc(),
+          currentLockStateAsString,
+          currentLockState,
           this->retrievedKeyTurnerState_.currentTimeHour,
           this->retrievedKeyTurnerState_.currentTimeMinute,
           this->retrievedKeyTurnerState_.currentTimeSecond);
@@ -72,19 +81,23 @@ void NukiLockComponent::update_status()
         if (this->door_sensor_state_ != nullptr)
             this->door_sensor_state_->publish_state(this->nuki_doorsensor_to_string(this->retrievedKeyTurnerState_.doorSensorState));
     } else {
-        ESP_LOGE(TAG, "requestKeyTurnerState failed: %d", result);
+        ESP_LOGE(TAG, "requestKeyTurnerState failed with error %s (%d)", cmdResultAsString, cmdResult);
         this->is_connected_->publish_state(false);
         this->publish_state(lock::LOCK_STATE_NONE);
         this->status_update_ = true;
     }
 
     NukiLock::Config config;
-    result = this->nukiLock_.requestConfig(&config);
-    if (result == Nuki::CmdResult::Success) {
+    Nuki::CmdResult confReqResult = this->nukiLock_.requestConfig(&config);
+    char confReqResultAsString[30];
+    NukiLock::cmdResultToString(confReqResult, confReqResultAsString);
+
+    if (confReqResult == Nuki::CmdResult::Success) {
+        ESP_LOGD(TAG, "requestConfig has resulted in %s (%d)", confReqResultAsString, confReqResult);
         keypad_paired_ = config.hasKeypad;
     }
     else {
-        ESP_LOGE(TAG, "update_status: requestConfig failed (result %d)", result);
+        ESP_LOGE(TAG, "requestConfig has resulted in %s (%d)", confReqResultAsString, confReqResult);
         return;
     }
 }
