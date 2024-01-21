@@ -20,6 +20,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
     static const uint8_t BLE_CONNECT_TIMEOUT_SEC = 3;
     static const uint8_t BLE_CONNECT_TIMEOUT_RETRIES = 1;
     static const uint8_t MAX_ACTION_ATTEMPTS = 5;
+    static const uint32_t COMMANDS_COOLDOWN_MILLIS = 3000;
 
     public:
         const uint32_t deviceId_ = 2020002;
@@ -70,6 +71,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
 
         BleScanner::Scanner scanner_;
         NukiLock::KeyTurnerState retrievedKeyTurnerState_;
+        uint32_t lastCommandExecutedTime_ = 0;
         uint8_t actionAttempts_ = 0;
         NukiLock::LockAction lockAction_;
         bool status_update_;

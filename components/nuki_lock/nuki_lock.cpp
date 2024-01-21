@@ -187,37 +187,55 @@ void NukiLockComponent::update() {
         // Execute (all) actions first, then status updates, then config updates.
         // Only one command (action, status, or config) is executed per update() call.
         if (this->actionAttempts_ > 0) {
-            this->actionAttempts_--;
+            if (millis() - lastCommandExecutedTime_ < COMMANDS_COOLDOWN_MILLIS) {
+                // Let the lock terminate the previous command
+                ESP_LOGD(TAG, "Too early for action, skipping...");
+            } else {
+                this->actionAttempts_--;
 
-            NukiLock::LockAction currentLockAction = this->lockAction_;
-            char currentLockActionAsString[30];
-            NukiLock::lockactionToString(currentLockAction, currentLockActionAsString);
-            ESP_LOGD(TAG, "Executing lock action %s (%d)... (%d attempts left)", currentLockActionAsString, currentLockAction, this->actionAttempts_);
+                NukiLock::LockAction currentLockAction = this->lockAction_;
+                char currentLockActionAsString[30];
+                NukiLock::lockactionToString(currentLockAction, currentLockActionAsString);
+                ESP_LOGD(TAG, "Executing lock action %s (%d)... (%d attempts left)", currentLockActionAsString, currentLockAction, this->actionAttempts_);
 
-            bool isExecutionSuccessful = this->executeLockAction(currentLockAction);
+                bool isExecutionSuccessful = this->executeLockAction(currentLockAction);
 
-            if (isExecutionSuccessful) {
-                if(this->lockAction_ == currentLockAction) {
-                    // Stop action attempts only if no new action was received in the meantime.
-                    // Otherwise, the new action won't be executed.
-                    this->actionAttempts_ = 0;
+                if (isExecutionSuccessful) {
+                    if(this->lockAction_ == currentLockAction) {
+                        // Stop action attempts only if no new action was received in the meantime.
+                        // Otherwise, the new action won't be executed.
+                        this->actionAttempts_ = 0;
+                    }
+                } else if (this->actionAttempts_ == 0) {
+                    // Publish failed state only when no attempts are left
+                    this->is_connected_->publish_state(false);
+                    this->publish_state(lock::LOCK_STATE_NONE);
                 }
-            } else if (this->actionAttempts_ == 0) {
-                // Publish failed state only when no attempts are left
-                this->is_connected_->publish_state(false);
-                this->publish_state(lock::LOCK_STATE_NONE);
+
+                // Schedule a status update without waiting for the next advertisement for a faster feedback
+                this->status_update_ = true;
+                lastCommandExecutedTime_ = millis();
             }
 
-            // Schedule a status update without waiting for the next advertisement for a faster feedback
-            this->status_update_ = true;
-
         } else if (this->status_update_) {
-            ESP_LOGD(TAG, "Update present, getting data...");
-            this->update_status();
+            if (millis() - lastCommandExecutedTime_ < COMMANDS_COOLDOWN_MILLIS) {
+                // Let the lock terminate the previous command
+                ESP_LOGD(TAG, "Too early for status update, skipping...");
+            } else {
+                ESP_LOGD(TAG, "Update present, getting data...");
+                this->update_status();
+                lastCommandExecutedTime_ = millis();
+            }
 
         } else if (this->config_update_) {
-            ESP_LOGD(TAG, "Update present, getting config...");
-            this->update_config();
+            if (millis() - lastCommandExecutedTime_ < COMMANDS_COOLDOWN_MILLIS) {
+                // Let the lock terminate the previous command
+                ESP_LOGD(TAG, "Too early for config update, skipping...");
+            } else {
+                ESP_LOGD(TAG, "Update present, getting config...");
+                this->update_config();
+                lastCommandExecutedTime_ = millis();
+            }
         }
     }
     else if (! this->unpair_) {
