@@ -26,8 +26,8 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
         const uint32_t deviceId_ = 2020002;
         const std::string deviceName_ = "Nuki ESPHome";
 
-        explicit NukiLockComponent() : Lock(), unpair_(false), 
-                                       open_latch_(false), lock_n_go_(false), 
+        explicit NukiLockComponent() : Lock(), unpair_(false),
+                                       open_latch_(false), lock_n_go_(false),
                                        keypad_paired_(false),
                                        nukiLock_(deviceName_, deviceId_) {
                 this->traits.set_supports_open(true);
@@ -82,7 +82,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
 
     private:
         NukiLock::NukiLock nukiLock_;
-        
+
         void lock_n_go();
         void print_keypad_entries();
         void add_keypad_entry(std::string name, int code);

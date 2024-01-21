@@ -274,7 +274,7 @@ void NukiLockComponent::control(const lock::LockCall &call) {
 
     lock::LockState state = *call.get_state();
 
-    switch(state){
+    switch(state) {
         case lock::LOCK_STATE_LOCKED:
             this->actionAttempts_ = MAX_ACTION_ATTEMPTS;
             this->lockAction_ = NukiLock::LockAction::Lock;
@@ -284,11 +284,11 @@ void NukiLockComponent::control(const lock::LockCall &call) {
             this->actionAttempts_ = MAX_ACTION_ATTEMPTS;
             this->lockAction_ = NukiLock::LockAction::Unlock;
 
-            if(this->open_latch_){
+            if(this->open_latch_) {
                 this->lockAction_ = NukiLock::LockAction::Unlatch;
             }
 
-            if(this->lock_n_go_){
+            if(this->lock_n_go_) {
                 this->lockAction_ = NukiLock::LockAction::LockNgo;
             }
 
@@ -307,7 +307,7 @@ void NukiLockComponent::control(const lock::LockCall &call) {
     ESP_LOGI(TAG, "New lock action received: %s (%d)", lockActionAsString, this->lockAction_);
 }
 
-void NukiLockComponent::lock_n_go(){
+void NukiLockComponent::lock_n_go() {
     this->lock_n_go_ = true;
     this->unlock();
 }
@@ -346,7 +346,7 @@ void NukiLockComponent::add_keypad_entry(std::string name, int code) {
         ESP_LOGE(TAG, "add_keypad_entry invalid parameters");
         return;
     }
-        
+
     NukiLock::NewKeypadEntry entry;
     memset(&entry, 0, sizeof(entry));
     size_t nameLen = name.length();
@@ -393,7 +393,7 @@ void NukiLockComponent::delete_keypad_entry(int id) {
         ESP_LOGE(TAG, "keypad is not paired to Nuki");
         return;
     }
-        
+
     if (! valid_keypad_id(id)) {
         ESP_LOGE(TAG, "delete_keypad_entry invalid parameters");
         return;
@@ -416,7 +416,7 @@ void NukiLockComponent::print_keypad_entries() {
 
     Nuki::CmdResult result = this->nukiLock_.retrieveKeypadEntries(0, 0xffff);
     if(result == Nuki::CmdResult::Success) {
-        ESP_LOGI(TAG, "retrieveKeypadEntries sucess"); 
+        ESP_LOGI(TAG, "retrieveKeypadEntries sucess");
         std::list<NukiLock::KeypadEntry> entries;
         this->nukiLock_.getKeypadEntries(&entries);
 
@@ -435,7 +435,7 @@ void NukiLockComponent::print_keypad_entries() {
 }
 
 
-void NukiLockComponent::dump_config(){
+void NukiLockComponent::dump_config() {
     LOG_LOCK(TAG, "Nuki Lock", this);
     LOG_BINARY_SENSOR(TAG, "Is Connected", this->is_connected_);
     LOG_BINARY_SENSOR(TAG, "Is Paired", this->is_paired_);
