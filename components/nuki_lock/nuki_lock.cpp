@@ -202,61 +202,64 @@ void NukiLockComponent::update() {
     // Terminate stale Bluetooth connections
     this->nukiLock_.updateConnectionState();
 
+    if (millis() - lastCommandExecutedTime_ < command_cooldown_millis) {
+        // Give the lock time to terminate the previous command
+        uint32_t millisSinceLastExecution = millis() - lastCommandExecutedTime_;
+        uint32_t millisLeft =
+            (millisSinceLastExecution < command_cooldown_millis)
+            ? command_cooldown_millis - millisSinceLastExecution
+            : 1;
+        ESP_LOGV(TAG, "Cooldown period, %dms left", millisLeft);
+        return;
+    }
+
     if (this->nukiLock_.isPairedWithLock()) {
         this->is_paired_->publish_state(true);
 
         // Execute (all) actions first, then status updates, then config updates.
         // Only one command (action, status, or config) is executed per update() call.
         if (this->actionAttempts_ > 0) {
-            if (millis() - lastCommandExecutedTime_ < ACTIONS_COOLDOWN_MILLIS) {
-                // Let the lock terminate the previous command
-                ESP_LOGD(TAG, "Too early for action, skipping...");
-            } else {
-                this->actionAttempts_--;
+            this->actionAttempts_--;
 
-                NukiLock::LockAction currentLockAction = this->lockAction_;
-                char currentLockActionAsString[30];
-                NukiLock::lockactionToString(currentLockAction, currentLockActionAsString);
-                ESP_LOGD(TAG, "Executing lock action %s (%d)... (%d attempts left)", currentLockActionAsString, currentLockAction, this->actionAttempts_);
+            NukiLock::LockAction currentLockAction = this->lockAction_;
+            char currentLockActionAsString[30];
+            NukiLock::lockactionToString(currentLockAction, currentLockActionAsString);
+            ESP_LOGD(TAG, "Executing lock action %s (%d)... (%d attempts left)", currentLockActionAsString, currentLockAction, this->actionAttempts_);
 
-                bool isExecutionSuccessful = this->executeLockAction(currentLockAction);
+            bool isExecutionSuccessful = this->executeLockAction(currentLockAction);
 
-                if (isExecutionSuccessful) {
-                    if(this->lockAction_ == currentLockAction) {
-                        // Stop action attempts only if no new action was received in the meantime.
-                        // Otherwise, the new action won't be executed.
-                        this->actionAttempts_ = 0;
-                    }
-                } else if (this->actionAttempts_ == 0) {
-                    // Publish failed state only when no attempts are left
-                    this->is_connected_->publish_state(false);
-                    this->publish_state(lock::LOCK_STATE_NONE);
+            if (isExecutionSuccessful) {
+                if(this->lockAction_ == currentLockAction) {
+                    // Stop action attempts only if no new action was received in the meantime.
+                    // Otherwise, the new action won't be executed.
+                    this->actionAttempts_ = 0;
                 }
-
-                // Schedule a status update without waiting for the next advertisement for a faster feedback
-                this->status_update_ = true;
-                lastCommandExecutedTime_ = millis();
+            } else if (this->actionAttempts_ == 0) {
+                // Publish failed state only when no attempts are left
+                this->is_connected_->publish_state(false);
+                this->publish_state(lock::LOCK_STATE_NONE);
             }
+
+            // Schedule a status update without waiting for the next advertisement for a faster feedback
+            this->status_update_ = true;
+
+            // Give the lock extra time when successful in order to account for time to turn the key
+            command_cooldown_millis = isExecutionSuccessful ? COOLDOWN_COMMANDS_EXTENDED_MILLIS : COOLDOWN_COMMANDS_MILLIS;
+            lastCommandExecutedTime_ = millis();
 
         } else if (this->status_update_) {
-            if (millis() - lastCommandExecutedTime_ < UPDATES_COOLDOWN_MILLIS) {
-                // Let the lock terminate the previous command
-                ESP_LOGD(TAG, "Too early for status update, skipping...");
-            } else {
-                ESP_LOGD(TAG, "Update present, getting data...");
-                this->update_status();
-                lastCommandExecutedTime_ = millis();
-            }
+            ESP_LOGD(TAG, "Update present, getting data...");
+            this->update_status();
+
+            command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
+            lastCommandExecutedTime_ = millis();
 
         } else if (this->config_update_) {
-            if (millis() - lastCommandExecutedTime_ < UPDATES_COOLDOWN_MILLIS) {
-                // Let the lock terminate the previous command
-                ESP_LOGD(TAG, "Too early for config update, skipping...");
-            } else {
-                ESP_LOGD(TAG, "Update present, getting config...");
-                this->update_config();
-                lastCommandExecutedTime_ = millis();
-            }
+            ESP_LOGD(TAG, "Update present, getting config...");
+            this->update_config();
+
+            command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
+            lastCommandExecutedTime_ = millis();
         }
     }
     else if (! this->unpair_) {
