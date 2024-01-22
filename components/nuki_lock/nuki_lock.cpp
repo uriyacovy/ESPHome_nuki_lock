@@ -156,7 +156,8 @@ void NukiLockComponent::setup() {
     this->traits.set_supported_states(std::set<lock::LockState> {lock::LOCK_STATE_NONE, lock::LOCK_STATE_LOCKED,
                                                                  lock::LOCK_STATE_UNLOCKED, lock::LOCK_STATE_JAMMED,
                                                                  lock::LOCK_STATE_LOCKING, lock::LOCK_STATE_UNLOCKING});
-    this->scanner_.initialize();
+    this->scanner_.initialize("ESPHomeNuki");
+    this->scanner_.setScanDuration(10);
     this->nukiLock_.registerBleScanner(&this->scanner_);
     this->nukiLock_.initialize();
     this->nukiLock_.setConnectTimeout(BLE_CONNECT_TIMEOUT_SEC);
@@ -190,6 +191,7 @@ void NukiLockComponent::update() {
 
     // Check for new advertisements
     this->scanner_.update();
+    delay(20);
 
     if (this->nukiLock_.isPairedWithLock()) {
         this->is_paired_->publish_state(true);
