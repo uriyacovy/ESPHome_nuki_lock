@@ -57,6 +57,7 @@ void NukiLockComponent::update_status()
     NukiLock::cmdResultToString(cmdResult, cmdResultAsString);
 
     if (cmdResult == Nuki::CmdResult::Success) {
+        this->statusUpdateConsecutiveErrors_ = 0;
         NukiLock::LockState currentLockState = this->retrievedKeyTurnerState_.lockState;
         char currentLockStateAsString[30];
         NukiLock::lockstateToString(currentLockState, currentLockStateAsString);
@@ -92,9 +93,14 @@ void NukiLockComponent::update_status()
         }
     } else {
         ESP_LOGE(TAG, "requestKeyTurnerState failed with error %s (%d)", cmdResultAsString, cmdResult);
-        this->is_connected_->publish_state(false);
-        this->publish_state(lock::LOCK_STATE_NONE);
         this->status_update_ = true;
+
+        this->statusUpdateConsecutiveErrors_++;
+        if (this->statusUpdateConsecutiveErrors_ > MAX_TOLERATED_UPDATES_ERRORS) {
+            // Publish failed state only when having too many consecutive errors
+            this->is_connected_->publish_state(false);
+            this->publish_state(lock::LOCK_STATE_NONE);
+        }
     }
 }
 
