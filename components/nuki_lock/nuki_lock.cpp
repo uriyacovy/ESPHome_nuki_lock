@@ -200,7 +200,7 @@ void NukiLockComponent::update() {
             // Terminate stale Bluetooth connections
             this->nukiLock_.updateConnectionState();
 
-            if (millis() - lastCommandExecutedTime_ < COMMANDS_COOLDOWN_MILLIS) {
+            if (millis() - lastCommandExecutedTime_ < ACTIONS_COOLDOWN_MILLIS) {
                 // Let the lock terminate the previous command
                 ESP_LOGD(TAG, "Too early for action, skipping...");
             } else {
@@ -234,7 +234,7 @@ void NukiLockComponent::update() {
             // Terminate stale Bluetooth connections
             this->nukiLock_.updateConnectionState();
 
-            if (millis() - lastCommandExecutedTime_ < COMMANDS_COOLDOWN_MILLIS) {
+            if (millis() - lastCommandExecutedTime_ < UPDATES_COOLDOWN_MILLIS) {
                 // Let the lock terminate the previous command
                 ESP_LOGD(TAG, "Too early for status update, skipping...");
             } else {
@@ -247,7 +247,7 @@ void NukiLockComponent::update() {
             // Terminate stale Bluetooth connections
             this->nukiLock_.updateConnectionState();
 
-            if (millis() - lastCommandExecutedTime_ < COMMANDS_COOLDOWN_MILLIS) {
+            if (millis() - lastCommandExecutedTime_ < UPDATES_COOLDOWN_MILLIS) {
                 // Let the lock terminate the previous command
                 ESP_LOGD(TAG, "Too early for config update, skipping...");
             } else {

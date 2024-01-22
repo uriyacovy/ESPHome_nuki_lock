@@ -20,7 +20,8 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
     static const uint8_t BLE_CONNECT_TIMEOUT_SEC = 3;
     static const uint8_t BLE_CONNECT_TIMEOUT_RETRIES = 1;
     static const uint8_t MAX_ACTION_ATTEMPTS = 5;
-    static const uint32_t COMMANDS_COOLDOWN_MILLIS = 3000;
+    static const uint32_t ACTIONS_COOLDOWN_MILLIS = 3000;
+    static const uint32_t UPDATES_COOLDOWN_MILLIS = 1000;
 
     public:
         const uint32_t deviceId_ = 2020002;
