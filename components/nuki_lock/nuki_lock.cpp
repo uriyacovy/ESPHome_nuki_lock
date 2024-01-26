@@ -111,8 +111,6 @@ void NukiLockComponent::setup() {
     }
 
     this->publish_state(lock::LOCK_STATE_NONE);
-
-    register_service(&NukiLockComponent::lock_n_go, "lock_n_go");
 }
 
 void NukiLockComponent::update() {
