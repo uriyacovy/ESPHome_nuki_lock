@@ -5,7 +5,6 @@
 #include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/text_sensor/text_sensor.h"
-#include "esphome/components/api/custom_api_device.h"
 
 #include "NukiLock.h"
 #include "NukiConstants.h"
@@ -28,7 +27,7 @@ class Handler: public Nuki::SmartlockEventHandler {
         bool *notified_p_;
 };
 
-class NukiLockComponent : public lock::Lock, public PollingComponent, public api::CustomAPIDevice {
+class NukiLockComponent : public lock::Lock, public PollingComponent {
     static const uint8_t BLE_CONNECT_TIMEOUT_SEC = 3;
     static const uint8_t BLE_CONNECT_TIMEOUT_RETRIES = 1;
 
