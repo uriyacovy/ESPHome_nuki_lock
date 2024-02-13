@@ -19,13 +19,17 @@ static const char *TAG = "nukilock.lock";
 class NukiLockComponent : public lock::Lock, public PollingComponent, public api::CustomAPIDevice, public Nuki::SmartlockEventHandler {
     static const uint8_t BLE_CONNECT_TIMEOUT_SEC = 3;
     static const uint8_t BLE_CONNECT_TIMEOUT_RETRIES = 1;
+    static const uint8_t MAX_ACTION_ATTEMPTS = 5;
+    static const uint8_t MAX_TOLERATED_UPDATES_ERRORS = 5;
+    static const uint32_t COOLDOWN_COMMANDS_MILLIS = 1000;
+    static const uint32_t COOLDOWN_COMMANDS_EXTENDED_MILLIS = 3000;
 
     public:
         const uint32_t deviceId_ = 2020002;
         const std::string deviceName_ = "Nuki ESPHome";
 
-        explicit NukiLockComponent() : Lock(), unpair_(false), 
-                                       open_latch_(false), lock_n_go_(false), 
+        explicit NukiLockComponent() : Lock(), unpair_(false),
+                                       open_latch_(false), lock_n_go_(false),
                                        keypad_paired_(false),
                                        nukiLock_(deviceName_, deviceId_) {
                 this->traits.set_supports_open(true);
@@ -56,6 +60,8 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
     protected:
         void control(const lock::LockCall &call) override;
         void update_status();
+        void update_config();
+        bool executeLockAction(NukiLock::LockAction lockAction);
         void open_latch() override { this->open_latch_ = true; unlock();}
 
         binary_sensor::BinarySensor *is_connected_{nullptr};
@@ -67,14 +73,20 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
 
         BleScanner::Scanner scanner_;
         NukiLock::KeyTurnerState retrievedKeyTurnerState_;
+        uint32_t lastCommandExecutedTime_ = 0;
+        uint32_t command_cooldown_millis = 0;
+        uint8_t actionAttempts_ = 0;
+        uint32_t statusUpdateConsecutiveErrors_ = 0;
+        NukiLock::LockAction lockAction_;
         bool status_update_;
+        bool config_update_;
         bool unpair_;
         bool open_latch_;
         bool lock_n_go_;
 
     private:
         NukiLock::NukiLock nukiLock_;
-        
+
         void lock_n_go();
         void print_keypad_entries();
         void add_keypad_entry(std::string name, int code);

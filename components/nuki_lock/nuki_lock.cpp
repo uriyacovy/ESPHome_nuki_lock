@@ -52,15 +52,26 @@ std::string NukiLockComponent::nuki_doorsensor_to_string(Nuki::DoorSensorState n
 void NukiLockComponent::update_status()
 {
     this->status_update_ = false;
-    Nuki::CmdResult result = this->nukiLock_.requestKeyTurnerState(&(this->retrievedKeyTurnerState_));
+    Nuki::CmdResult cmdResult = this->nukiLock_.requestKeyTurnerState(&(this->retrievedKeyTurnerState_));
+    char cmdResultAsString[30];
+    NukiLock::cmdResultToString(cmdResult, cmdResultAsString);
 
-    if (result == Nuki::CmdResult::Success) {
-        ESP_LOGI(TAG, "Bat state: %#x, Bat crit: %d, Bat perc:%d lock state: %d %d:%d:%d",
+    if (cmdResult == Nuki::CmdResult::Success) {
+        this->statusUpdateConsecutiveErrors_ = 0;
+        NukiLock::LockState currentLockState = this->retrievedKeyTurnerState_.lockState;
+        char currentLockStateAsString[30];
+        NukiLock::lockstateToString(currentLockState, currentLockStateAsString);
+
+        ESP_LOGI(TAG, "Bat state: %#x, Bat crit: %d, Bat perc:%d lock state: %s (%d) %d:%d:%d",
           this->retrievedKeyTurnerState_.criticalBatteryState,
-          this->nukiLock_.isBatteryCritical(), this->nukiLock_.getBatteryPerc(), this->retrievedKeyTurnerState_.lockState,
+          this->nukiLock_.isBatteryCritical(),
+          this->nukiLock_.getBatteryPerc(),
+          currentLockStateAsString,
+          currentLockState,
           this->retrievedKeyTurnerState_.currentTimeHour,
           this->retrievedKeyTurnerState_.currentTimeMinute,
           this->retrievedKeyTurnerState_.currentTimeSecond);
+
         this->publish_state(this->nuki_to_lock_state(this->retrievedKeyTurnerState_.lockState));
         this->is_connected_->publish_state(true);
         if (this->battery_critical_ != nullptr)
@@ -71,21 +82,76 @@ void NukiLockComponent::update_status()
             this->door_sensor_->publish_state(this->nuki_doorsensor_to_binary(this->retrievedKeyTurnerState_.doorSensorState));
         if (this->door_sensor_state_ != nullptr)
             this->door_sensor_state_->publish_state(this->nuki_doorsensor_to_string(this->retrievedKeyTurnerState_.doorSensorState));
+
+        if (
+            this->retrievedKeyTurnerState_.lockState == NukiLock::LockState::Locking
+            || this->retrievedKeyTurnerState_.lockState == NukiLock::LockState::Unlocking
+        ) {
+            // Schedule a status update without waiting for the next advertisement because the lock
+            // is in a transition state. This will speed up the feedback.
+            this->status_update_ = true;
+        }
     } else {
-        ESP_LOGE(TAG, "requestKeyTurnerState failed: %d", result);
-        this->is_connected_->publish_state(false);
-        this->publish_state(lock::LOCK_STATE_NONE);
+        ESP_LOGE(TAG, "requestKeyTurnerState failed with error %s (%d)", cmdResultAsString, cmdResult);
         this->status_update_ = true;
+
+        this->statusUpdateConsecutiveErrors_++;
+        if (this->statusUpdateConsecutiveErrors_ > MAX_TOLERATED_UPDATES_ERRORS) {
+            // Publish failed state only when having too many consecutive errors
+            this->is_connected_->publish_state(false);
+            this->publish_state(lock::LOCK_STATE_NONE);
+        }
     }
+}
+
+void NukiLockComponent::update_config() {
+    this->config_update_ = false;
 
     NukiLock::Config config;
-    result = this->nukiLock_.requestConfig(&config);
-    if (result == Nuki::CmdResult::Success) {
+    Nuki::CmdResult confReqResult = this->nukiLock_.requestConfig(&config);
+    char confReqResultAsString[30];
+    NukiLock::cmdResultToString(confReqResult, confReqResultAsString);
+
+    if (confReqResult == Nuki::CmdResult::Success) {
+        ESP_LOGD(TAG, "requestConfig has resulted in %s (%d)", confReqResultAsString, confReqResult);
         keypad_paired_ = config.hasKeypad;
+
+    } else {
+        ESP_LOGE(TAG, "requestConfig has resulted in %s (%d)", confReqResultAsString, confReqResult);
+        this->config_update_ = true;
     }
-    else {
-        ESP_LOGE(TAG, "update_status: requestConfig failed (result %d)", result);
-        return;
+}
+
+bool NukiLockComponent::executeLockAction(NukiLock::LockAction lockAction) {
+    // Publish the assumed transitional lock state
+    switch (lockAction) {
+        case NukiLock::LockAction::Unlatch:
+        case NukiLock::LockAction::Unlock: {
+            this->publish_state(lock::LOCK_STATE_UNLOCKING);
+            break;
+        }
+        case NukiLock::LockAction::FullLock:
+        case NukiLock::LockAction::Lock:
+        case NukiLock::LockAction::LockNgo: {
+            this->publish_state(lock::LOCK_STATE_LOCKING);
+            break;
+        }
+    }
+
+    // Execute the action
+    Nuki::CmdResult result = this->nukiLock_.lockAction(lockAction);
+
+    char lockActionAsString[30];
+    NukiLock::lockactionToString(lockAction, lockActionAsString);
+    char resultAsString[30];
+    NukiLock::cmdResultToString(result, resultAsString);
+
+    if (result == Nuki::CmdResult::Success) {
+        ESP_LOGI(TAG, "lockAction %s (%d) has resulted in %s (%d)", lockActionAsString, lockAction, resultAsString, result);
+        return true;
+    } else {
+        ESP_LOGE(TAG, "lockAction %s (%d) has resulted in %s (%d)", lockActionAsString, lockAction, resultAsString, result);
+        return false;
     }
 }
 
@@ -96,7 +162,8 @@ void NukiLockComponent::setup() {
     this->traits.set_supported_states(std::set<lock::LockState> {lock::LOCK_STATE_NONE, lock::LOCK_STATE_LOCKED,
                                                                  lock::LOCK_STATE_UNLOCKED, lock::LOCK_STATE_JAMMED,
                                                                  lock::LOCK_STATE_LOCKING, lock::LOCK_STATE_UNLOCKING});
-    this->scanner_.initialize();
+    this->scanner_.initialize("ESPHomeNuki");
+    this->scanner_.setScanDuration(10);
     this->nukiLock_.registerBleScanner(&this->scanner_);
     this->nukiLock_.initialize();
     this->nukiLock_.setConnectTimeout(BLE_CONNECT_TIMEOUT_SEC);
@@ -128,12 +195,71 @@ void NukiLockComponent::setup() {
 
 void NukiLockComponent::update() {
 
+    // Check for new advertisements
     this->scanner_.update();
+    delay(20);
+
+    // Terminate stale Bluetooth connections
+    this->nukiLock_.updateConnectionState();
+
+    if (millis() - lastCommandExecutedTime_ < command_cooldown_millis) {
+        // Give the lock time to terminate the previous command
+        uint32_t millisSinceLastExecution = millis() - lastCommandExecutedTime_;
+        uint32_t millisLeft =
+            (millisSinceLastExecution < command_cooldown_millis)
+            ? command_cooldown_millis - millisSinceLastExecution
+            : 1;
+        ESP_LOGV(TAG, "Cooldown period, %dms left", millisLeft);
+        return;
+    }
 
     if (this->nukiLock_.isPairedWithLock()) {
         this->is_paired_->publish_state(true);
-        if (this->status_update_) {
+
+        // Execute (all) actions first, then status updates, then config updates.
+        // Only one command (action, status, or config) is executed per update() call.
+        if (this->actionAttempts_ > 0) {
+            this->actionAttempts_--;
+
+            NukiLock::LockAction currentLockAction = this->lockAction_;
+            char currentLockActionAsString[30];
+            NukiLock::lockactionToString(currentLockAction, currentLockActionAsString);
+            ESP_LOGD(TAG, "Executing lock action %s (%d)... (%d attempts left)", currentLockActionAsString, currentLockAction, this->actionAttempts_);
+
+            bool isExecutionSuccessful = this->executeLockAction(currentLockAction);
+
+            if (isExecutionSuccessful) {
+                if(this->lockAction_ == currentLockAction) {
+                    // Stop action attempts only if no new action was received in the meantime.
+                    // Otherwise, the new action won't be executed.
+                    this->actionAttempts_ = 0;
+                }
+            } else if (this->actionAttempts_ == 0) {
+                // Publish failed state only when no attempts are left
+                this->is_connected_->publish_state(false);
+                this->publish_state(lock::LOCK_STATE_NONE);
+            }
+
+            // Schedule a status update without waiting for the next advertisement for a faster feedback
+            this->status_update_ = true;
+
+            // Give the lock extra time when successful in order to account for time to turn the key
+            command_cooldown_millis = isExecutionSuccessful ? COOLDOWN_COMMANDS_EXTENDED_MILLIS : COOLDOWN_COMMANDS_MILLIS;
+            lastCommandExecutedTime_ = millis();
+
+        } else if (this->status_update_) {
+            ESP_LOGD(TAG, "Update present, getting data...");
             this->update_status();
+
+            command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
+            lastCommandExecutedTime_ = millis();
+
+        } else if (this->config_update_) {
+            ESP_LOGD(TAG, "Update present, getting config...");
+            this->update_config();
+
+            command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
+            lastCommandExecutedTime_ = millis();
         }
     }
     else if (! this->unpair_) {
@@ -146,33 +272,30 @@ void NukiLockComponent::update() {
     }
 }
 
+/**
+ * @brief Add a new lock action that will be executed on the next update() call.
+ */
 void NukiLockComponent::control(const lock::LockCall &call) {
-    if (!this->nukiLock_.isPairedWithLock()) {
-        ESP_LOGE(TAG, "Lock/Unlock action called for unpaired nuki");
-        return;
-    }
 
-    auto state = *call.get_state();
-    Nuki::CmdResult result;
+    lock::LockState state = *call.get_state();
 
-    switch(state){
+    switch(state) {
         case lock::LOCK_STATE_LOCKED:
-            result = this->nukiLock_.lockAction(NukiLock::LockAction::Lock);
+            this->actionAttempts_ = MAX_ACTION_ATTEMPTS;
+            this->lockAction_ = NukiLock::LockAction::Lock;
             break;
 
         case lock::LOCK_STATE_UNLOCKED:{
-            NukiLock::LockAction action = NukiLock::LockAction::Unlock;
+            this->actionAttempts_ = MAX_ACTION_ATTEMPTS;
+            this->lockAction_ = NukiLock::LockAction::Unlock;
 
-            if(this->open_latch_){
-                action = NukiLock::LockAction::Unlatch;
+            if(this->open_latch_) {
+                this->lockAction_ = NukiLock::LockAction::Unlatch;
             }
 
-            if(this->lock_n_go_){
-                action = NukiLock::LockAction::LockNgo;
-                state = lock::LockState::LOCK_STATE_LOCKING;
+            if(this->lock_n_go_) {
+                this->lockAction_ = NukiLock::LockAction::LockNgo;
             }
-
-            result = this->nukiLock_.lockAction(action);
 
             this->open_latch_ = false;
             this->lock_n_go_ = false;
@@ -184,18 +307,12 @@ void NukiLockComponent::control(const lock::LockCall &call) {
             return;
     }
 
-    if (result == Nuki::CmdResult::Success) {
-        this->publish_state(state);
-    }
-    else {
-        ESP_LOGE(TAG, "lockAction failed: %d", result);
-        this->is_connected_->publish_state(false);
-        this->publish_state(lock::LOCK_STATE_NONE);
-        this->status_update_ = true;
-    }
+    char lockActionAsString[30];
+    NukiLock::lockactionToString(this->lockAction_, lockActionAsString);
+    ESP_LOGI(TAG, "New lock action received: %s (%d)", lockActionAsString, this->lockAction_);
 }
 
-void NukiLockComponent::lock_n_go(){
+void NukiLockComponent::lock_n_go() {
     this->lock_n_go_ = true;
     this->unlock();
 }
@@ -234,7 +351,7 @@ void NukiLockComponent::add_keypad_entry(std::string name, int code) {
         ESP_LOGE(TAG, "add_keypad_entry invalid parameters");
         return;
     }
-        
+
     NukiLock::NewKeypadEntry entry;
     memset(&entry, 0, sizeof(entry));
     size_t nameLen = name.length();
@@ -281,7 +398,7 @@ void NukiLockComponent::delete_keypad_entry(int id) {
         ESP_LOGE(TAG, "keypad is not paired to Nuki");
         return;
     }
-        
+
     if (! valid_keypad_id(id)) {
         ESP_LOGE(TAG, "delete_keypad_entry invalid parameters");
         return;
@@ -304,7 +421,7 @@ void NukiLockComponent::print_keypad_entries() {
 
     Nuki::CmdResult result = this->nukiLock_.retrieveKeypadEntries(0, 0xffff);
     if(result == Nuki::CmdResult::Success) {
-        ESP_LOGI(TAG, "retrieveKeypadEntries sucess"); 
+        ESP_LOGI(TAG, "retrieveKeypadEntries sucess");
         std::list<NukiLock::KeypadEntry> entries;
         this->nukiLock_.getKeypadEntries(&entries);
 
@@ -323,7 +440,7 @@ void NukiLockComponent::print_keypad_entries() {
 }
 
 
-void NukiLockComponent::dump_config(){
+void NukiLockComponent::dump_config() {
     LOG_LOCK(TAG, "Nuki Lock", this);
     LOG_BINARY_SENSOR(TAG, "Is Connected", this->is_connected_);
     LOG_BINARY_SENSOR(TAG, "Is Paired", this->is_paired_);
@@ -336,6 +453,7 @@ void NukiLockComponent::dump_config(){
 
 void NukiLockComponent::notify(Nuki::EventType eventType) {
     this->status_update_ = true;
+    this->config_update_ = true;
     ESP_LOGI(TAG, "event notified %d", eventType);
 }
 
