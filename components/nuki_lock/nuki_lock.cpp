@@ -233,10 +233,11 @@ namespace esphome
             // Terminate stale Bluetooth connections
             this->nukiLock_.updateConnectionState();
 
-            if(this->pairing_mode_)
+            if(this->pairing_mode_ && this->pairing_mode_timer_ != 0)
             {
                 if(millis() > this->pairing_mode_timer_)
                 {
+                    ESP_LOGV(TAG, "Pairing timed out, turning off pairing mode");
                     this->set_pairing_mode(false);
                 }
             }
@@ -585,37 +586,29 @@ namespace esphome
         void NukiLockPairingModeSwitch::write_state(bool state)
         {
             this->parent_->set_pairing_mode(state);
-
-            if(state)
-            {
-                this->parent_->pairing_mode_on_callback_.call();
-            }
-            else
-            {
-                this->parent_->pairing_mode_off_callback_.call();
-            }
         }
 
         void NukiLockComponent::set_pairing_mode(bool enabled)
         {
-            uint16_t timer_minutes = 5;
-
             this->pairing_mode_ = enabled;
+            this->pairing_mode_switch_->publish_state(this->pairing_mode_);
 
             if(enabled)
             {
-                ESP_LOGI(TAG, "Pairing Mode active for %d minutes", timer_minutes);
+                ESP_LOGI(TAG, "Pairing Mode turned on for %d seconds", this->pairing_timeout_);
+                this->pairing_mode_on_callback_.call();
+
                 ESP_LOGI(TAG, "Waiting for Nuki to enter pairing mode...");
 
-                // Turn on for 5 Minutes
-                this->pairing_mode_timer_ = millis() + (timer_minutes * 60 * 1000);
+                // Turn on for ... seconds
+                this->pairing_mode_timer_ = millis() + (this->pairing_timeout_ * 1000);
             }
             else
             {
-                ESP_LOGI(TAG, "Pairing Mode inactive");
+                ESP_LOGI(TAG, "Pairing Mode turned off");
+                this->pairing_mode_timer_ = 0;
+                this->pairing_mode_off_callback_.call();
             }
-
-            this->pairing_mode_switch_->publish_state(this->pairing_mode_);
         }
 
         void NukiLockComponent::add_pairing_mode_on_callback(std::function<void()> &&callback)

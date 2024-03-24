@@ -49,6 +49,8 @@ namespace esphome {
                 void set_door_sensor_state(text_sensor::TextSensor *door_sensor_state) { this->door_sensor_state_ = door_sensor_state; }
                 void set_unpair_button(button::Button *unpair_button) { this->unpair_button_ = unpair_button; }
                 void set_pairing_mode_switch(switch_::Switch *pairing_mode_switch) { this->pairing_mode_switch_ = pairing_mode_switch; }
+                
+                void set_pairing_timeout(uint16_t pairing_timeout) { this->pairing_timeout_ = pairing_timeout; }
 
                 void add_pairing_mode_on_callback(std::function<void()> &&callback);
                 void add_pairing_mode_off_callback(std::function<void()> &&callback);
@@ -101,6 +103,8 @@ namespace esphome {
                 bool config_update_;
                 bool open_latch_;
                 bool lock_n_go_;
+
+                uint16_t pairing_timeout_ = 0;
 
                 bool pairing_mode_ = false;
                 uint16_t pairing_mode_timer_ = 0;

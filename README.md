@@ -1,5 +1,6 @@
 # Nuki Lock for ESPHome (ESP32)
-[![Build Component](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml/badge.svg)](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/AzonInc/ESPHome_nuki_lock/build.yaml?branch=main&style=for-the-badge&logo=buddy&logoColor=ffffff&label=Build)
+<hr>
 
 This module builds an ESPHome lock platform for Nuki Smartlock (nuki_lock) that creates 9 new entities in Home Assistant:
 - Lock
