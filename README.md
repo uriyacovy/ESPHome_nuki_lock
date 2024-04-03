@@ -82,9 +82,10 @@ lock:
       - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
 ```
 
-After running ESPHome (esphome run <yamlfile.yaml>), the module will actively try to pair to Nuki.
-To set Nuki for paring mode, press the button for 5 seconds until the led turns on.
-Once Nuki is paired, the new ESPHome entities will get the updated state.
+After running ESPHome (esphome run <yamlfile.yaml>), you have to activate the pairing mode of the ESPHome Component to pair your Nuki.
+You can use the `Pairing Mode` Switch Entity or use the `nuki_lock.set_pairing_mode` Automation Action to do so.
+To set Nuki for paring mode, press the Button on your Smart Lock for 5 seconds until the led turns on.
+Once Nuki is paired, the new ESPHome entities will get the updated state and pairing mode is turned off.
 
 ## Supported Services ##
 ### Unlatch ###
