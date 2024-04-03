@@ -1,4 +1,5 @@
 #include "esphome/core/log.h"
+#include "esphome/core/application.h"
 #include "nuki_lock.h"
 
 namespace esphome
@@ -180,8 +181,11 @@ namespace esphome
 
         void NukiLockComponent::setup()
         {
-
             ESP_LOGI(TAG, "Starting NUKI Lock...");
+
+            // Increase Watchdog Timeout
+            // Fixes Pairing Crash
+            esp_task_wdt_init(15, false);
 
             this->traits.set_supported_states(
                 std::set<lock::LockState>
@@ -203,6 +207,19 @@ namespace esphome
             this->nukiLock_.setConnectTimeout(BLE_CONNECT_TIMEOUT_SEC);
             this->nukiLock_.setConnectRetries(BLE_CONNECT_TIMEOUT_RETRIES);
 
+            if(this->security_pin_ > 0)
+            {
+                bool result = this->nukiLock_.saveSecurityPincode(this->security_pin_);
+                if (result)
+                {
+                    ESP_LOGI(TAG, "Set pincode done");
+                }
+                else
+                {
+                    ESP_LOGE(TAG, "Set pincode failed!");
+                }
+            }
+            
             if (this->nukiLock_.isPairedWithLock())
             {
                 this->status_update_ = true;
@@ -228,6 +245,7 @@ namespace esphome
         {
             // Check for new advertisements
             this->scanner_.update();
+            App.feed_wdt();
             delay(20);
 
             // Terminate stale Bluetooth connections
@@ -312,6 +330,9 @@ namespace esphome
             }
             else
             {
+                this->is_paired_->publish_state(false);
+                this->is_connected_->publish_state(false);
+
                 // Pairing Mode is active
                 if(this->pairing_mode_)
                 {
@@ -563,8 +584,8 @@ namespace esphome
         {
             if(this->nukiLock_.isPairedWithLock())
             {
-                ESP_LOGW(TAG, "Unpair requested");
                 this->nukiLock_.unPairNuki();
+                ESP_LOGI(TAG, "Unpaired Nuki! Turn on Pairing Mode to pair a new Nuki.");
             }
             else
             {
@@ -601,7 +622,8 @@ namespace esphome
                 ESP_LOGI(TAG, "Waiting for Nuki to enter pairing mode...");
 
                 // Turn on for ... seconds
-                this->pairing_mode_timer_ = millis() + (this->pairing_timeout_ * 1000);
+                uint32_t now_millis = millis();
+                this->pairing_mode_timer_ = now_millis + (this->pairing_timeout_ * 1000);
             }
             else
             {

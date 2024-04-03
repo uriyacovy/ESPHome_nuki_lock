@@ -42,30 +42,42 @@ lock:
   # Required:
   - platform: nuki_lock
     name: Nuki Lock
+
     is_connected:
       name: "Nuki Connected"
+
     is_paired:
       name: "Nuki Paired"
 
   # Optional:
     battery_critical:
       name: "Nuki Battery Critical"
+
     battery_level:
       name: "Nuki Battery Level"
+
     door_sensor:
       name: "Nuki Door Sensor"
+
     door_sensor_state:
       name: "Nuki Door Sensor State"
+
     unpair:
       name: "Nuki Unpair"
+
     pairing_mode:
       name: "Nuki Pairing Mode"
+
+  # Optional: Settings
+    security_pin: 1234
 
   # Optional: Callbacks
     on_pairing_mode_on_action:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
+
     on_pairing_mode_off_action:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned off");
+
     on_paired_action:
       - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
 ```
@@ -111,8 +123,8 @@ The module is a Fork of [ESPHome_nuki_lock](https://github.com/uriyacovy/ESPHome
 
 
 ## Tested Hardware
-- ESP32 wroom
-- Nuki smart lock v3
-- Nuki smart lock v2
-- Nuki door sensor
-
+- ESP32 WROOM
+- Nuki Smart Lock v4
+- Nuki Smart Lock v3
+- Nuki Smart Lock v2
+- Nuki Door Sensor

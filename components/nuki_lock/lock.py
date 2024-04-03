@@ -18,6 +18,7 @@ AUTO_LOAD = ["binary_sensor", "text_sensor", "sensor", "switch", "button"]
 
 CONF_IS_CONNECTED = "is_connected"
 CONF_IS_PAIRED = "is_paired"
+CONF_SECURITY_PIN = "security_pin"
 CONF_UNPAIR_BUTTON = "unpair"
 CONF_PAIRING_MODE_SWITCH = "pairing_mode"
 CONF_BATTERY_CRITICAL = "battery_critical"
@@ -60,6 +61,7 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         device_class=DEVICE_CLASS_CONNECTIVITY,
         entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
     ),
+    cv.Optional(CONF_SECURITY_PIN, default=0): cv.uint16_t,
     cv.Optional(CONF_BATTERY_CRITICAL): binary_sensor.binary_sensor_schema(
         device_class=DEVICE_CLASS_BATTERY,
     ),
@@ -112,6 +114,9 @@ async def to_code(config):
     if CONF_IS_PAIRED in config:
         sens = await binary_sensor.new_binary_sensor(config[CONF_IS_PAIRED])
         cg.add(var.set_is_paired(sens))
+
+    if CONF_SECURITY_PIN in config:
+        cg.add(var.set_security_pin(config[CONF_SECURITY_PIN]))
 
     if CONF_BATTERY_CRITICAL in config:
         sens = await binary_sensor.new_binary_sensor(config[CONF_BATTERY_CRITICAL])
