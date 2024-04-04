@@ -13,12 +13,14 @@ namespace esphome
                 case NukiLock::LockState::Locked:
                     return lock::LOCK_STATE_LOCKED;
                 case NukiLock::LockState::Unlocked:
+                case NukiLock::LockState::Unlatched:
                     return lock::LOCK_STATE_UNLOCKED;
                 case NukiLock::LockState::MotorBlocked:
                     return lock::LOCK_STATE_JAMMED;
                 case NukiLock::LockState::Locking:
                     return lock::LOCK_STATE_LOCKING;
                 case NukiLock::LockState::Unlocking:
+                case NukiLock::LockState::Unlatching:
                     return lock::LOCK_STATE_UNLOCKING;
                 default:
                     return lock::LOCK_STATE_NONE;
