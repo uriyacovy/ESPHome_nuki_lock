@@ -22,7 +22,7 @@ esphome:
   libraries:
   - Preferences
   - https://github.com/h2zero/NimBLE-Arduino
-  - https://github.com/vinmenn/Crc16.git
+  - Crc16
   - https://github.com/uriyacovy/NukiBleEsp32
 
 external_components:
