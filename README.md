@@ -31,8 +31,8 @@ esp32:
   board: "esp32dev"  # Or whatever other board you're using
   framework:
     type: arduino
-    version: 2.0.3
-    platform_version: 5.3.0
+    version: 2.0.16
+    platform_version: 6.7.0
 
 lock:
   # Required:
