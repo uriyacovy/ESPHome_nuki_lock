@@ -16,27 +16,25 @@ namespace nuki_lock {
 
 static const char *TAG = "nukilock.lock";
 
-class Handler: public Nuki::SmartlockEventHandler {
-    public:
-        virtual ~Handler() {};
-        Handler(bool *notified_p) { this->notified_p_ = notified_p; }
-    void notify(Nuki::EventType eventType) {
-        *(this->notified_p_) = true;
-        ESP_LOGI(TAG, "event notified %d", eventType);      
-    }
-    private:
-        bool *notified_p_;
-};
-
-class NukiLockComponent : public lock::Lock, public PollingComponent, public api::CustomAPIDevice {
+class NukiLockComponent : public lock::Lock, public PollingComponent, public api::CustomAPIDevice, public Nuki::SmartlockEventHandler {
     static const uint8_t BLE_CONNECT_TIMEOUT_SEC = 3;
     static const uint8_t BLE_CONNECT_TIMEOUT_RETRIES = 1;
+    static const uint8_t MAX_ACTION_ATTEMPTS = 5;
+    static const uint8_t MAX_TOLERATED_UPDATES_ERRORS = 5;
+    static const uint32_t COOLDOWN_COMMANDS_MILLIS = 1000;
+    static const uint32_t COOLDOWN_COMMANDS_EXTENDED_MILLIS = 3000;
 
     public:
         const uint32_t deviceId_ = 2020002;
-        const std::string deviceName_ = "Nuki ESPHome"; 
+        const std::string deviceName_ = "Nuki ESPHome";
 
-        explicit NukiLockComponent() : Lock(), unpair_(false), open_latch_(false), lock_n_go_(false) { this->traits.set_supports_open(true); }
+        explicit NukiLockComponent() : Lock(), unpair_(false),
+                                       open_latch_(false), lock_n_go_(false),
+                                       keypad_paired_(false),
+                                       nukiLock_(deviceName_, deviceId_) {
+                this->traits.set_supports_open(true);
+                this->nukiLock_.setEventHandler(this);
+        }
 
         void setup() override;
         void update() override;
@@ -57,9 +55,13 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
         bool nuki_doorsensor_to_binary(Nuki::DoorSensorState);
         std::string nuki_doorsensor_to_string(Nuki::DoorSensorState nukiDoorSensorState);
 
+        void notify(Nuki::EventType eventType) override;
+
     protected:
         void control(const lock::LockCall &call) override;
         void update_status();
+        void update_config();
+        bool executeLockAction(NukiLock::LockAction lockAction);
         void open_latch() override { this->open_latch_ = true; unlock();}
 
         binary_sensor::BinarySensor *is_connected_{nullptr};
@@ -68,17 +70,34 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
         binary_sensor::BinarySensor *door_sensor_{nullptr};
         text_sensor::TextSensor *door_sensor_state_{nullptr};
         sensor::Sensor *battery_level_{nullptr};
-        NukiLock::NukiLock *nukiLock_;
+
         BleScanner::Scanner scanner_;
         NukiLock::KeyTurnerState retrievedKeyTurnerState_;
-        Handler *handler_;
+        uint32_t lastCommandExecutedTime_ = 0;
+        uint32_t command_cooldown_millis = 0;
+        uint8_t actionAttempts_ = 0;
+        uint32_t statusUpdateConsecutiveErrors_ = 0;
+        NukiLock::LockAction lockAction_;
         bool status_update_;
+        bool config_update_;
         bool unpair_;
         bool open_latch_;
         bool lock_n_go_;
 
     private:
+        NukiLock::NukiLock nukiLock_;
+
         void lock_n_go();
+        void print_keypad_entries();
+        void add_keypad_entry(std::string name, int code);
+        void update_keypad_entry(int id, std::string name, int code, bool enabled);
+        void delete_keypad_entry(int id);
+        bool valid_keypad_id(int id);
+        bool valid_keypad_name(std::string name);
+        bool valid_keypad_code(int code);
+
+        std::vector<uint16_t> keypadCodeIds_;
+        bool keypad_paired_;
 };
 
 } //namespace nuki_lock
