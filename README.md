@@ -21,7 +21,8 @@ Add the following to the ESPHome yaml file:
 esphome:
   libraries:
   - Preferences
-  - https://github.com/vinmenn/Crc16.git
+  - https://github.com/h2zero/NimBLE-Arduino
+  - Crc16
   - https://github.com/uriyacovy/NukiBleEsp32
 
 external_components:
@@ -31,8 +32,8 @@ esp32:
   board: "esp32dev"  # Or whatever other board you're using
   framework:
     type: arduino
-    version: 2.0.3
-    platform_version: 5.3.0
+    version: 2.0.16
+    platform_version: 6.7.0
 
 lock:
   # Required:
