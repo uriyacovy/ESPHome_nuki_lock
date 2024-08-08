@@ -15,12 +15,12 @@
 
         - name: Compile for main
           if: github.ref == 'refs/heads/main'
-          uses: esphome/build-action@v1
+          uses: esphome/build-action@v4.0.1
           with:
-            yaml_file: .github/example-project-main.yaml
+            yaml-file: .github/example-project-main.yaml
 
         - name: Compile for dev
           if: github.ref != 'refs/heads/main'
           uses: esphome/build-action@v1
           with:
-            yaml_file: .github/example-project-dev.yaml
+            yaml-file: .github/example-project-dev.yaml
