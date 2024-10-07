@@ -1,18 +1,21 @@
 # Nuki Lock for ESPHome (ESP32)
-[![Build Component](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml/badge.svg)](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/AzonInc/ESPHome_nuki_lock/build.yaml?branch=main&style=for-the-badge&logo=buddy&logoColor=ffffff&label=Build)
+<hr>
 
-This module builds an ESPHome lock platform for Nuki Smartlock (nuki_lock) that creates 6 new entities in Home Assistant:
-- Lock 
+This module builds an ESPHome lock platform for Nuki Smartlock (nuki_lock) that creates 9 new entities in Home Assistant:
+- Lock
 - Binary Sensor: Is Paired
 - Binary Sensor: Is Connected
-- Binary Sensor: Critical Battery 
+- Binary Sensor: Critical Battery
 - Sensor: Battery Level
 - Binary Sensor: Door Sensor
 - Text Sensor: Door Sensor State
+- Switch: Pairing Mode
+- Button: Unpair
 
 The lock entity is updated whenever the look changes state (via Nuki App, HA, or manually) using Nuki BT advertisement mechanism.
 
-![screenshot](https://user-images.githubusercontent.com/1754967/183266065-d1a6e9fe-d7f7-4295-9c0d-4bf9235bf4cd.png)
+![dashboard](./docs/nuki_dashboard.png)
 
 ## How to use
 Add the following to the ESPHome yaml file:
@@ -26,7 +29,7 @@ esphome:
   - https://github.com/uriyacovy/NukiBleEsp32
 
 external_components:
-  - source: github://uriyacovy/ESPHome_nuki_lock
+  - source: github://AzonInc/ESPHome_nuki_lock
 
 esp32:
   board: "esp32dev"  # Or whatever other board you're using
@@ -39,24 +42,50 @@ lock:
   # Required:
   - platform: nuki_lock
     name: Nuki Lock
-    is_connected: 
+
+    is_connected:
       name: "Nuki Connected"
-    is_paired: 
-      name: "Nuki Paired"      
+
+    is_paired:
+      name: "Nuki Paired"
+
   # Optional:
     battery_critical:
       name: "Nuki Battery Critical"
+
     battery_level:
       name: "Nuki Battery Level"
+
     door_sensor:
       name: "Nuki Door Sensor"
+
     door_sensor_state:
       name: "Nuki Door Sensor State"
+
+    unpair:
+      name: "Nuki Unpair"
+
+    pairing_mode:
+      name: "Nuki Pairing Mode"
+
+  # Optional: Settings
+    security_pin: 1234
+
+  # Optional: Callbacks
+    on_pairing_mode_on_action:
+      - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
+
+    on_pairing_mode_off_action:
+      - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned off");
+
+    on_paired_action:
+      - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
 ```
 
-After running ESPHome (esphome run <yamlfile.yaml>), the module will actively try to pair to Nuki.
-To set Nuki for paring mode, press the button for 5 seconds until the led turns on.
-Once Nuki is paired, the new ESPHome entities will get the updated state.
+After running ESPHome (esphome run <yamlfile.yaml>), you have to activate the pairing mode of the ESPHome Component to pair your Nuki.
+You can use the `Pairing Mode` Switch Entity or use the `nuki_lock.set_pairing_mode` Automation Action to do so.
+To set Nuki for paring mode, press the Button on your Smart Lock for 5 seconds until the led turns on.
+Once Nuki is paired, the new ESPHome entities will get the updated state and pairing mode is turned off.
 
 ## Supported Services ##
 ### Unlatch ###
@@ -69,24 +98,34 @@ target:
 ```
 
 ### Lock and Go
-To run lock and go, call this service from Home Assistant: 
+To run lock and go, call this service from Home Assistant:
 ```yaml
 service: esphome.<NODE_NAME>_lock_n_go
 data: {}
 ```
 
-## Unparing Nuki
-To unpair Nuki, add the following to ESPHome yaml file below `platform: nuki_lock` section and run ESPHome again:
+## Supported Automation Actions ##
+### Pairing Mode ###
+You can use automations to turn on/off the pairing mode:
 ```yaml
-    unpair: true
+on_...:
+  - nuki_lock.set_pairing_mode:
+```
+
+### Unpair
+You can usea utomations to unpair your Nuki:
+```yaml
+on_...:
+  - nuki_lock.unpair:
 ```
 
 ## Dependencies
-The module depends on the work done by [I-Connect](https://github.com/I-Connect), https://github.com/I-Connect/NukiBleEsp32
+The module is a Fork of [ESPHome_nuki_lock](https://github.com/uriyacovy/ESPHome_nuki_lock) and depends on the work done by [I-Connect](https://github.com/I-Connect) with [NukiBleEsp32](https://github.com/I-Connect/NukiBleEsp32).
+
 
 ## Tested Hardware
-- ESP32 wroom
-- Nuki smart lock v3
-- Nuki smart lock v2
-- Nuki door sensor
-
+- ESP32 WROOM
+- Nuki Smart Lock v4
+- Nuki Smart Lock v3
+- Nuki Smart Lock v2
+- Nuki Door Sensor
