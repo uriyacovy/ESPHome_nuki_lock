@@ -63,6 +63,7 @@ lock:
 
   # Optional: Settings
     security_pin: 1234
+    pairing_mode_timeout: 300s
 
   # Optional: Callbacks
     on_pairing_mode_on_action:
