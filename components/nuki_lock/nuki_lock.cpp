@@ -1,4 +1,5 @@
 #include "esphome/core/log.h"
+#include "esphome/core/application.h"
 #include "nuki_lock.h"
 
 namespace esphome {
@@ -161,6 +162,10 @@ bool NukiLockComponent::executeLockAction(NukiLock::LockAction lockAction) {
 void NukiLockComponent::setup() {
     ESP_LOGI(TAG, "Starting NUKI Lock...");
 
+    // Increase Watchdog Timeout
+    // Fixes Pairing Crash
+    esp_task_wdt_init(15, false);
+
     this->traits.set_supported_states(
         std::set<lock::LockState> {
             lock::LOCK_STATE_NONE,
@@ -210,6 +215,7 @@ void NukiLockComponent::setup() {
 void NukiLockComponent::update() {
     // Check for new advertisements
     this->scanner_.update();
+    App.feed_wdt();
     delay(20);
 
     // Terminate stale Bluetooth connections
