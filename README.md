@@ -95,8 +95,8 @@ service: esphome.<NODE_NAME>_lock_n_go
 data: {}
 ```
 
-## Supported Automation Actions ##
-### Pairing Mode ###
+## Automation ##
+### Action: Pairing Mode ###
 You can use this action to turn on/off the pairing mode: 
 ```yaml
 on_...:
@@ -104,11 +104,22 @@ on_...:
       pairing_mode: True
 ```
 
-### Unpair
+### Action: Unpair
 You can use this action to unpair your Nuki: 
 ```yaml
 on_...:
   - nuki_lock.unpair:
+```
+
+### Callbacks
+You can use this callbacks to run specific actions: 
+```yaml
+on_pairing_mode_on_action:
+  - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
+on_pairing_mode_off_action:
+  - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned off");
+on_paired_action:
+  - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
 ```
 
 ## Dependencies
