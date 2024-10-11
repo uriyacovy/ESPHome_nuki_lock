@@ -9,12 +9,14 @@ lock::LockState NukiLockComponent::nuki_to_lock_state(NukiLock::LockState nukiLo
         case NukiLock::LockState::Locked:
             return lock::LOCK_STATE_LOCKED;
         case NukiLock::LockState::Unlocked:
+        case NukiLock::LockState::Unlatched:
             return lock::LOCK_STATE_UNLOCKED;
         case NukiLock::LockState::MotorBlocked:
             return lock::LOCK_STATE_JAMMED;
         case NukiLock::LockState::Locking:
             return lock::LOCK_STATE_LOCKING;
         case NukiLock::LockState::Unlocking:
+        case NukiLock::LockState::Unlatching:
             return lock::LOCK_STATE_UNLOCKING;
         default:
             return lock::LOCK_STATE_NONE;
@@ -63,14 +65,15 @@ void NukiLockComponent::update_status()
         NukiLock::lockstateToString(currentLockState, currentLockStateAsString);
 
         ESP_LOGI(TAG, "Bat state: %#x, Bat crit: %d, Bat perc:%d lock state: %s (%d) %d:%d:%d",
-          this->retrievedKeyTurnerState_.criticalBatteryState,
-          this->nukiLock_.isBatteryCritical(),
-          this->nukiLock_.getBatteryPerc(),
-          currentLockStateAsString,
-          currentLockState,
-          this->retrievedKeyTurnerState_.currentTimeHour,
-          this->retrievedKeyTurnerState_.currentTimeMinute,
-          this->retrievedKeyTurnerState_.currentTimeSecond);
+            this->retrievedKeyTurnerState_.criticalBatteryState,
+            this->nukiLock_.isBatteryCritical(),
+            this->nukiLock_.getBatteryPerc(),
+            currentLockStateAsString,
+            currentLockState,
+            this->retrievedKeyTurnerState_.currentTimeHour,
+            this->retrievedKeyTurnerState_.currentTimeMinute,
+            this->retrievedKeyTurnerState_.currentTimeSecond
+        );
 
         this->publish_state(this->nuki_to_lock_state(this->retrievedKeyTurnerState_.lockState));
         this->is_connected_->publish_state(true);
@@ -156,30 +159,41 @@ bool NukiLockComponent::executeLockAction(NukiLock::LockAction lockAction) {
 }
 
 void NukiLockComponent::setup() {
-
     ESP_LOGI(TAG, "Starting NUKI Lock...");
 
-    this->traits.set_supported_states(std::set<lock::LockState> {lock::LOCK_STATE_NONE, lock::LOCK_STATE_LOCKED,
-                                                                 lock::LOCK_STATE_UNLOCKED, lock::LOCK_STATE_JAMMED,
-                                                                 lock::LOCK_STATE_LOCKING, lock::LOCK_STATE_UNLOCKING});
+    this->traits.set_supported_states(
+        std::set<lock::LockState> {
+            lock::LOCK_STATE_NONE,
+            lock::LOCK_STATE_LOCKED,
+            lock::LOCK_STATE_UNLOCKED,
+            lock::LOCK_STATE_JAMMED,
+            lock::LOCK_STATE_LOCKING,
+            lock::LOCK_STATE_UNLOCKING
+        }
+    );
+
     this->scanner_.initialize("ESPHomeNuki");
     this->scanner_.setScanDuration(10);
+
     this->nukiLock_.registerBleScanner(&this->scanner_);
     this->nukiLock_.initialize();
     this->nukiLock_.setConnectTimeout(BLE_CONNECT_TIMEOUT_SEC);
     this->nukiLock_.setConnectRetries(BLE_CONNECT_TIMEOUT_RETRIES);
 
-    if (this->unpair_) {
-        ESP_LOGW(TAG, "Unpair requested");
-        this->nukiLock_.unPairNuki();
+    if(this->security_pin_ > 0) {
+        bool result = this->nukiLock_.saveSecurityPincode(this->security_pin_);
+        if (result) {
+            ESP_LOGI(TAG, "Set pincode done");
+        } else {
+            ESP_LOGE(TAG, "Set pincode failed!");
+        }
     }
-
+    
     if (this->nukiLock_.isPairedWithLock()) {
         this->status_update_ = true;
         ESP_LOGI(TAG, "%s Nuki paired", this->deviceName_);
         this->is_paired_->publish_initial_state(true);
-    }
-    else {
+    } else {
         ESP_LOGW(TAG, "%s Nuki is not paired", this->deviceName_);
         this->is_paired_->publish_initial_state(false);
     }
@@ -194,7 +208,6 @@ void NukiLockComponent::setup() {
 }
 
 void NukiLockComponent::update() {
-
     // Check for new advertisements
     this->scanner_.update();
     delay(20);
@@ -202,13 +215,17 @@ void NukiLockComponent::update() {
     // Terminate stale Bluetooth connections
     this->nukiLock_.updateConnectionState();
 
+    if(this->pairing_mode_ && this->pairing_mode_timer_ != 0) {
+        if(millis() > this->pairing_mode_timer_) {
+            ESP_LOGV(TAG, "Pairing timed out, turning off pairing mode");
+            this->set_pairing_mode(false);
+        }
+    }
+
     if (millis() - lastCommandExecutedTime_ < command_cooldown_millis) {
         // Give the lock time to terminate the previous command
         uint32_t millisSinceLastExecution = millis() - lastCommandExecutedTime_;
-        uint32_t millisLeft =
-            (millisSinceLastExecution < command_cooldown_millis)
-            ? command_cooldown_millis - millisSinceLastExecution
-            : 1;
+        uint32_t millisLeft = (millisSinceLastExecution < command_cooldown_millis) ? command_cooldown_millis - millisSinceLastExecution : 1;
         ESP_LOGV(TAG, "Cooldown period, %dms left", millisLeft);
         return;
     }
@@ -261,14 +278,22 @@ void NukiLockComponent::update() {
             command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
             lastCommandExecutedTime_ = millis();
         }
-    }
-    else if (! this->unpair_) {
-        bool paired = (this->nukiLock_.pairNuki() == Nuki::PairingResult::Success);
-        if (paired) {
-            ESP_LOGI(TAG, "Nuki paired");
-            this->update_status();
-        }
-        this->is_paired_->publish_state(paired);
+    } else {
+        this->is_paired_->publish_state(false);
+        this->is_connected_->publish_state(false);
+
+        // Pairing Mode is active
+        if(this->pairing_mode_) {
+            // Pair Nuki
+            bool paired = (this->nukiLock_.pairNuki() == Nuki::PairingResult::Success);
+            if (paired) {
+                ESP_LOGI(TAG, "Nuki paired successfuly!");
+                this->update_status();
+                this->paired_callback_.call();
+                this->set_pairing_mode(false);
+            }
+            this->is_paired_->publish_state(paired);
+        }    
     }
 }
 
@@ -285,7 +310,7 @@ void NukiLockComponent::control(const lock::LockCall &call) {
             this->lockAction_ = NukiLock::LockAction::Lock;
             break;
 
-        case lock::LOCK_STATE_UNLOCKED:{
+        case lock::LOCK_STATE_UNLOCKED: {
             this->actionAttempts_ = MAX_ACTION_ATTEMPTS;
             this->lockAction_ = NukiLock::LockAction::Unlock;
 
@@ -326,7 +351,7 @@ bool NukiLockComponent::valid_keypad_id(int id) {
 }
 
 bool NukiLockComponent::valid_keypad_name(std::string name) {
-    bool nameValid = ! (name == "" || name == "--");
+    bool nameValid = !(name == "" || name == "--");
     if (!nameValid) {
         ESP_LOGE(TAG, "keypad name '%s' is invalid.", name.c_str());
     }
@@ -342,12 +367,12 @@ bool NukiLockComponent::valid_keypad_code(int code) {
 }
 
 void NukiLockComponent::add_keypad_entry(std::string name, int code) {
-    if (! keypad_paired_) {
+    if (!keypad_paired_) {
         ESP_LOGE(TAG, "keypad is not paired to Nuki");
         return;
     }
 
-    if (! (valid_keypad_name(name) && valid_keypad_code(code)) ) {
+    if (!(valid_keypad_name(name) && valid_keypad_code(code))) {
         ESP_LOGE(TAG, "add_keypad_entry invalid parameters");
         return;
     }
@@ -360,19 +385,18 @@ void NukiLockComponent::add_keypad_entry(std::string name, int code) {
     Nuki::CmdResult result = this->nukiLock_.addKeypadEntry(entry);
     if (result == Nuki::CmdResult::Success) {
         ESP_LOGI(TAG, "add_keypad_entry is sucessful");
-    }
-    else {
+    } else {
         ESP_LOGE(TAG, "add_keypad_entry: addKeypadEntry failed (result %d)", result);
     }
 }
 
 void NukiLockComponent::update_keypad_entry(int id, std::string name, int code, bool enabled) {
-    if (! keypad_paired_) {
+    if (!keypad_paired_) {
         ESP_LOGE(TAG, "keypad is not paired to Nuki");
         return;
     }
 
-    if (! (valid_keypad_id(id) && valid_keypad_name(name) && valid_keypad_code(code)) ) {
+    if (!(valid_keypad_id(id) && valid_keypad_name(name) && valid_keypad_code(code))) {
         ESP_LOGE(TAG, "update_keypad_entry invalid parameters");
         return;
     }
@@ -387,19 +411,18 @@ void NukiLockComponent::update_keypad_entry(int id, std::string name, int code, 
     Nuki::CmdResult result = this->nukiLock_.updateKeypadEntry(entry);
     if (result == Nuki::CmdResult::Success) {
         ESP_LOGI(TAG, "update_keypad_entry is sucessful");
-    }
-    else {
+    } else {
         ESP_LOGE(TAG, "update_keypad_entry: updateKeypadEntry failed (result %d)", result);
     }
 }
 
 void NukiLockComponent::delete_keypad_entry(int id) {
-    if (! keypad_paired_) {
+    if (!keypad_paired_) {
         ESP_LOGE(TAG, "keypad is not paired to Nuki");
         return;
     }
 
-    if (! valid_keypad_id(id)) {
+    if (!valid_keypad_id(id)) {
         ESP_LOGE(TAG, "delete_keypad_entry invalid parameters");
         return;
     }
@@ -407,14 +430,13 @@ void NukiLockComponent::delete_keypad_entry(int id) {
     Nuki::CmdResult result = this->nukiLock_.deleteKeypadEntry(id);
     if (result == Nuki::CmdResult::Success) {
         ESP_LOGI(TAG, "delete_keypad_entry is sucessful");
-    }
-    else {
+    } else {
         ESP_LOGE(TAG, "delete_keypad_entry: deleteKeypadEntry failed (result %d)", result);
     }
 }
 
 void NukiLockComponent::print_keypad_entries() {
-    if (! keypad_paired_) {
+    if (!keypad_paired_) {
         ESP_LOGE(TAG, "keypad is not paired to Nuki");
         return;
     }
@@ -433,12 +455,10 @@ void NukiLockComponent::print_keypad_entries() {
             keypadCodeIds_.push_back(entry.codeId);
             ESP_LOGI(TAG, "keypad #%d %s is %s", entry.codeId, entry.name, entry.enabled ? "enabled" : "disabled");
         }
-    }
-    else {
+    } else {
         ESP_LOGE(TAG, "print_keypad_entries: retrieveKeypadEntries failed (result %d)", result);
     }
 }
-
 
 void NukiLockComponent::dump_config() {
     LOG_LOCK(TAG, "Nuki Lock", this);
@@ -448,13 +468,75 @@ void NukiLockComponent::dump_config() {
     LOG_BINARY_SENSOR(TAG, "Door Sensor", this->door_sensor_);
     LOG_TEXT_SENSOR(TAG, "Door Sensor State", this->door_sensor_state_);
     LOG_SENSOR(TAG, "Battery Level", this->battery_level_);
-    ESP_LOGCONFIG(TAG, "Unpair request is %s", this->unpair_? "true":"false");
 }
 
 void NukiLockComponent::notify(Nuki::EventType eventType) {
     this->status_update_ = true;
     this->config_update_ = true;
     ESP_LOGI(TAG, "event notified %d", eventType);
+}
+
+// Unpair Button
+void NukiLockUnpairButton::press_action() {
+    this->parent_->unpair();
+}
+
+void NukiLockUnpairButton::dump_config() {
+    LOG_BUTTON(TAG, "Unpair", this);
+}
+
+void NukiLockComponent::unpair() {
+    if(this->nukiLock_.isPairedWithLock()) {
+        this->nukiLock_.unPairNuki();
+        ESP_LOGI(TAG, "Unpaired Nuki! Turn on Pairing Mode to pair a new Nuki.");
+    } else {
+        ESP_LOGE(TAG, "Unpair action called for unpaired Nuki");
+    }
+}
+
+// Pairing Mode Switch
+void NukiLockPairingModeSwitch::setup() {
+    this->publish_state(false);
+}
+
+void NukiLockPairingModeSwitch::dump_config() {
+    LOG_SWITCH(TAG, "Pairing Mode", this);
+}
+
+void NukiLockPairingModeSwitch::write_state(bool state) {
+    this->parent_->set_pairing_mode(state);
+}
+
+void NukiLockComponent::set_pairing_mode(bool enabled) {
+    this->pairing_mode_ = enabled;
+    this->pairing_mode_switch_->publish_state(enabled);
+
+    if(enabled) {
+        ESP_LOGI(TAG, "Pairing Mode turned on for %d seconds", this->pairing_timeout_);
+        this->pairing_mode_on_callback_.call();
+
+        ESP_LOGI(TAG, "Waiting for Nuki to enter pairing mode...");
+
+        // Turn on for ... seconds
+        uint32_t now_millis = millis();
+        this->pairing_mode_timer_ = now_millis + (this->pairing_timeout_ * 1000);
+    } else {
+        ESP_LOGI(TAG, "Pairing Mode turned off");
+        this->pairing_mode_timer_ = 0;
+        this->pairing_mode_off_callback_.call();
+    }
+}
+
+void NukiLockComponent::add_pairing_mode_on_callback(std::function<void()> &&callback) {
+    this->pairing_mode_on_callback_.add(std::move(callback));
+}
+
+void NukiLockComponent::add_pairing_mode_off_callback(std::function<void()> &&callback) {
+    this->pairing_mode_off_callback_.add(std::move(callback));
+}
+
+void NukiLockComponent::add_paired_callback(std::function<void()> &&callback) {
+    this->paired_callback_.add(std::move(callback));
 }
 
 } //namespace nuki_lock

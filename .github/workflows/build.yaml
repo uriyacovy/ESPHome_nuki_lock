@@ -21,6 +21,6 @@
 
         - name: Compile for dev
           if: github.ref != 'refs/heads/main'
-          uses: esphome/build-action@v1
+          uses: esphome/build-action@v4.0.1
           with:
             yaml-file: .github/example-project-dev.yaml
