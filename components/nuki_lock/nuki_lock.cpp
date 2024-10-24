@@ -52,6 +52,33 @@ std::string NukiLockComponent::nuki_doorsensor_to_string(Nuki::DoorSensorState n
     }
 }
 
+NukiLock::ButtonPressAction NukiLockComponent::nuki_button_press_action_to_enum(std::string str)
+{
+    if (str == "No Action") return NoAction;
+    if (str == "Intelligent") return Intelligent;
+    if (str == "Unlock") return Unlock;
+    if (str == "Lock") return Lock;
+    if (str == "Unlatch") return Unlatch;
+    if (str == "Lock n Go") return LockNgo;
+    if (str == "Show Status") return ShowStatus;
+    return (NukiLock::ButtonPressAction)0xff;
+}
+
+const char* NukiLockComponent::nuki_button_press_action_to_string(NukiLock::ButtonPressAction action)
+{
+    switch (action)
+    {
+        case NukiLock::ButtonPressAction::NoAction: return "No Action";
+        case NukiLock::ButtonPressAction::Intelligent: return "Intelligent";
+        case NukiLock::ButtonPressAction::Unlock: return "Unlock";
+        case NukiLock::ButtonPressAction::Lock: return "Lock";
+        case NukiLock::ButtonPressAction::Unlatch: return "Unlatch";
+        case NukiLock::ButtonPressAction::LockNgo: return "Lock n Go";
+        case NukiLock::ButtonPressAction::ShowStatus: return "Show Status";
+        default: return "No Action";
+    }
+}
+
 void NukiLockComponent::update_status()
 {
     this->status_update_ = false;
@@ -145,6 +172,57 @@ void NukiLockComponent::update_config() {
     } else {
         ESP_LOGE(TAG, "requestConfig has resulted in %s (%d)", confReqResultAsString, confReqResult);
         this->config_update_ = true;
+    }
+}
+
+void NukiLockComponent::update_advanced_config() {
+    this->advanced_config_update_ = false;
+
+    NukiLock::AdvancedConfig advanced_config;
+    Nuki::CmdResult confReqResult = this->nukiLock_.requestAdvancedConfig(&advanced_config);
+    char confReqResultAsString[30];
+    NukiLock::cmdResultToString(confReqResult, confReqResultAsString);
+
+    if (confReqResult == Nuki::CmdResult::Success) {
+        ESP_LOGD(TAG, "requestAdvancedConfig has resulted in %s (%d)", confReqResultAsString, confReqResult);
+
+        #ifdef USE_SWITCH
+        if (this->nightmode_enabled_switch_ != nullptr)
+            this->nightmode_enabled_switch_->publish_state(advanced_config.nightModeEnabled);
+        
+        if (this->night_mode_auto_lock_enabled_switch_ != nullptr)
+            this->night_mode_auto_lock_enabled_switch_->publish_state(advanced_config.nightModeAutoLockEnabled);
+        
+        if (this->night_mode_auto_unlock_disabled_switch_ != nullptr)
+            this->night_mode_auto_unlock_disabled_switch_->publish_state(advanced_config.nightModeAutoUnlockDisabled);
+        
+        if (this->night_mode_immediate_lock_on_start_switch_ != nullptr)
+            this->night_mode_immediate_lock_on_start_switch_->publish_state(advanced_config.nightModeImmediateLockOnStart);
+        
+        if (this->auto_lock_enabled_switch_ != nullptr)
+            this->auto_lock_enabled_switch_->publish_state(advanced_config.autoLockEnabled);
+
+        if (this->auto_unlock_disabled_switch_ != nullptr)
+            this->auto_unlock_disabled_switch_->publish_state(advanced_config.autoUnLockDisabled);
+
+        if (this->immediate_auto_lock_enabled_switch_ != nullptr)
+            this->immediate_auto_lock_enabled_switch_->publish_state(advanced_config.immediateAutoLockEnabled);
+
+        if (this->auto_update_enabled_switch_ != nullptr)
+            this->auto_update_enabled_switch_->publish_state(advanced_config.autoUpdateEnabled);
+        #endif
+
+        #ifdef USE_SELECT
+        if (this->single_button_press_action_select_ != nullptr)
+            this->single_button_press_action_select_->publish_state(this->nuki_button_press_action_to_string(advanced_config.singleButtonPressAction));
+
+        if (this->double_button_press_action_select_ != nullptr)
+            this->double_button_press_action_select_->publish_state(this->nuki_button_press_action_to_string(advanced_config.doubleButtonPressAction));
+        #endif
+
+    } else {
+        ESP_LOGE(TAG, "requestAdvancedConfig has resulted in %s (%d)", confReqResultAsString, confReqResult);
+        this->advanced_config_update_ = true;
     }
 }
 
@@ -310,6 +388,12 @@ void NukiLockComponent::update() {
         } else if (this->config_update_) {
             ESP_LOGD(TAG, "Update present, getting config...");
             this->update_config();
+
+            command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
+            lastCommandExecutedTime_ = millis();
+        } else if (this->advanced_config_update_) {
+            ESP_LOGD(TAG, "Update present, getting advanced config...");
+            this->update_advanced_config();
 
             command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
             lastCommandExecutedTime_ = millis();
@@ -501,7 +585,7 @@ void NukiLockComponent::print_keypad_entries() {
 }
 
 void NukiLockComponent::dump_config() {
-    ESP_LOGCONFIG(TAG, "NUKI_LOCK:");
+    ESP_LOGCONFIG(TAG, "NUKI LOCK:");
 
     LOG_LOCK(TAG, "Nuki Lock", this);
     #ifdef USE_BINARY_SENSOR
@@ -521,15 +605,28 @@ void NukiLockComponent::dump_config() {
     LOG_SWITCH(TAG, "Auto Unlatch Enabled", this->auto_unlatch_enabled_switch_);
     LOG_SWITCH(TAG, "Button Enabled", this->button_enabled_switch_);
     LOG_SWITCH(TAG, "LED Enabled", this->led_enabled_switch_);
+    LOG_SWITCH(TAG, "Night Mode Enabled", this->nightmode_enabled_switch_);
+    LOG_SWITCH(TAG, "Night Mode Auto Lock", this->night_mode_auto_lock_enabled_switch_);
+    LOG_SWITCH(TAG, "Night Mode Auto Unlock Disabled", this->night_mode_auto_unlock_disabled_switch_);
+    LOG_SWITCH(TAG, "Night Mode Immediate Lock On Start", this->night_mode_immediate_lock_on_start_switch_);
+    LOG_SWITCH(TAG, "Auto Lock", this->auto_lock_enabled_switch_);
+    LOG_SWITCH(TAG, "Auto Unlock Disabled", this->auto_unlock_disabled_switch_);
+    LOG_SWITCH(TAG, "Immediate Auto Lock", this->immediate_auto_lock_enabled_switch_);
+    LOG_SWITCH(TAG, "Automatic Updates", this->auto_update_enabled_switch_);
     #endif
     #ifdef USE_NUMBER
     LOG_NUMBER(TAG, "LED Brightness", this->led_brightness_number_);
+    #endif
+    #ifdef USE_SELECT
+    LOG_SELECT(TAG, "Single Button Press Action", this->single_button_press_action_select_);
+    LOG_SELECT(TAG, "Double Button Press Action", this->double_button_press_action_select_);
     #endif
 }
 
 void NukiLockComponent::notify(Nuki::EventType eventType) {
     this->status_update_ = true;
     this->config_update_ = true;
+    this->advanced_config_update_ = true;
     ESP_LOGI(TAG, "event notified %d", eventType);
 }
 
@@ -540,6 +637,32 @@ void NukiLockComponent::unpair() {
     } else {
         ESP_LOGE(TAG, "Unpair action called for unpaired Nuki");
     }
+}
+
+void NukiLockComponent::set_single_button_press_action(const std::string &action) {
+
+    NukiLock::ButtonPressAction press_action = this->nuki_button_press_action_to_enum(action);
+    Nuki::CmdResult cmdResult = this->nukiLock_.setSingleButtonPressAction(press_action);
+
+    #ifdef USE_SELECT
+    if (cmdResult == Nuki::CmdResult::Success && this->single_button_press_action_select_ != nullptr) {
+        this->single_button_press_action_select_->publish_state(action);
+        this->advanced_config_update_ = true;
+    }
+    #endif
+}
+
+void NukiLockComponent::set_double_button_press_action(const std::string &action) {
+
+    NukiLock::ButtonPressAction press_action = this->nuki_button_press_action_to_enum(action);
+    Nuki::CmdResult cmdResult = this->nukiLock_.setDoubleButtonPressAction(press_action);
+
+    #ifdef USE_SELECT
+    if (cmdResult == Nuki::CmdResult::Success && this->double_button_press_action_select_ != nullptr) {
+        this->double_button_press_action_select_->publish_state(action);
+        this->advanced_config_update_ = true;
+    }
+    #endif
 }
 
 void NukiLockComponent::set_pairing_mode(bool enabled) {
@@ -575,10 +698,6 @@ void NukiLockComponent::set_auto_unlatch_enabled(bool enabled) {
     if (cmdResult == Nuki::CmdResult::Success && this->auto_unlatch_enabled_switch_ != nullptr) {
         this->auto_unlatch_enabled_switch_->publish_state(enabled);
         this->config_update_ = true;
-    } else {
-        char cmdResultAsString[30];
-        NukiLock::cmdResultToString(cmdResult, cmdResultAsString);
-        ESP_LOGW(TAG, "Set Auto Unlatch result: %s", cmdResultAsString);
     }
     #endif
 }
@@ -591,10 +710,6 @@ void NukiLockComponent::set_button_enabled(bool enabled) {
     if (cmdResult == Nuki::CmdResult::Success && this->button_enabled_switch_ != nullptr) {
         this->button_enabled_switch_->publish_state(enabled);
         this->config_update_ = true;
-    } else {
-        char cmdResultAsString[30];
-        NukiLock::cmdResultToString(cmdResult, cmdResultAsString);
-        ESP_LOGW(TAG, "Set Button enabled result: %s", cmdResultAsString);
     }
     #endif
 }
@@ -607,10 +722,102 @@ void NukiLockComponent::set_led_enabled(bool enabled) {
     if (cmdResult == Nuki::CmdResult::Success && this->led_enabled_switch_ != nullptr) {
         this->led_enabled_switch_->publish_state(enabled);
         this->config_update_ = true;
-    } else {
-        char cmdResultAsString[30];
-        NukiLock::cmdResultToString(cmdResult, cmdResultAsString);
-        ESP_LOGW(TAG, "Set LED enabled result: %s", cmdResultAsString);
+    }
+    #endif
+}
+
+void NukiLockComponent::set_nightmode_enabled(bool enabled) {
+    
+    Nuki::CmdResult cmdResult = this->nukiLock_.enableNightMode(enabled);
+
+    #ifdef USE_SWITCH
+    if (cmdResult == Nuki::CmdResult::Success && this->nightmode_enabled_switch_ != nullptr) {
+        this->nightmode_enabled_switch_->publish_state(enabled);
+        this->advanced_config_update_ = true;
+    }
+    #endif
+}
+
+void NukiLockComponent::set_night_mode_auto_lock_enabled(bool enabled) {
+    
+    Nuki::CmdResult cmdResult = this->nukiLock_.enableNightModeAutoLock(enabled);
+
+    #ifdef USE_SWITCH
+    if (cmdResult == Nuki::CmdResult::Success && this->night_mode_auto_lock_enabled_switch_ != nullptr) {
+        this->night_mode_auto_lock_enabled_switch_->publish_state(enabled);
+        this->advanced_config_update_ = true;
+    }
+    #endif
+}
+
+void NukiLockComponent::set_night_mode_auto_unlock_disabled(bool disable) {
+    
+    Nuki::CmdResult cmdResult = this->nukiLock_.disableNightModeAutoUnlock(disable);
+
+    #ifdef USE_SWITCH
+    if (cmdResult == Nuki::CmdResult::Success && this->night_mode_auto_unlock_disabled_switch_ != nullptr) {
+        this->night_mode_auto_unlock_disabled_switch_->publish_state(disable);
+        this->advanced_config_update_ = true;
+    }
+    #endif
+}
+
+void NukiLockComponent::set_night_mode_immediate_lock_on_start(bool enabled) {
+    
+    Nuki::CmdResult cmdResult = this->nukiLock_.enableNightModeImmediateLockOnStart(enabled);
+
+    #ifdef USE_SWITCH
+    if (cmdResult == Nuki::CmdResult::Success && this->night_mode_immediate_lock_on_start_switch_ != nullptr) {
+        this->night_mode_immediate_lock_on_start_switch_->publish_state(enabled);
+        this->advanced_config_update_ = true;
+    }
+    #endif
+}
+
+void NukiLockComponent::set_auto_lock_enabled(bool enabled) {
+    
+    Nuki::CmdResult cmdResult = this->nukiLock_.enableAutoLock(enabled);
+
+    #ifdef USE_SWITCH
+    if (cmdResult == Nuki::CmdResult::Success && this->auto_lock_enabled_switch_ != nullptr) {
+        this->auto_lock_enabled_switch_->publish_state(enabled);
+        this->advanced_config_update_ = true;
+    }
+    #endif
+}
+
+void NukiLockComponent::set_auto_unlock_disabled(bool disabled) {
+    
+    Nuki::CmdResult cmdResult = this->nukiLock_.disableAutoUnlock(disabled);
+
+    #ifdef USE_SWITCH
+    if (cmdResult == Nuki::CmdResult::Success && this->auto_unlock_disabled_switch_ != nullptr) {
+        this->auto_unlock_disabled_switch_->publish_state(disabled);
+        this->advanced_config_update_ = true;
+    }
+    #endif
+}
+
+void NukiLockComponent::set_immediate_auto_lock_enabled(bool enabled) {
+    
+    Nuki::CmdResult cmdResult = this->nukiLock_.enableImmediateAutoLock(enabled);
+
+    #ifdef USE_SWITCH
+    if (cmdResult == Nuki::CmdResult::Success && this->immediate_auto_lock_enabled_switch_ != nullptr) {
+        this->immediate_auto_lock_enabled_switch_->publish_state(enabled);
+        this->advanced_config_update_ = true;
+    }
+    #endif
+}
+
+void NukiLockComponent::set_auto_update_enabled(bool enabled) {
+    
+    Nuki::CmdResult cmdResult = this->nukiLock_.enableAutoUpdate(enabled);
+
+    #ifdef USE_SWITCH
+    if (cmdResult == Nuki::CmdResult::Success && this->auto_update_enabled_switch_ != nullptr) {
+        this->auto_update_enabled_switch_->publish_state(enabled);
+        this->advanced_config_update_ = true;
     }
     #endif
 }
@@ -623,45 +830,73 @@ void NukiLockComponent::set_led_brightness(float value) {
     if (cmdResult == Nuki::CmdResult::Success && this->led_brightness_number_ != nullptr) {
         this->led_brightness_number_->publish_state(value);
         this->config_update_ = true;
-    } else {
-        char cmdResultAsString[30];
-        NukiLock::cmdResultToString(cmdResult, cmdResultAsString);
-        ESP_LOGW(TAG, "Set LED Brightness result: %s", cmdResultAsString);
     }
     #endif
 }
 
 #ifdef USE_BUTTON
-// Unpair Button
 void NukiLockUnpairButton::press_action() {
     this->parent_->unpair();
 }
 #endif
-
+#ifdef USE_SELECT
+void NukiLockSingleButtonPressActionSelect::control(const std::string &action) {
+    this->parent_->set_single_button_press_action(action);
+}
+void NukiLockDoubleButtonPressActionSelect::control(const std::string &action) {
+    this->parent_->set_double_button_press_action(action);
+}
+#endif
 #ifdef USE_SWITCH
-// Pairing Mode Switch
 void NukiLockPairingModeSwitch::write_state(bool state) {
     this->parent_->set_pairing_mode(state);
 }
 
-// Auto Unlatch Enabled Switch
 void NukiLockAutoUnlatchEnabledSwitch::write_state(bool state) {
     this->parent_->set_auto_unlatch_enabled(state);
 }
 
-// Button Enabled Switch
 void NukiLockButtonEnabledSwitch::write_state(bool state) {
     this->parent_->set_button_enabled(state);
 }
 
-// LED Enabled Switch
 void NukiLockLedEnabledSwitch::write_state(bool state) {
     this->parent_->set_led_enabled(state);
 }
-#endif
 
+void NukiLockNightModeEnabledSwitch::write_state(bool state) {
+    this->parent_->set_nightmode_enabled(state);
+}
+
+void NukiLockNightModeAutoLockEnabledSwitch::write_state(bool state) {
+    this->parent_->set_night_mode_auto_lock_enabled(state);
+}
+
+void NukiLockNightModeAutoUnlockDisabledSwitch::write_state(bool state) {
+    this->parent_->set_night_mode_auto_unlock_disabled(state);
+}
+
+void NukiLockNightModeImmediateLockOnStartEnabledSwitch::write_state(bool state) {
+    this->parent_->set_night_mode_immediate_lock_on_start(state);
+}
+
+void NukiLockAutoLockEnabledSwitch::write_state(bool state) {
+    this->parent_->set_auto_lock_enabled(state);
+}
+
+void NukiLockAutoUnlockDisabledSwitch::write_state(bool state) {
+    this->parent_->set_auto_unlock_disabled(state);
+}
+
+void NukiLockImmediateAutoLockEnabledSwitch::write_state(bool state) {
+    this->parent_->set_immediate_auto_lock_enabled(state);
+}
+
+void NukiLockAutoUpdateEnabledSwitch::write_state(bool state) {
+    this->parent_->set_auto_update_enabled(state);
+}
+#endif
 #ifdef USE_NUMBER
-// LED Brightness Number
 void NukiLockLedBrightnessNumber::control(float value) {
     this->parent_->set_led_brightness(value);
 }

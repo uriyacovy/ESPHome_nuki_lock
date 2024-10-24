@@ -32,8 +32,27 @@ CONF_PAIRING_MODE_SWITCH = "pairing_mode"
 CONF_AUTO_UNLATCH_SWITCH = "auto_unlatch"
 CONF_BUTTON_ENABLED_SWITCH = "button_enabled"
 CONF_LED_ENABLED_SWITCH = "led_enabled"
-
+CONF_NIGHT_MODE_ENABLED_SWITCH = "night_mode_enabled"
+CONF_NIGHT_MODE_AUTO_LOCK_ENABLED_SWITCH = "night_mode_auto_lock_enabled"
+CONF_NIGHT_MODE_AUTO_UNLOCK_DISABLED_SWITCH = "night_mode_auto_unlock_disabled"
+CONF_NIGHT_MODE_IMMEDIATE_LOCK_ON_START_ENABLED_SWITCH = "night_mode_immediate_lock_on_start_enabled"
+CONF_AUTO_LOCK_ENABLED_SWITCH = "auto_lock_enabled"
+CONF_AUTO_UNLOCK_DISABLED_SWITCH = "auto_unlock_disabled"
+CONF_IMMEDIATE_AUTO_LOCK_ENABLED_SWITCH = "immediate_auto_lock_enabled"
+CONF_AUTO_UPDATE_ENABLED_SWITCH = "auto_update_enabled"
+CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT = "single_buton_press_action"
+CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT = "double_buton_press_action"
 CONF_LED_BRIGHTNESS_NUMBER = "led_brightness"
+
+CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS = [
+    "No Action",
+    "Intelligent",
+    "Unlock",
+    "Lock",
+    "Unlatch",
+    "Lock n Go",
+    "Show Status",
+]
 
 CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_SECURITY_PIN = "security_pin"
@@ -52,7 +71,17 @@ NukiLockPairingModeSwitch = nuki_lock_ns.class_("NukiLockPairingModeSwitch", swi
 NukiLockAutoUnlatchEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoUnlatchEnabledSwitch", switch.Switch, cg.Component)
 NukiLockButtonEnabledSwitch = nuki_lock_ns.class_("NukiLockButtonEnabledSwitch", switch.Switch, cg.Component)
 NukiLockLedEnabledSwitch = nuki_lock_ns.class_("NukiLockLedEnabledSwitch", switch.Switch, cg.Component)
+NukiLockNightModeEnabledSwitch = nuki_lock_ns.class_("NukiLockNightModeEnabledSwitch", switch.Switch, cg.Component)
+NukiLockNightModeAutoLockEnabledSwitch = nuki_lock_ns.class_("NukiLockNightModeAutoLockEnabledSwitch", switch.Switch, cg.Component)
+NukiLockNightModeAutoUnlockDisabledSwitch = nuki_lock_ns.class_("NukiLockNightModeAutoUnlockDisabledSwitch", switch.Switch, cg.Component)
+NukiLockNightModeImmediateLockOnStartEnabledSwitch = nuki_lock_ns.class_("NukiLockNightModeImmediateLockOnStartEnabledSwitch", switch.Switch, cg.Component)
+NukiLockAutoLockEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoLockEnabledSwitch", switch.Switch, cg.Component)
+NukiLockAutoUnlockDisabledSwitch = nuki_lock_ns.class_("NukiLockAutoUnlockDisabledSwitch", switch.Switch, cg.Component)
+NukiLockImmediateAutoLockEnabledSwitch = nuki_lock_ns.class_("NukiLockImmediateAutoLockEnabledSwitch", switch.Switch, cg.Component)
+NukiLockAutoUpdateEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoUpdateEnabledSwitch", switch.Switch, cg.Component)
 NukiLockLedBrightnessNumber = nuki_lock_ns.class_("NukiLockLedBrightnessNumber", number.Number, cg.Component)
+NukiLockSingleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockSingleButtonPressActionSelect", select.Select, cg.Component)
+NukiLockDoubleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockDoubleButtonPressActionSelect", select.Select, cg.Component)
 
 NukiLockUnpairAction = nuki_lock_ns.class_(
     "NukiLockUnpairAction", automation.Action
@@ -112,8 +141,56 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         device_class=DEVICE_CLASS_SWITCH,
         entity_category=ENTITY_CATEGORY_CONFIG,
     ),
+    cv.Optional(CONF_NIGHT_MODE_ENABLED_SWITCH): switch.switch_schema(
+        NukiLockNightModeEnabledSwitch,
+        device_class=DEVICE_CLASS_SWITCH,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+    ),
+    cv.Optional(CONF_NIGHT_MODE_AUTO_LOCK_ENABLED_SWITCH): switch.switch_schema(
+        NukiLockNightModeAutoLockEnabledSwitch,
+        device_class=DEVICE_CLASS_SWITCH,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+    ),
+    cv.Optional(CONF_NIGHT_MODE_AUTO_UNLOCK_DISABLED_SWITCH): switch.switch_schema(
+        NukiLockNightModeAutoUnlockDisabledSwitch,
+        device_class=DEVICE_CLASS_SWITCH,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+    ),
+    cv.Optional(CONF_NIGHT_MODE_IMMEDIATE_LOCK_ON_START_ENABLED_SWITCH): switch.switch_schema(
+        NukiLockNightModeImmediateLockOnStartEnabledSwitch,
+        device_class=DEVICE_CLASS_SWITCH,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+    ),
+    cv.Optional(CONF_AUTO_LOCK_ENABLED_SWITCH): switch.switch_schema(
+        NukiLockAutoLockEnabledSwitch,
+        device_class=DEVICE_CLASS_SWITCH,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+    ),
+    cv.Optional(CONF_AUTO_UNLOCK_DISABLED_SWITCH): switch.switch_schema(
+        NukiLockAutoUnlockDisabledSwitch,
+        device_class=DEVICE_CLASS_SWITCH,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+    ),
+    cv.Optional(CONF_IMMEDIATE_AUTO_LOCK_ENABLED_SWITCH): switch.switch_schema(
+        NukiLockImmediateAutoLockEnabledSwitch,
+        device_class=DEVICE_CLASS_SWITCH,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+    ),
+    cv.Optional(CONF_AUTO_UPDATE_ENABLED_SWITCH): switch.switch_schema(
+        NukiLockAutoUpdateEnabledSwitch,
+        device_class=DEVICE_CLASS_SWITCH,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+    ),
     cv.Optional(CONF_LED_BRIGHTNESS_NUMBER): number.number_schema(
         NukiLockLedBrightnessNumber,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+    ),
+    cv.Optional(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT): select.select_schema(
+        NukiLockSingleButtonPressActionSelect,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+    ),
+    cv.Optional(CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT): select.select_schema(
+        NukiLockDoubleButtonPressActionSelect,
         entity_category=ENTITY_CATEGORY_CONFIG,
     ),
     cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
@@ -208,6 +285,64 @@ async def to_code(config):
         s = await switch.new_switch(led_enabled)
         await cg.register_parented(s, config[CONF_ID])
         cg.add(var.set_led_enabled_switch(s))
+
+    if nightmode_enabled := config.get(CONF_NIGHT_MODE_ENABLED_SWITCH):
+        s = await switch.new_switch(nightmode_enabled)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_nightmode_enabled_switch(s))
+
+    if night_mode_auto_lock_enabled := config.get(CONF_NIGHT_MODE_AUTO_LOCK_ENABLED_SWITCH):
+        s = await switch.new_switch(night_mode_auto_lock_enabled)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_night_mode_auto_lock_enabled_switch(s))
+
+    if night_mode_auto_unlock_disabled := config.get(CONF_NIGHT_MODE_AUTO_UNLOCK_DISABLED_SWITCH):
+        s = await switch.new_switch(night_mode_auto_unlock_disabled)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_night_mode_auto_unlock_disabled_switch(s))
+
+    if night_mode_immediate_lock_on_start := config.get(CONF_NIGHT_MODE_IMMEDIATE_LOCK_ON_START_ENABLED_SWITCH):
+        s = await switch.new_switch(night_mode_immediate_lock_on_start)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_night_mode_immediate_lock_on_start_switch(s))
+
+    if auto_lock_enabled := config.get(CONF_AUTO_LOCK_ENABLED_SWITCH):
+        s = await switch.new_switch(auto_lock_enabled)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_auto_lock_enabled_switch(s))
+
+    if auto_unlock_disabled := config.get(CONF_AUTO_UNLOCK_DISABLED_SWITCH):
+        s = await switch.new_switch(auto_unlock_disabled)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_auto_unlock_disabled_switch(s))
+
+    if immediate_auto_lock_enabled := config.get(CONF_IMMEDIATE_AUTO_LOCK_ENABLED_SWITCH):
+        s = await switch.new_switch(immediate_auto_lock_enabled)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_immediate_auto_lock_enabled_switch(s))
+
+    if auto_update_enabled := config.get(CONF_AUTO_UPDATE_ENABLED_SWITCH):
+        s = await switch.new_switch(auto_update_enabled)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_auto_update_enabled_switch(s))
+
+    # Select
+    if single_button_press_action := config.get(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT):
+        sel = await select.new_select(
+            single_button_press_action,
+            options=[CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS],
+        )
+        await cg.register_parented(sel, config[CONF_ID])
+        cg.add(var.set_single_button_press_action_select(sel))
+
+    if double_button_press_action := config.get(CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT):
+        sel = await select.new_select(
+            double_button_press_action,
+            options=[CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS],
+        )
+        await cg.register_parented(sel, config[CONF_ID])
+        cg.add(var.set_double_button_press_action_select(sel))
+
 
     # Callback
     for conf in config.get(CONF_ON_PAIRING_MODE_ON, []):

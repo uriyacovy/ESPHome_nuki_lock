@@ -52,6 +52,10 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
     #ifdef USE_NUMBER
     SUB_NUMBER(led_brightness)
     #endif
+    #ifdef USE_SELECT
+    SUB_SELECT(single_button_press_action)
+    SUB_SELECT(double_button_press_action)
+    #endif
     #ifdef USE_BUTTON
     SUB_BUTTON(unpair)
     #endif
@@ -60,6 +64,14 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
     SUB_SWITCH(button_enabled)
     SUB_SWITCH(auto_unlatch_enabled)
     SUB_SWITCH(led_enabled)
+    SUB_SWITCH(nightmode_enabled)
+    SUB_SWITCH(night_mode_auto_lock_enabled)
+    SUB_SWITCH(night_mode_auto_unlock_disabled)
+    SUB_SWITCH(night_mode_immediate_lock_on_start)
+    SUB_SWITCH(auto_lock_enabled)
+    SUB_SWITCH(auto_unlock_disabled)
+    SUB_SWITCH(immediate_auto_lock_enabled)
+    SUB_SWITCH(auto_update_enabled)
     #endif
 
     static const uint8_t BLE_CONNECT_TIMEOUT_SEC = 3;
@@ -102,12 +114,28 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
         bool nuki_doorsensor_to_binary(Nuki::DoorSensorState);
         std::string nuki_doorsensor_to_string(Nuki::DoorSensorState nukiDoorSensorState);
 
+        NukiLock::ButtonPressAction nuki_button_press_action_to_enum(std::string str);
+        const char* nuki_button_press_action_to_string(NukiLock::ButtonPressAction action);
+
         void unpair();
+
         void set_pairing_mode(bool enabled);
         void set_auto_unlatch_enabled(bool enabled);
         void set_button_enabled(bool enabled);
         void set_led_enabled(bool enabled);
+        void set_nightmode_enabled(bool enabled);
+        void set_night_mode_auto_lock_enabled(bool enabled);
+        void set_night_mode_auto_unlock_disabled(bool disabled);
+        void set_night_mode_immediate_lock_on_start(bool enabled);
+        void set_auto_lock_enabled(bool enabled);
+        void set_auto_unlock_disabled(bool disabled);
+        void set_immediate_auto_lock_enabled(bool enabled);
+        void set_auto_update_enabled(bool enabled);
+
         void set_led_brightness(float value);
+
+        void set_single_button_press_action(const std::string &action);
+        void set_double_button_press_action(const std::string &action);
 
     protected:
         void control(const lock::LockCall &call) override;
@@ -115,6 +143,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
 
         void update_status();
         void update_config();
+        void update_advanced_config();
         bool executeLockAction(NukiLock::LockAction lockAction);
 
         BleScanner::Scanner scanner_;
@@ -128,6 +157,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
 
         bool status_update_;
         bool config_update_;
+        bool advanced_config_update_;
         bool open_latch_;
         bool lock_n_go_;
 
@@ -207,52 +237,116 @@ class NukiLockUnpairButton : public button::Button, public Parented<NukiLockComp
 };
 #endif
 
+#ifdef USE_SELECT
+class NukiLockSingleButtonPressActionSelect : public select::Select, public Parented<NukiLockComponent> {
+    public:
+        NukiLockSingleButtonPressActionSelect() = default;
+    protected:
+        void control(const std::string &value) override;
+};
+
+class NukiLockDoubleButtonPressActionSelect : public select::Select, public Parented<NukiLockComponent> {
+    public:
+        NukiLockDoubleButtonPressActionSelect() = default;
+    protected:
+        void control(const std::string &value) override;
+};
+#endif
+
 #ifdef USE_SWITCH
 class NukiLockPairingModeSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
     public:
         NukiLockPairingModeSwitch() = default;
-        Trigger<> *get_turn_on_trigger() const;
-        Trigger<> *get_turn_off_trigger() const;
     protected:
         void write_state(bool state) override;
-        Trigger<> *turn_on_trigger_;
-        Trigger<> *turn_off_trigger_;
 };
 
 class NukiLockAutoUnlatchEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
    public:
       NukiLockAutoUnlatchEnabledSwitch() = default;
-      Trigger<> *get_turn_on_trigger() const;
-      Trigger<> *get_turn_off_trigger() const;
 
    protected:
       void write_state(bool state) override;
-      Trigger<> *turn_on_trigger_;
-      Trigger<> *turn_off_trigger_;
 };
 
 class NukiLockButtonEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
    public:
       NukiLockButtonEnabledSwitch() = default;
-      Trigger<> *get_turn_on_trigger() const;
-      Trigger<> *get_turn_off_trigger() const;
 
    protected:
       void write_state(bool state) override;
-      Trigger<> *turn_on_trigger_;
-      Trigger<> *turn_off_trigger_;
 };
 
 class NukiLockLedEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
     public:
         NukiLockLedEnabledSwitch() = default;
-        Trigger<> *get_turn_on_trigger() const;
-        Trigger<> *get_turn_off_trigger() const;
 
     protected:
         void write_state(bool state) override;
-        Trigger<> *turn_on_trigger_;
-        Trigger<> *turn_off_trigger_;
+};
+
+class NukiLockNightModeEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockNightModeEnabledSwitch() = default;
+
+    protected:
+        void write_state(bool state) override;
+};
+
+class NukiLockNightModeAutoLockEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockNightModeAutoLockEnabledSwitch() = default;
+
+    protected:
+        void write_state(bool state) override;
+};
+
+class NukiLockNightModeAutoUnlockDisabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockNightModeAutoUnlockDisabledSwitch() = default;
+
+    protected:
+        void write_state(bool state) override;
+};
+
+class NukiLockNightModeImmediateLockOnStartEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockNightModeImmediateLockOnStartEnabledSwitch() = default;
+
+    protected:
+        void write_state(bool state) override;
+};
+
+class NukiLockAutoLockEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockAutoLockEnabledSwitch() = default;
+
+    protected:
+        void write_state(bool state) override;
+};
+
+class NukiLockAutoUnlockDisabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockAutoUnlockDisabledSwitch() = default;
+
+    protected:
+        void write_state(bool state) override;
+};
+
+class NukiLockImmediateAutoLockEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockImmediateAutoLockEnabledSwitch() = default;
+
+    protected:
+        void write_state(bool state) override;
+};
+
+class NukiLockAutoUpdateEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockAutoUpdateEnabledSwitch() = default;
+
+    protected:
+        void write_state(bool state) override;
 };
 #endif
 
