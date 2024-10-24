@@ -18,16 +18,36 @@ external_components:
 
 lock:
   - platform: nuki_lock
-    name: My Nuki Lock
+    name: Nuki Lock
+    is_connected:
+      name: "Nuki Connected"
     is_paired:
       name: "Nuki Paired"
     battery_critical:
       name: "Nuki Battery Critical"
     battery_level:
       name: "Nuki Battery Level"
-    is_connected:
-      name: "Nuki Connected"
     door_sensor:
       name: "Nuki Door Sensor"
     door_sensor_state:
       name: "Nuki Door Sensor State"
+    unpair:
+      name: "Nuki Unpair"
+    pairing_mode:
+      name: "Nuki Pairing Mode"
+    auto_unlatch:
+      name: "Nuki Auto unlatch"
+    button_enabled:
+      name: "Nuki Button enabled"
+    led_enabled:
+      name: "Nuki LED enabled"
+    led_brightness:
+      name: "Nuki LED brightness"
+    security_pin: 1234
+    pairing_mode_timeout: 300s
+    on_pairing_mode_on_action:
+      - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
+    on_pairing_mode_off_action:
+      - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned off");
+    on_paired_action:
+      - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");

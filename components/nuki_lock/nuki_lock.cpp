@@ -93,7 +93,7 @@ void NukiLockComponent::update_status()
         if (this->door_sensor_state_text_sensor_ != nullptr)
             this->door_sensor_state_text_sensor_->publish_state(this->nuki_doorsensor_to_string(this->retrievedKeyTurnerState_.doorSensorState));
         #endif
-        
+
         if (
             this->retrievedKeyTurnerState_.lockState == NukiLock::LockState::Locking
             || this->retrievedKeyTurnerState_.lockState == NukiLock::LockState::Unlocking
@@ -132,13 +132,12 @@ void NukiLockComponent::update_config() {
         #ifdef USE_SWITCH
         if (this->auto_unlatch_enabled_switch_ != nullptr)
             this->auto_unlatch_enabled_switch_->publish_state(config.autoUnlatch);
-        
         if (this->button_enabled_switch_ != nullptr)
             this->button_enabled_switch_->publish_state(config.buttonEnabled);
-        
         if (this->led_enabled_switch_ != nullptr)
             this->led_enabled_switch_->publish_state(config.ledEnabled);
-
+        #endif
+        #ifdef USE_NUMBER
         if (this->led_brightness_number_ != nullptr)
             this->led_brightness_number_->publish_state(config.ledBrightness);
         #endif
@@ -575,6 +574,11 @@ void NukiLockComponent::set_auto_unlatch_enabled(bool enabled) {
     #ifdef USE_SWITCH
     if (cmdResult == Nuki::CmdResult::Success && this->auto_unlatch_enabled_switch_ != nullptr) {
         this->auto_unlatch_enabled_switch_->publish_state(enabled);
+        this->config_update_ = true;
+    } else {
+        char cmdResultAsString[30];
+        NukiLock::cmdResultToString(cmdResult, cmdResultAsString);
+        ESP_LOGW(TAG, "Set Auto Unlatch result: %s", cmdResultAsString);
     }
     #endif
 }
@@ -586,6 +590,11 @@ void NukiLockComponent::set_button_enabled(bool enabled) {
     #ifdef USE_SWITCH
     if (cmdResult == Nuki::CmdResult::Success && this->button_enabled_switch_ != nullptr) {
         this->button_enabled_switch_->publish_state(enabled);
+        this->config_update_ = true;
+    } else {
+        char cmdResultAsString[30];
+        NukiLock::cmdResultToString(cmdResult, cmdResultAsString);
+        ESP_LOGW(TAG, "Set Button enabled result: %s", cmdResultAsString);
     }
     #endif
 }
@@ -597,6 +606,11 @@ void NukiLockComponent::set_led_enabled(bool enabled) {
     #ifdef USE_SWITCH
     if (cmdResult == Nuki::CmdResult::Success && this->led_enabled_switch_ != nullptr) {
         this->led_enabled_switch_->publish_state(enabled);
+        this->config_update_ = true;
+    } else {
+        char cmdResultAsString[30];
+        NukiLock::cmdResultToString(cmdResult, cmdResultAsString);
+        ESP_LOGW(TAG, "Set LED enabled result: %s", cmdResultAsString);
     }
     #endif
 }
@@ -605,9 +619,14 @@ void NukiLockComponent::set_led_brightness(float value) {
     
     Nuki::CmdResult cmdResult = this->nukiLock_.setLedBrightness(static_cast<uint8_t>(value));
 
-    #ifdef USE_SWITCH
+    #ifdef USE_NUMBER
     if (cmdResult == Nuki::CmdResult::Success && this->led_brightness_number_ != nullptr) {
         this->led_brightness_number_->publish_state(value);
+        this->config_update_ = true;
+    } else {
+        char cmdResultAsString[30];
+        NukiLock::cmdResultToString(cmdResult, cmdResultAsString);
+        ESP_LOGW(TAG, "Set LED Brightness result: %s", cmdResultAsString);
     }
     #endif
 }
@@ -621,28 +640,21 @@ void NukiLockUnpairButton::press_action() {
 
 #ifdef USE_SWITCH
 // Pairing Mode Switch
-void NukiLockPairingModeSwitch::setup() {
-    this->publish_state(false);
-}
-
 void NukiLockPairingModeSwitch::write_state(bool state) {
     this->parent_->set_pairing_mode(state);
 }
 
-// Button Enabled Switch
-void NukiLockButtonEnabledSwitch::setup() {
-    this->publish_state(false);
+// Auto Unlatch Enabled Switch
+void NukiLockAutoUnlatchEnabledSwitch::write_state(bool state) {
+    this->parent_->set_auto_unlatch_enabled(state);
 }
 
+// Button Enabled Switch
 void NukiLockButtonEnabledSwitch::write_state(bool state) {
     this->parent_->set_button_enabled(state);
 }
 
 // LED Enabled Switch
-void NukiLockLedEnabledSwitch::setup() {
-    this->publish_state(false);
-}
-
 void NukiLockLedEnabledSwitch::write_state(bool state) {
     this->parent_->set_led_enabled(state);
 }
@@ -650,10 +662,6 @@ void NukiLockLedEnabledSwitch::write_state(bool state) {
 
 #ifdef USE_NUMBER
 // LED Brightness Number
-void NukiLockLedBrightnessNumber::setup() {
-    this->publish_state(0);
-}
-
 void NukiLockLedBrightnessNumber::control(float value) {
     this->parent_->set_led_brightness(value);
 }

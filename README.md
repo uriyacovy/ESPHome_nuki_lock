@@ -63,6 +63,8 @@ lock:
       name: "Nuki Unpair"
     pairing_mode:
       name: "Nuki Pairing Mode"
+    auto_unlatch:
+      name: "Nuki Auto unlatch"
     button_enabled:
       name: "Nuki Button enabled"
     led_enabled:

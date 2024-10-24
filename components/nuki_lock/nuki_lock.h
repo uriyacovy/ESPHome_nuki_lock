@@ -208,13 +208,12 @@ class NukiLockUnpairButton : public button::Button, public Parented<NukiLockComp
 #endif
 
 #ifdef USE_SWITCH
-class NukiLockPairingModeSwitch : public Component, public switch_::Switch, public Parented<NukiLockComponent> {
+class NukiLockPairingModeSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
     public:
         NukiLockPairingModeSwitch() = default;
         Trigger<> *get_turn_on_trigger() const;
         Trigger<> *get_turn_off_trigger() const;
     protected:
-        void setup() override;
         void write_state(bool state) override;
         Trigger<> *turn_on_trigger_;
         Trigger<> *turn_off_trigger_;
@@ -227,7 +226,6 @@ class NukiLockAutoUnlatchEnabledSwitch : public switch_::Switch, public Parented
       Trigger<> *get_turn_off_trigger() const;
 
    protected:
-      void setup() override;
       void write_state(bool state) override;
       Trigger<> *turn_on_trigger_;
       Trigger<> *turn_off_trigger_;
@@ -240,7 +238,6 @@ class NukiLockButtonEnabledSwitch : public switch_::Switch, public Parented<Nuki
       Trigger<> *get_turn_off_trigger() const;
 
    protected:
-      void setup() override;
       void write_state(bool state) override;
       Trigger<> *turn_on_trigger_;
       Trigger<> *turn_off_trigger_;
@@ -253,7 +250,6 @@ class NukiLockLedEnabledSwitch : public switch_::Switch, public Parented<NukiLoc
         Trigger<> *get_turn_off_trigger() const;
 
     protected:
-        void setup() override;
         void write_state(bool state) override;
         Trigger<> *turn_on_trigger_;
         Trigger<> *turn_off_trigger_;
@@ -266,7 +262,6 @@ class NukiLockLedBrightnessNumber : public number::Number, public Parented<NukiL
         NukiLockLedBrightnessNumber() = default;
 
     protected:
-        void setup() override;
         void control(float value) override;
 };
 #endif

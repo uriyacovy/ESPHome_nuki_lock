@@ -6,7 +6,7 @@ esphome:
     - Preferences
     - https://github.com/h2zero/NimBLE-Arduino#1.4.0
     - Crc16
-    - https://github.com/uriyacovy/NukiBleEsp32#dev
+    - https://github.com/I-Connect/NukiBleEsp32
 
 esp32:
   framework:

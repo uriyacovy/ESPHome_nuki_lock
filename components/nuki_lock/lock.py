@@ -29,7 +29,7 @@ CONF_DOOR_SENSOR_STATE = "door_sensor_state"
 CONF_UNPAIR_BUTTON = "unpair"
 
 CONF_PAIRING_MODE_SWITCH = "pairing_mode"
-CONF_AUTO_UNLATCH_ENABLED_SWITCH = "auto_unlatch_enabled"
+CONF_AUTO_UNLATCH_SWITCH = "auto_unlatch"
 CONF_BUTTON_ENABLED_SWITCH = "button_enabled"
 CONF_LED_ENABLED_SWITCH = "led_enabled"
 
@@ -102,7 +102,7 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         device_class=DEVICE_CLASS_SWITCH,
         entity_category=ENTITY_CATEGORY_CONFIG,
     ),
-    cv.Optional(CONF_AUTO_UNLATCH_ENABLED_SWITCH): switch.switch_schema(
+    cv.Optional(CONF_AUTO_UNLATCH_SWITCH): switch.switch_schema(
         NukiLockAutoUnlatchEnabledSwitch,
         device_class=DEVICE_CLASS_SWITCH,
         entity_category=ENTITY_CATEGORY_CONFIG,
@@ -150,29 +150,29 @@ async def to_code(config):
     # Binary Sensor
     if is_connected := config.get(CONF_IS_CONNECTED):
         sens = await binary_sensor.new_binary_sensor(is_connected)
-        cg.add(var.set_is_connected(sens))
+        cg.add(var.set_is_connected_binary_sensor(sens))
 
     if is_paired := config.get(CONF_IS_PAIRED):
         sens = await binary_sensor.new_binary_sensor(is_paired)
-        cg.add(var.set_is_paired(sens))
+        cg.add(var.set_is_paired_binary_sensor(sens))
 
     if battery_critical := config.get(CONF_BATTERY_CRITICAL):
         sens = await binary_sensor.new_binary_sensor(battery_critical)
-        cg.add(var.set_battery_critical(sens))
+        cg.add(var.set_battery_critical_binary_sensor(sens))
 
     if door_sensor := config.get(CONF_DOOR_SENSOR):
         sens = await binary_sensor.new_binary_sensor(door_sensor)
-        cg.add(var.set_door_sensor(sens))
+        cg.add(var.set_door_sensor_binary_sensor(sens))
 
     # Sensor
     if battery_level := config.get(CONF_BATTERY_LEVEL):
         sens = await sensor.new_sensor(battery_level)
-        cg.add(var.set_battery_level(sens))
+        cg.add(var.set_battery_level_sensor(sens))
 
     # Text Sensor
     if door_sensor_state := config.get(CONF_DOOR_SENSOR_STATE):
         sens = await text_sensor.new_text_sensor(door_sensor_state)
-        cg.add(var.set_door_sensor_state(sens))
+        cg.add(var.set_door_sensor_state_text_sensor(sens))
 
     # Button
     if unpair := config.get(CONF_UNPAIR_BUTTON):
@@ -199,7 +199,7 @@ async def to_code(config):
         await cg.register_parented(s, config[CONF_ID])
         cg.add(var.set_button_enabled_switch(s))
 
-    if auto_unlatch := config.get(CONF_AUTO_UNLATCH_ENABLED_SWITCH):
+    if auto_unlatch := config.get(CONF_AUTO_UNLATCH_SWITCH):
         s = await switch.new_switch(auto_unlatch)
         await cg.register_parented(s, config[CONF_ID])
         cg.add(var.set_auto_unlatch_enabled_switch(s))
@@ -252,7 +252,7 @@ NUKI_LOCK_SET_PAIRING_MODE_SCHEMA = automation.maybe_simple_id(
 )
 
 @automation.register_action(
-    "nuki_hub.set_pairing_mode", NukiLockPairingModeAction, NUKI_LOCK_SET_PAIRING_MODE_SCHEMA
+    "nuki_lock.set_pairing_mode", NukiLockPairingModeAction, NUKI_LOCK_SET_PAIRING_MODE_SCHEMA
 )
 
 async def nuki_lock_set_pairing_mode_to_code(config, action_id, template_arg, args):
