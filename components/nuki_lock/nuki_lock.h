@@ -50,7 +50,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
         void set_unpair_button(button::Button *unpair_button) { this->unpair_button_ = unpair_button; }
         void set_pairing_mode_switch(switch_::Switch *pairing_mode_switch) { this->pairing_mode_switch_ = pairing_mode_switch; }
         void set_security_pin(uint16_t security_pin) { this->security_pin_ = security_pin; }
-        void set_pairing_timeout(uint16_t pairing_timeout) { this->pairing_timeout_ = pairing_timeout; }
+        void set_pairing_mode_timeout(uint16_t pairing_mode_timeout) { this->pairing_mode_timeout_ = pairing_mode_timeout; }
         void add_pairing_mode_on_callback(std::function<void()> &&callback);
         void add_pairing_mode_off_callback(std::function<void()> &&callback);
         void add_paired_callback(std::function<void()> &&callback);
@@ -105,7 +105,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
 
         uint16_t security_pin_ = 0;
 
-        uint16_t pairing_timeout_ = 0;
+        uint16_t pairing_mode_timeout_ = 0;
         bool pairing_mode_ = false;
         uint32_t pairing_mode_timer_ = 0;
 

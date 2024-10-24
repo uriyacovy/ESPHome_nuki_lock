@@ -518,14 +518,14 @@ void NukiLockComponent::set_pairing_mode(bool enabled) {
     this->pairing_mode_switch_->publish_state(enabled);
 
     if(enabled) {
-        ESP_LOGI(TAG, "Pairing Mode turned on for %d seconds", this->pairing_timeout_);
+        ESP_LOGI(TAG, "Pairing Mode turned on for %d seconds", this->pairing_mode_timeout_);
         this->pairing_mode_on_callback_.call();
 
         ESP_LOGI(TAG, "Waiting for Nuki to enter pairing mode...");
 
         // Turn on for ... seconds
         uint32_t now_millis = millis();
-        this->pairing_mode_timer_ = now_millis + (this->pairing_timeout_ * 1000);
+        this->pairing_mode_timer_ = now_millis + (this->pairing_mode_timeout_ * 1000);
     } else {
         ESP_LOGI(TAG, "Pairing Mode turned off");
         this->pairing_mode_timer_ = 0;

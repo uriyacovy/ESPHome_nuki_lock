@@ -27,7 +27,7 @@ CONF_DOOR_SENSOR = "door_sensor"
 CONF_DOOR_SENSOR_STATE = "door_sensor_state"
 
 CONF_SET_PAIRING_MODE = "pairing_mode"
-CONF_PAIRING_TIMEOUT = "pairing_timeout"
+CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 
 CONF_ON_PAIRING_MODE_ON = "on_pairing_mode_on_action"
 CONF_ON_PAIRING_MODE_OFF = "on_pairing_mode_off_action"
@@ -83,7 +83,7 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         entity_category=ENTITY_CATEGORY_CONFIG,
         icon="mdi:bluetooth-connect",
     ),
-    cv.Optional(CONF_PAIRING_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
+    cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
     cv.Optional(CONF_ON_PAIRING_MODE_ON): automation.validate_automation(
         {
             cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairingModeOnTrigger),
@@ -139,7 +139,7 @@ async def to_code(config):
         await cg.register_parented(sw, config[CONF_ID])
         cg.add(var.set_pairing_mode_switch(sw))
 
-    cg.add(var.set_pairing_timeout(config[CONF_PAIRING_TIMEOUT]))
+    cg.add(var.set_pairing_mode_timeout(config[CONF_PAIRING_MODE_TIMEOUT]))
 
     for conf in config.get(CONF_ON_PAIRING_MODE_ON, []):
         trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
