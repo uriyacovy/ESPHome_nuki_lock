@@ -33,7 +33,7 @@
 namespace esphome {
 namespace nuki_lock {
 
-static const char *TAG = "nukilock.lock";
+static const char *TAG = "nuki_lock.lock";
 
 class NukiLockComponent : public lock::Lock, public PollingComponent, public api::CustomAPIDevice, public Nuki::SmartlockEventHandler {
     
@@ -58,6 +58,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
     #ifdef USE_SWITCH
     SUB_SWITCH(pairing_mode)
     SUB_SWITCH(button_enabled)
+    SUB_SWITCH(auto_unlatch_enabled)
     SUB_SWITCH(led_enabled)
     #endif
 
@@ -103,6 +104,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
 
         void unpair();
         void set_pairing_mode(bool enabled);
+        void set_auto_unlatch_enabled(bool enabled);
         void set_button_enabled(bool enabled);
         void set_led_enabled(bool enabled);
         void set_led_brightness(float value);
@@ -196,13 +198,16 @@ class PairedTrigger : public Trigger<> {
 };
 
 // Entities
+#ifdef USE_BUTTON
 class NukiLockUnpairButton : public button::Button, public Parented<NukiLockComponent> {
     public:
         NukiLockUnpairButton() = default;
     protected:
         void press_action() override;
 };
+#endif
 
+#ifdef USE_SWITCH
 class NukiLockPairingModeSwitch : public Component, public switch_::Switch, public Parented<NukiLockComponent> {
     public:
         NukiLockPairingModeSwitch() = default;
@@ -213,6 +218,19 @@ class NukiLockPairingModeSwitch : public Component, public switch_::Switch, publ
         void write_state(bool state) override;
         Trigger<> *turn_on_trigger_;
         Trigger<> *turn_off_trigger_;
+};
+
+class NukiLockAutoUnlatchEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+   public:
+      NukiLockAutoUnlatchEnabledSwitch() = default;
+      Trigger<> *get_turn_on_trigger() const;
+      Trigger<> *get_turn_off_trigger() const;
+
+   protected:
+      void setup() override;
+      void write_state(bool state) override;
+      Trigger<> *turn_on_trigger_;
+      Trigger<> *turn_off_trigger_;
 };
 
 class NukiLockButtonEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
@@ -240,7 +258,9 @@ class NukiLockLedEnabledSwitch : public switch_::Switch, public Parented<NukiLoc
         Trigger<> *turn_on_trigger_;
         Trigger<> *turn_off_trigger_;
 };
+#endif
 
+#ifdef USE_NUMBER
 class NukiLockLedBrightnessNumber : public number::Number, public Parented<NukiLockComponent> {
     public:
         NukiLockLedBrightnessNumber() = default;
@@ -249,6 +269,7 @@ class NukiLockLedBrightnessNumber : public number::Number, public Parented<NukiL
         void setup() override;
         void control(float value) override;
 };
+#endif
 
 } //namespace nuki_lock
 } //namespace esphome

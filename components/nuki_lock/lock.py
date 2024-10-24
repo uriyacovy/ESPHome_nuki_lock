@@ -29,6 +29,7 @@ CONF_DOOR_SENSOR_STATE = "door_sensor_state"
 CONF_UNPAIR_BUTTON = "unpair"
 
 CONF_PAIRING_MODE_SWITCH = "pairing_mode"
+CONF_AUTO_UNLATCH_ENABLED_SWITCH = "auto_unlatch_enabled"
 CONF_BUTTON_ENABLED_SWITCH = "button_enabled"
 CONF_LED_ENABLED_SWITCH = "led_enabled"
 
@@ -48,6 +49,7 @@ NukiLock = nuki_lock_ns.class_('NukiLockComponent', lock.Lock, switch.Switch, cg
 
 NukiLockUnpairButton = nuki_lock_ns.class_("NukiLockUnpairButton", button.Button, cg.Component)
 NukiLockPairingModeSwitch = nuki_lock_ns.class_("NukiLockPairingModeSwitch", switch.Switch, cg.Component)
+NukiLockAutoUnlatchEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoUnlatchEnabledSwitch", switch.Switch, cg.Component)
 NukiLockButtonEnabledSwitch = nuki_lock_ns.class_("NukiLockButtonEnabledSwitch", switch.Switch, cg.Component)
 NukiLockLedEnabledSwitch = nuki_lock_ns.class_("NukiLockLedEnabledSwitch", switch.Switch, cg.Component)
 NukiLockLedBrightnessNumber = nuki_lock_ns.class_("NukiLockLedBrightnessNumber", number.Number, cg.Component)
@@ -97,6 +99,11 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
     ),
     cv.Optional(CONF_BUTTON_ENABLED_SWITCH): switch.switch_schema(
         NukiLockButtonEnabledSwitch,
+        device_class=DEVICE_CLASS_SWITCH,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+    ),
+    cv.Optional(CONF_AUTO_UNLATCH_ENABLED_SWITCH): switch.switch_schema(
+        NukiLockAutoUnlatchEnabledSwitch,
         device_class=DEVICE_CLASS_SWITCH,
         entity_category=ENTITY_CATEGORY_CONFIG,
     ),
@@ -191,6 +198,11 @@ async def to_code(config):
         s = await switch.new_switch(button_enabled)
         await cg.register_parented(s, config[CONF_ID])
         cg.add(var.set_button_enabled_switch(s))
+
+    if auto_unlatch := config.get(CONF_AUTO_UNLATCH_ENABLED_SWITCH):
+        s = await switch.new_switch(auto_unlatch)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_auto_unlatch_enabled_switch(s))
 
     if led_enabled := config.get(CONF_LED_ENABLED_SWITCH):
         s = await switch.new_switch(led_enabled)
