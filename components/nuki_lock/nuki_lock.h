@@ -144,11 +144,20 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
         void update_status();
         void update_config();
         void update_advanced_config();
+
+        void update_event_logs();
+        void update_auth_data();
+        void processLogEntries(const std::list<NukiLock::LogEntry>& logEntries);
+
         bool executeLockAction(NukiLock::LockAction lockAction);
 
         BleScanner::Scanner scanner_;
         NukiLock::KeyTurnerState retrievedKeyTurnerState_;
         NukiLock::LockAction lockAction_;
+
+        std::map<uint32_t, std::string> auth_entries_;
+        uint32_t auth_id_ = 0;
+        char auth_name_[33];
 
         uint32_t lastCommandExecutedTime_ = 0;
         uint32_t command_cooldown_millis = 0;
@@ -158,6 +167,8 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
         bool status_update_;
         bool config_update_;
         bool advanced_config_update_;
+        bool auth_data_update_;
+        bool event_log_update_;
         bool open_latch_;
         bool lock_n_go_;
 

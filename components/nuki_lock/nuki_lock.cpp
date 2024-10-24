@@ -121,6 +121,9 @@ void NukiLockComponent::update_status()
             this->door_sensor_state_text_sensor_->publish_state(this->nuki_doorsensor_to_string(this->retrievedKeyTurnerState_.doorSensorState));
         #endif
 
+        this->auth_data_update_ = true;
+        this->event_log_update_ = true;
+
         if (
             this->retrievedKeyTurnerState_.lockState == NukiLock::LockState::Locking
             || this->retrievedKeyTurnerState_.lockState == NukiLock::LockState::Unlocking
@@ -226,6 +229,236 @@ void NukiLockComponent::update_advanced_config() {
     }
 }
 
+void NukiLockComponent::update_auth_data()
+{
+    this->auth_data_update_ = false;
+
+    Nuki::CmdResult confReqResult = (Nuki::CmdResult)-1;
+    int retryCount = 0;
+    while(retryCount < 3)
+    {
+        ESP_LOGD(TAG, "Retrieve Auth Data");
+        confReqResult = this->nukiLock_.retrieveAuthorizationEntries(0, 10);
+
+        if(confReqResult != Nuki::CmdResult::Success)
+        {
+            ++retryCount;
+            App.feed_wdt();
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    App.feed_wdt();
+    delay(5000);
+
+    std::list<NukiLock::AuthorizationEntry> authEntries;
+    this->nukiLock_.getAuthorizationEntries(&authEntries);
+
+    authEntries.sort([](const NukiLock::AuthorizationEntry& a, const NukiLock::AuthorizationEntry& b)
+    {
+        return a.authId < b.authId;
+    });
+
+    if(authEntries.size() > 20)
+    {
+        authEntries.resize(20);
+    }
+
+    for(const auto& entry : authEntries)
+    {
+        ESP_LOGD(TAG, "Authorization entry[%d] type: %d name: %s", entry.authId, entry.idType, entry.name);
+        this->auth_entries_[entry.authId] = std::string(reinterpret_cast<const char*>(entry.name));
+    }
+}
+
+void NukiLockComponent::update_event_logs()
+{
+    this->event_log_update_ = false;
+
+    Nuki::CmdResult confReqResult = (Nuki::CmdResult)-1;
+    int retryCount = 0;
+    while(retryCount < 3)
+    {
+        ESP_LOGD(TAG, "Retrieve Event Logs");
+        confReqResult = this->nukiLock_.retrieveLogEntries(0, 10, 1, false);
+
+        if(confReqResult != Nuki::CmdResult::Success)
+        {
+            ++retryCount;
+            App.feed_wdt();
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    App.feed_wdt();
+    delay(5000);
+
+    std::list<NukiLock::LogEntry> log;
+    this->nukiLock_.getLogEntries(&log);
+
+    if(log.size() > 3)
+    {
+        log.resize(3);
+    }
+
+    log.sort([](const NukiLock::LogEntry& a, const NukiLock::LogEntry& b)
+    {
+        return a.index < b.index;
+    });
+
+    if(log.size() > 0)
+    {
+        this->processLogEntries(log);
+    }
+}
+
+void NukiLockComponent::processLogEntries(const std::list<NukiLock::LogEntry>& logEntries)
+{
+    char str[50];
+    char authName[33];
+    uint32_t authIndex = 0;
+    
+
+    for(const auto& log : logEntries)
+    {
+        memset(authName, 0, sizeof(authName));
+        authName[0] = '\0';
+
+        if((log.loggingType == NukiLock::LoggingType::LockAction || log.loggingType == NukiLock::LoggingType::KeypadAction))
+        {
+            int sizeName = sizeof(log.name);
+            memcpy(authName, log.name, sizeName);
+            if(authName[sizeName - 1] != '\0')
+            {
+                authName[sizeName] = '\0';
+            }
+
+            if(log.index > authIndex)
+            {
+                authIndex = log.index;
+                this->auth_id_ = log.authId;
+
+                memset(this->auth_name_, 0, sizeof(this->auth_name_));
+                memcpy(this->auth_name_, authName, sizeof(authName));
+
+                if(authName[sizeName - 1] != '\0' && this->auth_entries_.count(this->auth_id_) > 0)
+                {
+                    memset(this->auth_name_, 0, sizeof(this->auth_name_));
+                    memcpy(this->auth_name_, this->auth_entries_[this->auth_id_].c_str(), sizeof(this->auth_entries_[this->auth_id_].c_str()));
+                }
+            }
+        }
+
+        ESP_LOGD(TAG, "index: %i", log.index);
+        ESP_LOGD(TAG, "authorizationId: %d", log.authId);
+
+        if(this->auth_entries_.count(log.authId) > 0)
+        {
+            ESP_LOGD(TAG, "authorizationName: %s", this->auth_entries_[log.authId]);
+        } else {
+            ESP_LOGD(TAG, "authorizationName: %s", authName);
+        }
+
+        ESP_LOGD(TAG, "timeYear: %i", log.timeStampYear);
+        ESP_LOGD(TAG, "timeMonth: %i", log.timeStampMonth);
+        ESP_LOGD(TAG, "timeDay: %i", log.timeStampDay);
+        ESP_LOGD(TAG, "timeHour: %i", log.timeStampHour);
+        ESP_LOGD(TAG, "timeMinute: %i", log.timeStampMinute);
+        ESP_LOGD(TAG, "timeSecond: %i", log.timeStampSecond);
+
+        memset(str, 0, sizeof(str));
+        NukiLock::loggingTypeToString(log.loggingType, str);
+        ESP_LOGD(TAG, "type: %s", str);
+
+        switch(log.loggingType)
+        {
+            case NukiLock::LoggingType::LockAction:
+                memset(str, 0, sizeof(str));
+                NukiLock::lockactionToString((NukiLock::LockAction)log.data[0], str);
+                ESP_LOGD(TAG, "action: %s", str);
+
+                memset(str, 0, sizeof(str));
+                NukiLock::triggerToString((NukiLock::Trigger)log.data[1], str);
+                ESP_LOGD(TAG, "trigger: %s", str);
+
+                memset(str, 0, sizeof(str));
+                NukiLock::completionStatusToString((NukiLock::CompletionStatus)log.data[3], str);
+                ESP_LOGD(TAG, "completionStatus: %s", str);
+                break;
+            case NukiLock::LoggingType::KeypadAction:
+                memset(str, 0, sizeof(str));
+                NukiLock::lockactionToString((NukiLock::LockAction)log.data[0], str);
+                ESP_LOGD(TAG, "action: %s", str);
+
+                switch(log.data[1])
+                {
+                    case 0:
+                        ESP_LOGD(TAG, "trigger: arrowkey");
+                        break;
+                    case 1:
+                        ESP_LOGD(TAG, "trigger: code");
+                        break;
+                    case 2:
+                        ESP_LOGD(TAG, "trigger: fingerprint");
+                        break;
+                    default:
+                        ESP_LOGD(TAG, "trigger: unknown");
+                        break;
+                }
+
+                memset(str, 0, sizeof(str));
+
+                if(log.data[2] == 9)
+                {
+                    ESP_LOGD(TAG, "completionStatus: notAuthorized");
+                }
+                else if (log.data[2] == 224)
+                {
+                    ESP_LOGD(TAG, "completionStatus: invalidCode");
+                }
+                else
+                {
+                    NukiLock::completionStatusToString((NukiLock::CompletionStatus)log.data[2], str);
+                    ESP_LOGD(TAG, "completionStatus: %s", str);
+                }
+
+                ESP_LOGD(TAG, "codeId: %i", 256U*log.data[4]+log.data[3]);
+                break;
+            case NukiLock::LoggingType::DoorSensor:
+                switch(log.data[0])
+                {
+                case 0:
+                    ESP_LOGD(TAG, "action: DoorOpened");
+                    break;
+                case 1:
+                    ESP_LOGD(TAG, "action: DoorClosed");
+                    break;
+                case 2:
+                    ESP_LOGD(TAG, "action: SensorJammed");
+                    break;
+                default:
+                    ESP_LOGD(TAG, "action: unknown");
+                    break;
+                }
+                break;
+        }
+
+        /*if(log.index > _lastRollingLog)
+        {
+            _lastRollingLog = log.index;
+            serializeJson(entry, _buffer, _bufferSize);
+            publishString(mqtt_topic_lock_log_rolling, _buffer, true);
+            publishInt(mqtt_topic_lock_log_rolling_last, log.index, true);
+        }*/
+    }
+}
+
 bool NukiLockComponent::executeLockAction(NukiLock::LockAction lockAction) {
     // Publish the assumed transitional lock state
     switch (lockAction) {
@@ -296,6 +529,10 @@ void NukiLockComponent::setup() {
     
     if (this->nukiLock_.isPairedWithLock()) {
         this->status_update_ = true;
+        this->config_update_ = true;
+        this->advanced_config_update_ = true;
+        this->auth_data_update_ = true;
+        this->event_log_update_ = true;
         ESP_LOGI(TAG, "%s Nuki paired", this->deviceName_);
         #ifdef USE_BINARY_SENSOR
         this->is_paired_binary_sensor_->publish_initial_state(true);
@@ -346,7 +583,7 @@ void NukiLockComponent::update() {
         #endif
 
         // Execute (all) actions first, then status updates, then config updates.
-        // Only one command (action, status, or config) is executed per update() call.
+        // Only one command (action, status, config, or auth data) is executed per update() call.
         if (this->actionAttempts_ > 0) {
             this->actionAttempts_--;
 
@@ -394,6 +631,18 @@ void NukiLockComponent::update() {
         } else if (this->advanced_config_update_) {
             ESP_LOGD(TAG, "Update present, getting advanced config...");
             this->update_advanced_config();
+
+            command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
+            lastCommandExecutedTime_ = millis();
+        } else if (this->auth_data_update_) {
+            ESP_LOGD(TAG, "Update present, getting auth data...");
+            this->update_auth_data();
+
+            command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
+            lastCommandExecutedTime_ = millis();
+        } else if (this->event_log_update_) {
+            ESP_LOGD(TAG, "Update present, getting event logs...");
+            this->update_event_logs();
 
             command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
             lastCommandExecutedTime_ = millis();
@@ -627,6 +876,8 @@ void NukiLockComponent::notify(Nuki::EventType eventType) {
     this->status_update_ = true;
     this->config_update_ = true;
     this->advanced_config_update_ = true;
+    this->auth_data_update_ = true;
+    this->event_log_update_ = true;
     ESP_LOGI(TAG, "event notified %d", eventType);
 }
 
