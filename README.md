@@ -10,6 +10,9 @@ This module builds an ESPHome lock platform for Nuki Smartlock (nuki_lock) that 
 - Binary Sensor: Door Sensor
 - Text Sensor: Door Sensor State
 - Switch: Pairing Mode
+- Switch: Button Enabled
+- Switch: LED Enabled
+- Number: LED Brightness
 - Button: Unpair
 
 The lock entity is updated whenever the look changes state (via Nuki App, HA, or manually) using Nuki BT advertisement mechanism.
@@ -60,6 +63,12 @@ lock:
       name: "Nuki Unpair"
     pairing_mode:
       name: "Nuki Pairing Mode"
+    button_enabled:
+      name: "Nuki Button enabled"
+    led_enabled:
+      name: "Nuki LED enabled"
+    led_brightness:
+      name: "Nuki LED brightness"
 
   # Optional: Settings
     security_pin: 1234

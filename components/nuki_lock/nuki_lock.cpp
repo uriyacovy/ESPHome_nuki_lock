@@ -77,15 +77,15 @@ void NukiLockComponent::update_status()
         );
 
         this->publish_state(this->nuki_to_lock_state(this->retrievedKeyTurnerState_.lockState));
-        this->is_connected_->publish_state(true);
-        if (this->battery_critical_ != nullptr)
-            this->battery_critical_->publish_state(this->nukiLock_.isBatteryCritical());
-        if (this->battery_level_ != nullptr)
-            this->battery_level_->publish_state(this->nukiLock_.getBatteryPerc());
-        if (this->door_sensor_ != nullptr)
-            this->door_sensor_->publish_state(this->nuki_doorsensor_to_binary(this->retrievedKeyTurnerState_.doorSensorState));
-        if (this->door_sensor_state_ != nullptr)
-            this->door_sensor_state_->publish_state(this->nuki_doorsensor_to_string(this->retrievedKeyTurnerState_.doorSensorState));
+        this->is_connected_binary_sensor_->publish_state(true);
+        if (this->battery_critical_binary_sensor_ != nullptr)
+            this->battery_critical_binary_sensor_->publish_state(this->nukiLock_.isBatteryCritical());
+        if (this->battery_level_sensor_ != nullptr)
+            this->battery_level_sensor_->publish_state(this->nukiLock_.getBatteryPerc());
+        if (this->door_sensor_binary_sensor_ != nullptr)
+            this->door_sensor_binary_sensor_->publish_state(this->nuki_doorsensor_to_binary(this->retrievedKeyTurnerState_.doorSensorState));
+        if (this->door_sensor_state_text_sensor_ != nullptr)
+            this->door_sensor_state_text_sensor_->publish_state(this->nuki_doorsensor_to_string(this->retrievedKeyTurnerState_.doorSensorState));
 
         if (
             this->retrievedKeyTurnerState_.lockState == NukiLock::LockState::Locking
@@ -102,7 +102,7 @@ void NukiLockComponent::update_status()
         this->statusUpdateConsecutiveErrors_++;
         if (this->statusUpdateConsecutiveErrors_ > MAX_TOLERATED_UPDATES_ERRORS) {
             // Publish failed state only when having too many consecutive errors
-            this->is_connected_->publish_state(false);
+            this->is_connected_binary_sensor_->publish_state(false);
             this->publish_state(lock::LOCK_STATE_NONE);
         }
     }
@@ -119,6 +119,15 @@ void NukiLockComponent::update_config() {
     if (confReqResult == Nuki::CmdResult::Success) {
         ESP_LOGD(TAG, "requestConfig has resulted in %s (%d)", confReqResultAsString, confReqResult);
         keypad_paired_ = config.hasKeypad;
+
+        if (this->button_enabled_switch_ != nullptr)
+            this->button_enabled_switch_->publish_state(config.buttonEnabled);
+        
+        if (this->led_enabled_switch_ != nullptr)
+            this->led_enabled_switch_->publish_state(config.ledEnabled);
+
+        if (this->led_brightness_number_ != nullptr)
+            this->led_brightness_number_->publish_state(config.ledBrightness);
 
     } else {
         ESP_LOGE(TAG, "requestConfig has resulted in %s (%d)", confReqResultAsString, confReqResult);
@@ -197,10 +206,10 @@ void NukiLockComponent::setup() {
     if (this->nukiLock_.isPairedWithLock()) {
         this->status_update_ = true;
         ESP_LOGI(TAG, "%s Nuki paired", this->deviceName_);
-        this->is_paired_->publish_initial_state(true);
+        this->is_paired_binary_sensor_->publish_initial_state(true);
     } else {
         ESP_LOGW(TAG, "%s Nuki is not paired", this->deviceName_);
-        this->is_paired_->publish_initial_state(false);
+        this->is_paired_binary_sensor_->publish_initial_state(false);
     }
 
     this->publish_state(lock::LOCK_STATE_NONE);
@@ -237,7 +246,7 @@ void NukiLockComponent::update() {
     }
 
     if (this->nukiLock_.isPairedWithLock()) {
-        this->is_paired_->publish_state(true);
+        this->is_paired_binary_sensor_->publish_state(true);
 
         // Execute (all) actions first, then status updates, then config updates.
         // Only one command (action, status, or config) is executed per update() call.
@@ -259,7 +268,7 @@ void NukiLockComponent::update() {
                 }
             } else if (this->actionAttempts_ == 0) {
                 // Publish failed state only when no attempts are left
-                this->is_connected_->publish_state(false);
+                this->is_connected_binary_sensor_->publish_state(false);
                 this->publish_state(lock::LOCK_STATE_NONE);
             }
 
@@ -285,8 +294,8 @@ void NukiLockComponent::update() {
             lastCommandExecutedTime_ = millis();
         }
     } else {
-        this->is_paired_->publish_state(false);
-        this->is_connected_->publish_state(false);
+        this->is_paired_binary_sensor_->publish_state(false);
+        this->is_connected_binary_sensor_->publish_state(false);
 
         // Pairing Mode is active
         if(this->pairing_mode_) {
@@ -298,7 +307,7 @@ void NukiLockComponent::update() {
                 this->paired_callback_.call();
                 this->set_pairing_mode(false);
             }
-            this->is_paired_->publish_state(paired);
+            this->is_paired_binary_sensor_->publish_state(paired);
         }    
     }
 }
@@ -468,27 +477,32 @@ void NukiLockComponent::print_keypad_entries() {
 
 void NukiLockComponent::dump_config() {
     LOG_LOCK(TAG, "Nuki Lock", this);
-    LOG_BINARY_SENSOR(TAG, "Is Connected", this->is_connected_);
-    LOG_BINARY_SENSOR(TAG, "Is Paired", this->is_paired_);
-    LOG_BINARY_SENSOR(TAG, "Battery Critical", this->battery_critical_);
-    LOG_BINARY_SENSOR(TAG, "Door Sensor", this->door_sensor_);
-    LOG_TEXT_SENSOR(TAG, "Door Sensor State", this->door_sensor_state_);
-    LOG_SENSOR(TAG, "Battery Level", this->battery_level_);
+    #ifdef USE_BINARY_SENSOR
+    LOG_BINARY_SENSOR(TAG, "Is Connected", this->is_connected_binary_sensor_);
+    LOG_BINARY_SENSOR(TAG, "Is Paired", this->is_paired_binary_sensor_);
+    LOG_BINARY_SENSOR(TAG, "Battery Critical", this->battery_critical_binary_sensor_);
+    LOG_BINARY_SENSOR(TAG, "Door Sensor", this->door_sensor_binary_sensor_);
+    #endif
+    #ifdef USE_TEXT_SENSOR
+    LOG_TEXT_SENSOR(TAG, "Door Sensor State", this->door_sensor_state_text_sensor_);
+    #endif
+    #ifdef USE_SENSOR
+    LOG_SENSOR(TAG, "Battery Level", this->battery_level_sensor_);
+    #endif
+    #ifdef USE_SWITCH
+    LOG_SWITCH(TAG, "Pairing Mode", this->pairing_mode_switch_);
+    LOG_SWITCH(TAG, "Button Enabled", this->button_enabled_switch_);
+    LOG_SWITCH(TAG, "LED Enabled", this->led_enabled_switch_);
+    #endif
+    #ifdef USE_NUMBER
+    LOG_NUMBER(TAG, "LED Brightness", this->led_brightness_number_);
+    #endif
 }
 
 void NukiLockComponent::notify(Nuki::EventType eventType) {
     this->status_update_ = true;
     this->config_update_ = true;
     ESP_LOGI(TAG, "event notified %d", eventType);
-}
-
-// Unpair Button
-void NukiLockUnpairButton::press_action() {
-    this->parent_->unpair();
-}
-
-void NukiLockUnpairButton::dump_config() {
-    LOG_BUTTON(TAG, "Unpair", this);
 }
 
 void NukiLockComponent::unpair() {
@@ -498,19 +512,6 @@ void NukiLockComponent::unpair() {
     } else {
         ESP_LOGE(TAG, "Unpair action called for unpaired Nuki");
     }
-}
-
-// Pairing Mode Switch
-void NukiLockPairingModeSwitch::setup() {
-    this->publish_state(false);
-}
-
-void NukiLockPairingModeSwitch::dump_config() {
-    LOG_SWITCH(TAG, "Pairing Mode", this);
-}
-
-void NukiLockPairingModeSwitch::write_state(bool state) {
-    this->parent_->set_pairing_mode(state);
 }
 
 void NukiLockComponent::set_pairing_mode(bool enabled) {
@@ -533,6 +534,75 @@ void NukiLockComponent::set_pairing_mode(bool enabled) {
     }
 }
 
+void NukiLockComponent::set_button_enabled(bool enabled) {
+
+    Nuki::CmdResult cmdResult = this->nukiLock_.enableButton(enabled);
+
+    if (cmdResult == Nuki::CmdResult::Success && this->button_enabled_switch_ != nullptr) {
+        this->button_enabled_switch_->publish_state(enabled);
+    }
+}
+
+void NukiLockComponent::set_led_enabled(bool enabled) {
+    
+    Nuki::CmdResult cmdResult = this->nukiLock_.enableLedFlash(enabled);
+
+    if (cmdResult == Nuki::CmdResult::Success && this->led_enabled_switch_ != nullptr) {
+        this->led_enabled_switch_->publish_state(enabled);
+    }
+}
+
+void NukiLockComponent::set_led_brightness(float value) {
+    
+    Nuki::CmdResult cmdResult = this->nukiLock_.setLedBrightness(static_cast<uint8_t>(value));
+
+    if (cmdResult == Nuki::CmdResult::Success && this->led_brightness_number_ != nullptr) {
+        this->led_brightness_number_->publish_state(value);
+    }
+}
+
+// Unpair Button
+void NukiLockUnpairButton::press_action() {
+    this->parent_->unpair();
+}
+
+// Pairing Mode Switch
+void NukiLockPairingModeSwitch::setup() {
+    this->publish_state(false);
+}
+
+void NukiLockPairingModeSwitch::write_state(bool state) {
+    this->parent_->set_pairing_mode(state);
+}
+
+// Button Enabled Switch
+void NukiLockButtonEnabledSwitch::setup() {
+    this->publish_state(false);
+}
+
+void NukiLockButtonEnabledSwitch::write_state(bool state) {
+    this->parent_->set_button_enabled(state);
+}
+
+// LED Enabled Switch
+void NukiLockLedEnabledSwitch::setup() {
+    this->publish_state(false);
+}
+
+void NukiLockLedEnabledSwitch::write_state(bool state) {
+    this->parent_->set_led_enabled(state);
+}
+
+// LED Brightness Number
+void NukiLockLedBrightnessNumber::setup() {
+    this->publish_state(0);
+}
+
+void NukiLockLedBrightnessNumber::control(float value) {
+    this->parent_->set_led_brightness(value);
+}
+
+// Callbacks
 void NukiLockComponent::add_pairing_mode_on_callback(std::function<void()> &&callback) {
     this->pairing_mode_on_callback_.add(std::move(callback));
 }
