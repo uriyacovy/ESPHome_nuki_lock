@@ -32,7 +32,7 @@ lock:
     door_sensor_state:
       name: "Nuki Door Sensor: State"
     unpair:
-      name: "Nuki Unpair"
+      name: "Nuki Unpair Device"
     pairing_mode:
       name: "Nuki Pairing Mode"
     auto_unlatch:

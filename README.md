@@ -1,21 +1,8 @@
-# Nuki Lock for ESPHome (ESP32)
-[![Build Component](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml/badge.svg)](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml)
+# ESPHome Nuki Lock Component (ESP32) [![Build Component](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml/badge.svg)](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml)
 
-This module builds an ESPHome lock platform for Nuki Smartlock (nuki_lock) that creates 9 new entities in Home Assistant:
-- Lock 
-- Binary Sensor: Is Paired
-- Binary Sensor: Is Connected
-- Binary Sensor: Critical Battery 
-- Sensor: Battery Level
-- Binary Sensor: Door Sensor
-- Text Sensor: Door Sensor State
-- Switch: Pairing Mode
-- Switch: Button Enabled
-- Switch: LED Enabled
-- Number: LED Brightness
-- Button: Unpair
+This module builds an ESPHome lock platform for Nuki Smartlocks (nuki_lock) that creates [23 entities](#entites) in Home Assistant.
 
-The lock entity is updated whenever the look changes state (via Nuki App, HA, or manually) using Nuki BT advertisement mechanism.
+The lock entity is updated whenever the look changes state (via Nuki App, HA, or manually) using the Nuki BLE advertisement mechanism.
 
 ![dashboard](./docs/nuki_dashboard.png)
 
@@ -60,7 +47,7 @@ lock:
     door_sensor_state:
       name: "Nuki Door Sensor: State"
     unpair:
-      name: "Nuki Unpair"
+      name: "Nuki Unpair Device"
     pairing_mode:
       name: "Nuki Pairing Mode"
     auto_unlatch:
@@ -137,7 +124,7 @@ on_...:
 ```
 
 ### Action: Unpair
-You can use this action to unpair your Nuki: 
+You can use this action to unpair your Nuki Smartlock: 
 ```yaml
 on_...:
   - nuki_lock.unpair:
@@ -153,6 +140,46 @@ on_pairing_mode_off_action:
 on_paired_action:
   - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
 ```
+
+## Entites
+
+**Lock:**  
+- Lock
+
+**Binary Sensor:**  
+- Is Paired
+- Is Connected
+- Critical Battery 
+- Door Sensor
+
+**Sensor:**
+- Battery Level
+
+**Text Sensor:**  
+- Door Sensor State
+
+**Switch:**  
+- Pairing Mode
+- Button Enabled
+- LED Enabled
+- Night Mode
+- Night Mode: Auto Lock
+- Night Mode: Reject Auto Unlock
+- Night Mode: Lock at Start Time
+- Auto Lock
+- Auto Unlock: Disable
+- Auto Lock: Immediately
+- Automatic Updates
+
+**Select:**  
+- Single Button Press Action
+- Double Button Press Action
+
+**Number:**  
+- LED Brightness
+
+**Button:**  
+- Unpair Device
 
 ## Dependencies
 The module depends on the work done by [I-Connect](https://github.com/I-Connect) with [NukiBleEsp32](https://github.com/I-Connect/NukiBleEsp32).
