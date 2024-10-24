@@ -179,4 +179,7 @@ async def nuki_lock_unpair_to_code(config, action_id, template_arg, args):
 )
 async def nuki_lock_set_pairing_mode_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])
-    return cg.new_Pvariable(action_id, template_arg, paren)
+    var = cg.new_Pvariable(action_id, template_arg, paren)
+    pairing_mode_template_ = await cg.templatable(config[CONF_SET_PAIRING_MODE], args, cg.bool_)
+    cg.add(var.set_pairing_mode(pairing_mode_template_))
+    return var
