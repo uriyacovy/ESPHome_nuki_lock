@@ -54,13 +54,13 @@ std::string NukiLockComponent::nuki_doorsensor_to_string(Nuki::DoorSensorState n
 
 NukiLock::ButtonPressAction NukiLockComponent::nuki_button_press_action_to_enum(std::string str)
 {
-    if (str == "No Action") return NoAction;
-    if (str == "Intelligent") return Intelligent;
-    if (str == "Unlock") return Unlock;
-    if (str == "Lock") return Lock;
-    if (str == "Unlatch") return Unlatch;
-    if (str == "Lock n Go") return LockNgo;
-    if (str == "Show Status") return ShowStatus;
+    if (str == "No Action") return NukiLock::ButtonPressAction::NoAction;
+    if (str == "Intelligent") return NukiLock::ButtonPressAction::Intelligent;
+    if (str == "Unlock") return NukiLock::ButtonPressAction::Unlock;
+    if (str == "Lock") return NukiLock::ButtonPressAction::Lock;
+    if (str == "Unlatch") return NukiLock::ButtonPressAction::Unlatch;
+    if (str == "Lock n Go") return NukiLock::ButtonPressAction::LockNgo;
+    if (str == "Show Status") return NukiLock::ButtonPressAction::ShowStatus;
     return (NukiLock::ButtonPressAction)0xff;
 }
 
