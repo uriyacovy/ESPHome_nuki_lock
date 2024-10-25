@@ -117,8 +117,8 @@ service: esphome.<NODE_NAME>_lock_n_go
 data: {}
 ```
 
-## Automation ##
-### Action: Pairing Mode ###
+## Automation
+### Action: Pairing Mode
 You can use this action to turn on/off the pairing mode: 
 ```yaml
 on_...:
@@ -142,6 +142,34 @@ on_pairing_mode_off_action:
   - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned off");
 on_paired_action:
   - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
+```
+
+### Events
+By default this component sends auth eventlog events to Home Assistant.
+You can use them in automations. If you want to disable events, set the `event` property in your yaml to `none`.
+```yaml
+event_type: esphome.nuki
+data:
+  device_id: 373c62d6788cf81d322763235513310e
+  action: Unlatch
+  authorizationId: "3902896895"
+  authorizationName: Nuki ESPHome
+  completionStatus: success
+  index: "92"
+  timeDay: "25"
+  timeHour: "0"
+  timeMinute: "46"
+  timeMonth: "10"
+  timeSecond: "11"
+  timeYear: "2024"
+  trigger: system
+  type: LockAction
+origin: LOCAL
+time_fired: "2024-10-25T00:46:33.398284+00:00"
+context:
+  id: 01JB0J7AXPMS5DWHG188Y6XFCP
+  parent_id: null
+  user_id: null
 ```
 
 ## Entites
