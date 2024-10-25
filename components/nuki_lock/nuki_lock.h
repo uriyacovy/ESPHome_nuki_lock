@@ -125,33 +125,23 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
         std::string nuki_doorsensor_to_string(Nuki::DoorSensorState nukiDoorSensorState);
 
         uint8_t fob_action_to_int(std::string str);
-        std::string fob_action_to_string(uint_8_t action);
+        std::string fob_action_to_string(uint8_t action);
 
         NukiLock::ButtonPressAction nuki_button_press_action_to_enum(std::string str);
         const char* nuki_button_press_action_to_string(NukiLock::ButtonPressAction action);
 
         void unpair();
-
         void set_pairing_mode(bool enabled);
-        void set_auto_unlatch_enabled(bool enabled);
-        void set_button_enabled(bool enabled);
-        void set_led_enabled(bool enabled);
-        void set_nightmode_enabled(bool enabled);
-        void set_night_mode_auto_lock_enabled(bool enabled);
-        void set_night_mode_auto_unlock_disabled(bool disabled);
-        void set_night_mode_immediate_lock_on_start(bool enabled);
-        void set_auto_lock_enabled(bool enabled);
-        void set_auto_unlock_disabled(bool disabled);
-        void set_immediate_auto_lock_enabled(bool enabled);
-        void set_auto_update_enabled(bool enabled);
 
-        void set_led_brightness(float value);
-
-        void set_single_button_press_action(const std::string &action);
-        void set_double_button_press_action(const std::string &action);
-        void set_fob_action_1(const std::string &action);
-        void set_fob_action_2(const std::string &action);
-        void set_fob_action_3(const std::string &action);
+        #ifdef USE_NUMBER
+        void set_config_number(std::string config, float value);
+        #endif
+        #ifdef USE_SWITCH
+        void set_config_switch(std::string config, bool value);
+        #endif
+        #ifdef USE_SELECT
+        void set_config_select(std::string config, const std::string &value);
+        #endif
 
     protected:
         void control(const lock::LockCall &call) override;
