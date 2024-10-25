@@ -127,24 +127,32 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         device_class=DEVICE_CLASS_BATTERY,
         icon="mdi:battery-alert-variant-outline",
     ),
+    cv.Optional(CONF_DOOR_SENSOR): binary_sensor.binary_sensor_schema(
+        device_class=DEVICE_CLASS_DOOR,
+        icon="mdi:door-open",
+    ),
+
+    cv.Optional(CONF_DOOR_SENSOR_STATE): text_sensor.text_sensor_schema(
+        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+        icon="mdi:door-open",
+    ),
+    cv.Optional(CONF_LAST_UNLOCK_USER_TEXT_SENSOR):  text_sensor.text_sensor_schema(
+        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+        icon="mdi:account-clock"
+    ),
+
     cv.Optional(CONF_BATTERY_LEVEL): sensor.sensor_schema(
         device_class=DEVICE_CLASS_BATTERY,
         unit_of_measurement=UNIT_PERCENT,
         icon="mdi:battery-50",
     ),
-    cv.Optional(CONF_DOOR_SENSOR): binary_sensor.binary_sensor_schema(
-        device_class=DEVICE_CLASS_DOOR,
-        icon="mdi:door-open",
-    ),
-    cv.Optional(CONF_DOOR_SENSOR_STATE): text_sensor.text_sensor_schema(
-        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
-        icon="mdi:door-open",
-    ),
+
     cv.Optional(CONF_UNPAIR_BUTTON): button.button_schema(
         NukiLockUnpairButton,
         entity_category=ENTITY_CATEGORY_CONFIG,
         icon="mdi:link-off",
     ),
+
     cv.Optional(CONF_PAIRING_MODE_SWITCH): switch.switch_schema(
         NukiLockPairingModeSwitch,
         entity_category=ENTITY_CATEGORY_CONFIG,
@@ -217,11 +225,13 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         entity_category=ENTITY_CATEGORY_CONFIG,
         icon="mdi:auto-download",
     ),
+
     cv.Optional(CONF_LED_BRIGHTNESS_NUMBER): number.number_schema(
         NukiLockLedBrightnessNumber,
         entity_category=ENTITY_CATEGORY_CONFIG,
         icon="mdi:brightness-6",
     ),
+
     cv.Optional(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT): select.select_schema(
         NukiLockSingleButtonPressActionSelect,
         entity_category=ENTITY_CATEGORY_CONFIG,
@@ -247,12 +257,11 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         entity_category=ENTITY_CATEGORY_CONFIG,
         icon="mdi:gesture-tap",
     ),
-    cv.Optional(CONF_LAST_UNLOCK_USER_TEXT_SENSOR):  text_sensor.text_sensor_schema(
-        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
-    ),
+
     cv.Optional(CONF_SECURITY_PIN, default=0): cv.uint16_t,
     cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
     cv.Optional(CONF_EVENT, default="nuki"): cv.string,
+
     cv.Optional(CONF_ON_PAIRING_MODE_ON): automation.validate_automation(
         {
             cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairingModeOnTrigger),
