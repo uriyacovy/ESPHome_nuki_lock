@@ -239,7 +239,7 @@ void NukiLockComponent::update_auth_data()
     while(retryCount < 3)
     {
         ESP_LOGD(TAG, "Retrieve Auth Data");
-        confReqResult = this->nuki_lock_.retrieveAuthorizationEntries(0, 10);
+        confReqResult = this->nuki_lock_.retrieveAuthorizationEntries(0, MAX_AUTH_DATA_ENTRIES);
 
         if(confReqResult != Nuki::CmdResult::Success)
         {
@@ -263,9 +263,9 @@ void NukiLockComponent::update_auth_data()
         return a.authId < b.authId;
     });
 
-    if(authEntries.size() > 20)
+    if(authEntries.size() > MAX_AUTH_DATA_ENTRIES)
     {
-        authEntries.resize(20);
+        authEntries.resize(MAX_AUTH_DATA_ENTRIES);
     }
 
     for(const auto& entry : authEntries)
@@ -284,7 +284,7 @@ void NukiLockComponent::update_event_logs()
     while(retryCount < 3)
     {
         ESP_LOGD(TAG, "Retrieve Event Logs");
-        confReqResult = this->nuki_lock_.retrieveLogEntries(0, 10, 1, false);
+        confReqResult = this->nuki_lock_.retrieveLogEntries(0, MAX_EVENT_LOG_ENTRIES, 1, false);
 
         if(confReqResult != Nuki::CmdResult::Success)
         {
@@ -303,9 +303,9 @@ void NukiLockComponent::update_event_logs()
     std::list<NukiLock::LogEntry> log;
     this->nuki_lock_.getLogEntries(&log);
 
-    if(log.size() > 3)
+    if(log.size() > MAX_EVENT_LOG_ENTRIES)
     {
-        log.resize(3);
+        log.resize(MAX_EVENT_LOG_ENTRIES);
     }
 
     log.sort([](const NukiLock::LogEntry& a, const NukiLock::LogEntry& b)
