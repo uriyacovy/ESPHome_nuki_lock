@@ -111,10 +111,12 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
     cv.Optional(CONF_SECURITY_PIN, default=0): cv.uint16_t,
     cv.Optional(CONF_BATTERY_CRITICAL): binary_sensor.binary_sensor_schema(
         device_class=DEVICE_CLASS_BATTERY,
+        icon="mdi:battery-alert-variant-outline",
     ),
     cv.Optional(CONF_BATTERY_LEVEL): sensor.sensor_schema(
         device_class=DEVICE_CLASS_BATTERY,
         unit_of_measurement=UNIT_PERCENT,
+        icon="mdi:battery-50",
     ),
     cv.Optional(CONF_DOOR_SENSOR): binary_sensor.binary_sensor_schema(
         device_class=DEVICE_CLASS_DOOR,
