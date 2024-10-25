@@ -81,15 +81,15 @@ lock:
       name: "Nuki Automatic Updates"
       
     single_buton_press_action:
-      name: "Nuki Single Button Press Action"
+      name: "Nuki Button: Single Press Action"
     double_buton_press_action:
-      name: "Nuki Double Button Press Action"
+      name: "Nuki Button: Double Press Action"
     fob_action_1:
-      name: "Nuki Fob Action 1"
+      name: "Nuki Fob: Action 1"
     fob_action_2:
-      name: "Nuki Fob Action 2"
+      name: "Nuki Fob: Action 2"
     fob_action_3:
-      name: "Nuki Fob Action 3"
+      name: "Nuki Fob: Action 3"
 
     unpair:
       name: "Nuki Unpair Device"
