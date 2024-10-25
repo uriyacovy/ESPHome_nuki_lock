@@ -25,6 +25,7 @@ CONF_DOOR_SENSOR = "door_sensor"
 CONF_BATTERY_LEVEL = "battery_level"
 
 CONF_DOOR_SENSOR_STATE = "door_sensor_state"
+CONF_LAST_UNLOCK_USER_TEXT_SENSOR = "last_unlock_user"
 
 CONF_UNPAIR_BUTTON = "unpair"
 
@@ -215,6 +216,9 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         entity_category=ENTITY_CATEGORY_CONFIG,
         icon="mdi:gesture-tap",
     ),
+    cv.Optional(CONF_LAST_UNLOCK_USER_TEXT_SENSOR):  text_sensor.text_sensor_schema(
+        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+    ),
     cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
     cv.Optional(CONF_ON_PAIRING_MODE_ON): automation.validate_automation(
         {
@@ -272,6 +276,10 @@ async def to_code(config):
     if door_sensor_state := config.get(CONF_DOOR_SENSOR_STATE):
         sens = await text_sensor.new_text_sensor(door_sensor_state)
         cg.add(var.set_door_sensor_state_text_sensor(sens))
+
+    if last_unlock_user := config.get(CONF_LAST_UNLOCK_USER_TEXT_SENSOR):
+        sens = await text_sensor.new_text_sensor(last_unlock_user)
+        cg.add(var.set_last_unlock_user_text_sensor(sens))
 
     # Button
     if unpair := config.get(CONF_UNPAIR_BUTTON):

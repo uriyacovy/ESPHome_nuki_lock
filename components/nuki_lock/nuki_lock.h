@@ -48,6 +48,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
     #endif
     #ifdef USE_TEXT_SENSOR
     SUB_TEXT_SENSOR(door_sensor_state)
+    SUB_TEXT_SENSOR(last_unlock_user)
     #endif
     #ifdef USE_NUMBER
     SUB_NUMBER(led_brightness)
@@ -177,6 +178,8 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
         uint16_t pairing_mode_timeout_ = 0;
         bool pairing_mode_ = false;
         uint32_t pairing_mode_timer_ = 0;
+
+        uint32_t last_rolling_log_id = 0;
 
     private:
         NukiLock::NukiLock nukiLock_;

@@ -1,6 +1,6 @@
 # ESPHome Nuki Lock Component (ESP32) [![Build Component](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml/badge.svg)](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml)
 
-This module builds an ESPHome lock platform for Nuki Smartlocks (nuki_lock) that creates [23 entities](#entites) in Home Assistant.
+This module builds an ESPHome lock platform for Nuki Smartlocks (nuki_lock) that creates [24 entities](#entites) in Home Assistant.
 
 The lock entity is updated whenever the look changes state (via Nuki App, HA, or manually) using the Nuki BLE advertisement mechanism.
 
@@ -46,6 +46,8 @@ lock:
       name: "Nuki Door Sensor"
     door_sensor_state:
       name: "Nuki Door Sensor: State"
+    last_unlock_user:
+      name: "Nuki Last Unlock User"
     unpair:
       name: "Nuki Unpair Device"
     pairing_mode:
@@ -157,6 +159,7 @@ on_paired_action:
 
 **Text Sensor:**  
 - Door Sensor State
+- Last Unlock User
 
 **Switch:**  
 - Pairing Mode

@@ -323,7 +323,6 @@ void NukiLockComponent::processLogEntries(const std::list<NukiLock::LogEntry>& l
     char str[50];
     char authName[33];
     uint32_t authIndex = 0;
-    
 
     for(const auto& log : logEntries)
     {
@@ -448,15 +447,20 @@ void NukiLockComponent::processLogEntries(const std::list<NukiLock::LogEntry>& l
                 }
                 break;
         }
-
-        /*if(log.index > _lastRollingLog)
+        
+        // Send as Home Assistant Event
+        if(log.index > this->last_rolling_log_id)
         {
-            _lastRollingLog = log.index;
-            serializeJson(entry, _buffer, _bufferSize);
-            publishString(mqtt_topic_lock_log_rolling, _buffer, true);
-            publishInt(mqtt_topic_lock_log_rolling_last, log.index, true);
-        }*/
+            this->last_rolling_log_id = log.index;
+
+            // TODO
+        }
     }
+
+    #ifdef USE_TEXT_SENSOR
+    if (this->last_unlock_user_text_sensor_ != nullptr)
+        this->last_unlock_user_text_sensor_->publish_state(this->auth_name_);
+    #endif
 }
 
 bool NukiLockComponent::executeLockAction(NukiLock::LockAction lockAction) {
@@ -845,6 +849,7 @@ void NukiLockComponent::dump_config() {
     #endif
     #ifdef USE_TEXT_SENSOR
     LOG_TEXT_SENSOR(TAG, "Door Sensor State", this->door_sensor_state_text_sensor_);
+    LOG_TEXT_SENSOR(TAG, "Last Unlock User", this->last_unlock_user_text_sensor_);
     #endif
     #ifdef USE_SENSOR
     LOG_SENSOR(TAG, "Battery Level", this->battery_level_sensor_);
