@@ -25,8 +25,8 @@ lock::LockState NukiLockComponent::nuki_to_lock_state(NukiLock::LockState nukiLo
     }
 }
 
-bool NukiLockComponent::nuki_doorsensor_to_binary(Nuki::DoorSensorState nukiDoorSensorState) {
-    switch(nukiDoorSensorState) {
+bool NukiLockComponent::nuki_doorsensor_to_binary(Nuki::DoorSensorState nuki_door_sensor_state) {
+    switch(nuki_door_sensor_state) {
         case Nuki::DoorSensorState::DoorClosed:
             return false;
         default:
@@ -34,8 +34,8 @@ bool NukiLockComponent::nuki_doorsensor_to_binary(Nuki::DoorSensorState nukiDoor
     }
 }
 
-std::string NukiLockComponent::nuki_doorsensor_to_string(Nuki::DoorSensorState nukiDoorSensorState) {
-    switch(nukiDoorSensorState) {
+std::string NukiLockComponent::nuki_doorsensor_to_string(Nuki::DoorSensorState nuki_door_sensor_state) {
+    switch(nuki_door_sensor_state) {
         case Nuki::DoorSensorState::Unavailable:
             return "unavailable";
         case Nuki::DoorSensorState::Deactivated:
@@ -127,7 +127,8 @@ void NukiLockComponent::update_status()
         this->publish_state(this->nuki_to_lock_state(this->retrieved_key_turner_state_.lockState));
 
         #ifdef USE_BINARY_SENSOR
-        this->is_connected_binary_sensor_->publish_state(true);
+        if (this->is_connected_binary_sensor_ != nullptr)
+            this->is_connected_binary_sensor_->publish_state(true);
         if (this->battery_critical_binary_sensor_ != nullptr)
             this->battery_critical_binary_sensor_->publish_state(this->nuki_lock_.isBatteryCritical());
         if (this->door_sensor_binary_sensor_ != nullptr)
@@ -161,7 +162,8 @@ void NukiLockComponent::update_status()
         if (this->status_update_consecutive_errors_ > MAX_TOLERATED_UPDATES_ERRORS) {
             // Publish failed state only when having too many consecutive errors
             #ifdef USE_BINARY_SENSOR
-            this->is_connected_binary_sensor_->publish_state(false);
+            if (this->is_connected_binary_sensor_ != nullptr)
+                this->is_connected_binary_sensor_->publish_state(false);
             #endif
             this->publish_state(lock::LOCK_STATE_NONE);
         }
@@ -178,6 +180,7 @@ void NukiLockComponent::update_config() {
 
     if (conf_req_result == Nuki::CmdResult::Success) {
         ESP_LOGD(TAG, "requestConfig has resulted in %s (%d)", conf_req_result_as_string, conf_req_result);
+
         keypad_paired_ = config.hasKeypad;
 
         #ifdef USE_SWITCH
@@ -346,36 +349,36 @@ void NukiLockComponent::update_event_logs()
     }
 }
 
-void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>& logEntries)
+void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>& log_entries)
 {
     char str[50];
-    char authName[33];
-    uint32_t authIndex = 0;
+    char auth_name[33];
+    uint32_t auth_index = 0;
     std::map<std::string, std::string> event_data;
 
-    for(const auto& log : logEntries)
+    for(const auto& log : log_entries)
     {
-        memset(authName, 0, sizeof(authName));
-        authName[0] = '\0';
+        memset(auth_name, 0, sizeof(auth_name));
+        auth_name[0] = '\0';
 
         if((log.loggingType == NukiLock::LoggingType::LockAction || log.loggingType == NukiLock::LoggingType::KeypadAction))
         {
             int sizeName = sizeof(log.name);
-            memcpy(authName, log.name, sizeName);
-            if(authName[sizeName - 1] != '\0')
+            memcpy(auth_name, log.name, sizeName);
+            if(auth_name[sizeName - 1] != '\0')
             {
-                authName[sizeName] = '\0';
+                auth_name[sizeName] = '\0';
             }
 
-            if(log.index > authIndex)
+            if(log.index > auth_index)
             {
-                authIndex = log.index;
+                auth_index = log.index;
                 this->auth_id_ = log.authId;
 
                 memset(this->auth_name_, 0, sizeof(this->auth_name_));
-                memcpy(this->auth_name_, authName, sizeof(authName));
+                memcpy(this->auth_name_, auth_name, sizeof(auth_name));
 
-                if(authName[sizeName - 1] != '\0' && this->auth_entries_.count(this->auth_id_) > 0)
+                if(auth_name[sizeName - 1] != '\0' && this->auth_entries_.count(this->auth_id_) > 0)
                 {
                     memset(this->auth_name_, 0, sizeof(this->auth_name_));
                     memcpy(this->auth_name_, this->auth_entries_[this->auth_id_].c_str(), sizeof(this->auth_entries_[this->auth_id_].c_str()));
@@ -385,7 +388,7 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
 
         event_data["index"] = std::to_string(log.index);
         event_data["authorizationId"] = std::to_string(log.authId);
-        event_data["authorizationName"] = authName;
+        event_data["authorizationName"] = auth_name;
 
         if(this->auth_entries_.count(log.authId) > 0)
         {
@@ -498,9 +501,9 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
     #endif
 }
 
-bool NukiLockComponent::execute_lock_action(NukiLock::LockAction lockAction) {
+bool NukiLockComponent::execute_lock_action(NukiLock::LockAction lock_action) {
     // Publish the assumed transitional lock state
-    switch (lockAction) {
+    switch (lock_action) {
         case NukiLock::LockAction::Unlatch:
         case NukiLock::LockAction::Unlock: {
             this->publish_state(lock::LOCK_STATE_UNLOCKING);
@@ -515,18 +518,18 @@ bool NukiLockComponent::execute_lock_action(NukiLock::LockAction lockAction) {
     }
 
     // Execute the action
-    Nuki::CmdResult result = this->nuki_lock_.lockAction(lockAction);
+    Nuki::CmdResult result = this->nuki_lock_.lockAction(lock_action);
 
-    char lockActionAsString[30];
-    NukiLock::lockactionToString(lockAction, lockActionAsString);
-    char resultAsString[30];
-    NukiLock::cmdResultToString(result, resultAsString);
+    char lock_action_as_string[30];
+    NukiLock::lockactionToString(lock_action, lock_action_as_string);
+    char result_as_string[30];
+    NukiLock::cmdResultToString(result, result_as_string);
 
     if (result == Nuki::CmdResult::Success) {
-        ESP_LOGI(TAG, "lockAction %s (%d) has resulted in %s (%d)", lockActionAsString, lockAction, resultAsString, result);
+        ESP_LOGI(TAG, "lockAction %s (%d) has resulted in %s (%d)", lock_action_as_string, lock_action, result_as_string, result);
         return true;
     } else {
-        ESP_LOGE(TAG, "lockAction %s (%d) has resulted in %s (%d)", lockActionAsString, lockAction, resultAsString, result);
+        ESP_LOGE(TAG, "lockAction %s (%d) has resulted in %s (%d)", lock_action_as_string, lock_action, result_as_string, result);
         return false;
     }
 }
@@ -574,12 +577,14 @@ void NukiLockComponent::setup() {
         this->event_log_update_ = true;
         ESP_LOGI(TAG, "%s Nuki paired", this->deviceName_);
         #ifdef USE_BINARY_SENSOR
-        this->is_paired_binary_sensor_->publish_initial_state(true);
+        if (this->is_paired_binary_sensor_ != nullptr)
+            this->is_paired_binary_sensor_->publish_initial_state(true);
         #endif
     } else {
         ESP_LOGW(TAG, "%s Nuki is not paired", this->deviceName_);
         #ifdef USE_BINARY_SENSOR
-        this->is_paired_binary_sensor_->publish_initial_state(false);
+        if (this->is_paired_binary_sensor_ != nullptr)
+            this->is_paired_binary_sensor_->publish_initial_state(false);
         #endif
     }
 
@@ -618,7 +623,8 @@ void NukiLockComponent::update() {
 
     if (this->nuki_lock_.isPairedWithLock()) {
         #ifdef USE_BINARY_SENSOR
-        this->is_paired_binary_sensor_->publish_state(true);
+        if (this->is_paired_binary_sensor_ != nullptr)
+            this->is_paired_binary_sensor_->publish_state(true);
         #endif
 
         // Execute (all) actions first, then status updates, then config updates.
@@ -627,9 +633,9 @@ void NukiLockComponent::update() {
             this->action_attempts_--;
 
             NukiLock::LockAction currentLockAction = this->lock_action_;
-            char currentLockActionAsString[30];
-            NukiLock::lockactionToString(currentLockAction, currentLockActionAsString);
-            ESP_LOGD(TAG, "Executing lock action %s (%d)... (%d attempts left)", currentLockActionAsString, currentLockAction, this->action_attempts_);
+            char currentlock_action_as_string[30];
+            NukiLock::lockactionToString(currentLockAction, currentlock_action_as_string);
+            ESP_LOGD(TAG, "Executing lock action %s (%d)... (%d attempts left)", currentlock_action_as_string, currentLockAction, this->action_attempts_);
 
             bool isExecutionSuccessful = this->execute_lock_action(currentLockAction);
 
@@ -642,7 +648,8 @@ void NukiLockComponent::update() {
             } else if (this->action_attempts_ == 0) {
                 // Publish failed state only when no attempts are left
                 #ifdef USE_BINARY_SENSOR
-                this->is_connected_binary_sensor_->publish_state(false);
+                if (this->is_connected_binary_sensor_ != nullptr)
+                    this->is_connected_binary_sensor_->publish_state(false);
                 #endif
                 this->publish_state(lock::LOCK_STATE_NONE);
             }
@@ -688,8 +695,10 @@ void NukiLockComponent::update() {
         }
     } else {
         #ifdef USE_BINARY_SENSOR
-        this->is_paired_binary_sensor_->publish_state(false);
-        this->is_connected_binary_sensor_->publish_state(false);
+        if (this->is_paired_binary_sensor_ != nullptr)
+            this->is_paired_binary_sensor_->publish_state(false);
+        if (this->is_connected_binary_sensor_ != nullptr)
+            this->is_connected_binary_sensor_->publish_state(false);
         #endif
 
         // Pairing Mode is active
@@ -703,7 +712,8 @@ void NukiLockComponent::update() {
                 this->set_pairing_mode(false);
             }
             #ifdef USE_BINARY_SENSOR
-            this->is_paired_binary_sensor_->publish_state(paired);
+            if (this->is_paired_binary_sensor_ != nullptr)
+                this->is_paired_binary_sensor_->publish_state(paired);
             #endif
         }    
     }
@@ -744,9 +754,9 @@ void NukiLockComponent::control(const lock::LockCall &call) {
             return;
     }
 
-    char lockActionAsString[30];
-    NukiLock::lockactionToString(this->lock_action_, lockActionAsString);
-    ESP_LOGI(TAG, "New lock action received: %s (%d)", lockActionAsString, this->lock_action_);
+    char lock_action_as_string[30];
+    NukiLock::lockactionToString(this->lock_action_, lock_action_as_string);
+    ESP_LOGI(TAG, "New lock action received: %s (%d)", lock_action_as_string, this->lock_action_);
 }
 
 void NukiLockComponent::lock_n_go() {
@@ -755,27 +765,27 @@ void NukiLockComponent::lock_n_go() {
 }
 
 bool NukiLockComponent::valid_keypad_id(int id) {
-    bool idValid = std::find(keypad_code_ids_.begin(), keypad_code_ids_.end(), id) != keypad_code_ids_.end();
-    if (!idValid) {
+    bool is_valid = std::find(keypad_code_ids_.begin(), keypad_code_ids_.end(), id) != keypad_code_ids_.end();
+    if (!is_valid) {
         ESP_LOGE(TAG, "keypad id %d unknown.", id);
     }
-    return idValid;
+    return is_valid;
 }
 
 bool NukiLockComponent::valid_keypad_name(std::string name) {
-    bool nameValid = !(name == "" || name == "--");
-    if (!nameValid) {
+    bool name_valid = !(name == "" || name == "--");
+    if (!name_valid) {
         ESP_LOGE(TAG, "keypad name '%s' is invalid.", name.c_str());
     }
-    return nameValid;
+    return name_valid;
 }
 
 bool NukiLockComponent::valid_keypad_code(int code) {
-    bool codeValid = (code > 100000 && code < 1000000 && (std::to_string(code).find('0') == std::string::npos));
-    if (!codeValid) {
+    bool code_valid = (code > 100000 && code < 1000000 && (std::to_string(code).find('0') == std::string::npos));
+    if (!code_valid) {
         ESP_LOGE(TAG, "keypad code %d is invalid. Code must be 6 digits, without 0.", code);
     }
-    return codeValid;
+    return code_valid;
 }
 
 void NukiLockComponent::add_keypad_entry(std::string name, int code) {
@@ -791,8 +801,8 @@ void NukiLockComponent::add_keypad_entry(std::string name, int code) {
 
     NukiLock::NewKeypadEntry entry;
     memset(&entry, 0, sizeof(entry));
-    size_t nameLen = name.length();
-    memcpy(&entry.name, name.c_str(), nameLen > 20 ? 20 : nameLen);
+    size_t name_len = name.length();
+    memcpy(&entry.name, name.c_str(), name_len > 20 ? 20 : name_len);
     entry.code = code;
     Nuki::CmdResult result = this->nuki_lock_.addKeypadEntry(entry);
     if (result == Nuki::CmdResult::Success) {
@@ -816,8 +826,8 @@ void NukiLockComponent::update_keypad_entry(int id, std::string name, int code, 
     NukiLock::UpdatedKeypadEntry entry;
     memset(&entry, 0, sizeof(entry));
     entry.codeId = id;
-    size_t nameLen = name.length();
-    memcpy(&entry.name, name.c_str(), nameLen > 20 ? 20 : nameLen);
+    size_t name_len = name.length();
+    memcpy(&entry.name, name.c_str(), name_len > 20 ? 20 : name_len);
     entry.code = code;
     entry.enabled = enabled ? 1 : 0;
     Nuki::CmdResult result = this->nuki_lock_.updateKeypadEntry(entry);
@@ -909,16 +919,19 @@ void NukiLockComponent::dump_config() {
     #ifdef USE_SELECT
     LOG_SELECT(TAG, "Single Button Press Action", this->single_button_press_action_select_);
     LOG_SELECT(TAG, "Double Button Press Action", this->double_button_press_action_select_);
+    LOG_SELECT(TAG, "Fob Action 1", this->fob_action_1_select_);
+    LOG_SELECT(TAG, "Fob Action 2", this->fob_action_2_select_);
+    LOG_SELECT(TAG, "Fob Action 3", this->fob_action_3_select_);
     #endif
 }
 
-void NukiLockComponent::notify(Nuki::EventType eventType) {
+void NukiLockComponent::notify(Nuki::EventType event_type) {
     this->status_update_ = true;
     this->config_update_ = true;
     this->advanced_config_update_ = true;
     this->auth_data_update_ = true;
     this->event_log_update_ = true;
-    ESP_LOGI(TAG, "event notified %d", eventType);
+    ESP_LOGI(TAG, "event notified %d", event_type);
 }
 
 void NukiLockComponent::unpair() {

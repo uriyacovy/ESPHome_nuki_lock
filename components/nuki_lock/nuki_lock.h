@@ -105,7 +105,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
         void setup() override;
         void update() override;
         void dump_config() override;
-        void notify(Nuki::EventType eventType) override;
+        void notify(Nuki::EventType event_type) override;
         float get_setup_priority() const override { return setup_priority::HARDWARE - 1.0f; }
 
         void set_security_pin(uint16_t security_pin) { this->security_pin_ = security_pin; }
@@ -122,7 +122,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
 
         lock::LockState nuki_to_lock_state(NukiLock::LockState);
         bool nuki_doorsensor_to_binary(Nuki::DoorSensorState);
-        std::string nuki_doorsensor_to_string(Nuki::DoorSensorState nukiDoorSensorState);
+        std::string nuki_doorsensor_to_string(Nuki::DoorSensorState nuki_door_sensor_state);
 
         uint8_t fob_action_to_int(std::string str);
         std::string fob_action_to_string(uint8_t action);
@@ -153,9 +153,9 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
 
         void update_event_logs();
         void update_auth_data();
-        void process_log_entries(const std::list<NukiLock::LogEntry>& logEntries);
+        void process_log_entries(const std::list<NukiLock::LogEntry>& log_entries);
 
-        bool execute_lock_action(NukiLock::LockAction lockAction);
+        bool execute_lock_action(NukiLock::LockAction lock_action);
 
         BleScanner::Scanner scanner_;
         NukiLock::KeyTurnerState retrieved_key_turner_state_;
