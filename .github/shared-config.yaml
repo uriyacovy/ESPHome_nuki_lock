@@ -19,20 +19,27 @@ external_components:
 lock:
   - platform: nuki_lock
     name: Nuki Lock
+
     is_connected:
       name: "Nuki Connected"
     is_paired:
       name: "Nuki Paired"
     battery_critical:
       name: "Nuki Battery Critical"
-    battery_level:
-      name: "Nuki Battery Level"
     door_sensor:
       name: "Nuki Door Sensor"
+
+    battery_level:
+      name: "Nuki Battery Level"
+    
     door_sensor_state:
       name: "Nuki Door Sensor: State"
+    last_unlock_user:
+      name: "Nuki Last Unlock User"
+
     unpair:
       name: "Nuki Unpair Device"
+      
     pairing_mode:
       name: "Nuki Pairing Mode"
     auto_unlatch:
@@ -41,8 +48,6 @@ lock:
       name: "Nuki Button: Locking operations"
     led_enabled:
       name: "Nuki LED Signal"
-    led_brightness:
-      name: "Nuki LED Brightness"
     night_mode_enabled:
       name: "Nuki Night Mode"
     night_mode_auto_lock_enabled:
@@ -59,12 +64,19 @@ lock:
       name: "Nuki Auto Lock: Immediately"
     auto_update_enabled:
       name: "Nuki Automatic Updates"
+
+    led_brightness:
+      name: "Nuki LED Brightness"
+
     single_buton_press_action:
       name: "Nuki Single Button Press Action"
     double_buton_press_action:
       name: "Nuki Double Button Press Action"
+
     security_pin: 1234
     pairing_mode_timeout: 300s
+    event: "nuki"
+
     on_pairing_mode_on_action:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
     on_pairing_mode_off_action:

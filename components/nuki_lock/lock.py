@@ -57,6 +57,7 @@ CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS = [
 
 CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_SECURITY_PIN = "security_pin"
+CONF_EVENT = "event"
 
 CONF_SET_PAIRING_MODE = "pairing_mode"
 
@@ -108,7 +109,6 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
         icon="mdi:link"
     ),
-    cv.Optional(CONF_SECURITY_PIN, default=0): cv.uint16_t,
     cv.Optional(CONF_BATTERY_CRITICAL): binary_sensor.binary_sensor_schema(
         device_class=DEVICE_CLASS_BATTERY,
         icon="mdi:battery-alert-variant-outline",
@@ -221,7 +221,9 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
     cv.Optional(CONF_LAST_UNLOCK_USER_TEXT_SENSOR):  text_sensor.text_sensor_schema(
         entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
     ),
+    cv.Optional(CONF_SECURITY_PIN, default=0): cv.uint16_t,
     cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
+    cv.Optional(CONF_EVENT, default="nuki"): cv.string,
     cv.Optional(CONF_ON_PAIRING_MODE_ON): automation.validate_automation(
         {
             cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairingModeOnTrigger),
@@ -251,6 +253,9 @@ async def to_code(config):
 
     if CONF_PAIRING_MODE_TIMEOUT in config:
         cg.add(var.set_pairing_mode_timeout(config[CONF_PAIRING_MODE_TIMEOUT]))
+
+    if CONF_EVENT in config:
+        cg.add(var.set_event("esphome." + config[CONF_EVENT]))
 
     # Binary Sensor
     if is_connected := config.get(CONF_IS_CONNECTED):

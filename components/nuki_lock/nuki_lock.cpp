@@ -1,5 +1,6 @@
 #include "esphome/core/log.h"
 #include "esphome/core/application.h"
+#include "esphome/components/api/custom_api_device.h"
 #include "nuki_lock.h"
 
 namespace esphome {
@@ -323,6 +324,7 @@ void NukiLockComponent::processLogEntries(const std::list<NukiLock::LogEntry>& l
     char str[50];
     char authName[33];
     uint32_t authIndex = 0;
+    std::map<std::string, std::string> event_data;
 
     for(const auto& log : logEntries)
     {
@@ -354,60 +356,60 @@ void NukiLockComponent::processLogEntries(const std::list<NukiLock::LogEntry>& l
             }
         }
 
-        ESP_LOGD(TAG, "index: %i", log.index);
-        ESP_LOGD(TAG, "authorizationId: %d", log.authId);
+        event_data["index"] = std::to_string(log.index);
+        event_data["authorizationId"] = std::to_string(log.authId);
+        event_data["authorizationName"] = authName;
 
         if(this->auth_entries_.count(log.authId) > 0)
         {
-            ESP_LOGD(TAG, "authorizationName: %s", this->auth_entries_[log.authId]);
-        } else {
-            ESP_LOGD(TAG, "authorizationName: %s", authName);
+            event_data["authorizationName"] = this->auth_entries_[log.authId];
         }
 
-        ESP_LOGD(TAG, "timeYear: %i", log.timeStampYear);
-        ESP_LOGD(TAG, "timeMonth: %i", log.timeStampMonth);
-        ESP_LOGD(TAG, "timeDay: %i", log.timeStampDay);
-        ESP_LOGD(TAG, "timeHour: %i", log.timeStampHour);
-        ESP_LOGD(TAG, "timeMinute: %i", log.timeStampMinute);
-        ESP_LOGD(TAG, "timeSecond: %i", log.timeStampSecond);
+        event_data["timeYear"] = std::to_string(log.timeStampYear);
+        event_data["timeMonth"] = std::to_string(log.timeStampMonth);
+        event_data["timeDay"] = std::to_string(log.timeStampDay);
+        event_data["timeHour"] = std::to_string(log.timeStampHour);
+        event_data["timeMinute"] = std::to_string(log.timeStampMinute);
+        event_data["timeSecond"] = std::to_string(log.timeStampSecond);
 
         memset(str, 0, sizeof(str));
         NukiLock::loggingTypeToString(log.loggingType, str);
-        ESP_LOGD(TAG, "type: %s", str);
+        event_data["type"] = str;
 
         switch(log.loggingType)
         {
             case NukiLock::LoggingType::LockAction:
                 memset(str, 0, sizeof(str));
                 NukiLock::lockactionToString((NukiLock::LockAction)log.data[0], str);
-                ESP_LOGD(TAG, "action: %s", str);
+                event_data["action"] = str;
 
                 memset(str, 0, sizeof(str));
                 NukiLock::triggerToString((NukiLock::Trigger)log.data[1], str);
-                ESP_LOGD(TAG, "trigger: %s", str);
+                event_data["trigger"] = str;
 
                 memset(str, 0, sizeof(str));
                 NukiLock::completionStatusToString((NukiLock::CompletionStatus)log.data[3], str);
-                ESP_LOGD(TAG, "completionStatus: %s", str);
+                event_data["completionStatus"] = str;
                 break;
+
             case NukiLock::LoggingType::KeypadAction:
                 memset(str, 0, sizeof(str));
                 NukiLock::lockactionToString((NukiLock::LockAction)log.data[0], str);
-                ESP_LOGD(TAG, "action: %s", str);
+                event_data["action"] = str;
 
                 switch(log.data[1])
                 {
                     case 0:
-                        ESP_LOGD(TAG, "trigger: arrowkey");
+                        event_data["trigger"] = "arrowkey";
                         break;
                     case 1:
-                        ESP_LOGD(TAG, "trigger: code");
+                        event_data["trigger"] = "code";
                         break;
                     case 2:
-                        ESP_LOGD(TAG, "trigger: fingerprint");
+                        event_data["trigger"] = "fingerprint";
                         break;
                     default:
-                        ESP_LOGD(TAG, "trigger: unknown");
+                        event_data["trigger"] = "unknown";
                         break;
                 }
 
@@ -415,35 +417,36 @@ void NukiLockComponent::processLogEntries(const std::list<NukiLock::LogEntry>& l
 
                 if(log.data[2] == 9)
                 {
-                    ESP_LOGD(TAG, "completionStatus: notAuthorized");
+                    event_data["trigger"] = "notAuthorized";
                 }
                 else if (log.data[2] == 224)
                 {
-                    ESP_LOGD(TAG, "completionStatus: invalidCode");
+                    event_data["trigger"] = "invalidCode";
                 }
                 else
                 {
                     NukiLock::completionStatusToString((NukiLock::CompletionStatus)log.data[2], str);
-                    ESP_LOGD(TAG, "completionStatus: %s", str);
+                    event_data["completionStatus"] = str;
                 }
 
-                ESP_LOGD(TAG, "codeId: %i", 256U*log.data[4]+log.data[3]);
+                event_data["codeId"] = std::to_string(256U*log.data[4]+log.data[3]);
                 break;
+
             case NukiLock::LoggingType::DoorSensor:
                 switch(log.data[0])
                 {
-                case 0:
-                    ESP_LOGD(TAG, "action: DoorOpened");
-                    break;
-                case 1:
-                    ESP_LOGD(TAG, "action: DoorClosed");
-                    break;
-                case 2:
-                    ESP_LOGD(TAG, "action: SensorJammed");
-                    break;
-                default:
-                    ESP_LOGD(TAG, "action: unknown");
-                    break;
+                    case 0:
+                        event_data["action"] = "DoorOpened";
+                        break;
+                    case 1:
+                        event_data["action"] = "DoorClosed";
+                        break;
+                    case 2:
+                        event_data["action"] = "SensorJammed";
+                        break;
+                    default:
+                        event_data["action"] = "Unknown";
+                        break;
                 }
                 break;
         }
@@ -453,7 +456,12 @@ void NukiLockComponent::processLogEntries(const std::list<NukiLock::LogEntry>& l
         {
             this->last_rolling_log_id = log.index;
 
-            // TODO
+            if (strcmp(event_, "esphome.none") != 0)
+            {
+                auto capi = new esphome::api::CustomAPIDevice();
+                ESP_LOGD(TAG, "Send event to Home Assistant on %s", event_);
+                capi->fire_homeassistant_event(event_, event_data);
+            }
         }
     }
 
