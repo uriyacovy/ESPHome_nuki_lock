@@ -89,9 +89,9 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
         explicit NukiLockComponent() : Lock(), open_latch_(false),
                                     lock_n_go_(false),
                                     keypad_paired_(false),
-                                    nukiLock_(deviceName_, deviceId_) {
+                                    nuki_lock_(deviceName_, deviceId_) {
                 this->traits.set_supports_open(true);
-                this->nukiLock_.setEventHandler(this);
+                this->nuki_lock_.setEventHandler(this);
         }
 
         void setup() override;
@@ -149,22 +149,22 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
 
         void update_event_logs();
         void update_auth_data();
-        void processLogEntries(const std::list<NukiLock::LogEntry>& logEntries);
+        void process_log_entries(const std::list<NukiLock::LogEntry>& logEntries);
 
-        bool executeLockAction(NukiLock::LockAction lockAction);
+        bool execute_lock_action(NukiLock::LockAction lockAction);
 
         BleScanner::Scanner scanner_;
-        NukiLock::KeyTurnerState retrievedKeyTurnerState_;
-        NukiLock::LockAction lockAction_;
+        NukiLock::KeyTurnerState retrieved_key_turner_state_;
+        NukiLock::LockAction lock_action_;
 
         std::map<uint32_t, std::string> auth_entries_;
         uint32_t auth_id_ = 0;
         char auth_name_[33];
 
-        uint32_t lastCommandExecutedTime_ = 0;
+        uint32_t last_command_executed_time_ = 0;
         uint32_t command_cooldown_millis = 0;
-        uint8_t actionAttempts_ = 0;
-        uint32_t statusUpdateConsecutiveErrors_ = 0;
+        uint8_t action_attempts_ = 0;
+        uint32_t status_update_consecutive_errors_ = 0;
 
         bool status_update_;
         bool config_update_;
@@ -176,15 +176,15 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
 
         uint16_t security_pin_ = 0;
         const char* event_;
-
         uint16_t pairing_mode_timeout_ = 0;
+
         bool pairing_mode_ = false;
         uint32_t pairing_mode_timer_ = 0;
 
         uint32_t last_rolling_log_id = 0;
 
     private:
-        NukiLock::NukiLock nukiLock_;
+        NukiLock::NukiLock nuki_lock_;
 
         void lock_n_go();
         void print_keypad_entries();
@@ -195,7 +195,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
         bool valid_keypad_name(std::string name);
         bool valid_keypad_code(int code);
 
-        std::vector<uint16_t> keypadCodeIds_;
+        std::vector<uint16_t> keypad_code_ids_;
         bool keypad_paired_;
 };
 
