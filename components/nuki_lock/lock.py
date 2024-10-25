@@ -43,6 +43,9 @@ CONF_IMMEDIATE_AUTO_LOCK_ENABLED_SWITCH = "immediate_auto_lock_enabled"
 CONF_AUTO_UPDATE_ENABLED_SWITCH = "auto_update_enabled"
 CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT = "single_buton_press_action"
 CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT = "double_buton_press_action"
+CONF_FOB_ACTION_1_SELECT = "fob_action_1"
+CONF_FOB_ACTION_2_SELECT = "fob_action_2"
+CONF_FOB_ACTION_3_SELECT = "fob_action_3"
 CONF_LED_BRIGHTNESS_NUMBER = "led_brightness"
 
 CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS = [
@@ -53,6 +56,14 @@ CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS = [
     "Unlatch",
     "Lock n Go",
     "Show Status",
+]
+
+CONF_FOB_ACTION_SELECT_OPTIONS = [
+    "No Action",
+    "Unlock",
+    "Lock",
+    "Lock n Go",
+    "Intelligent",
 ]
 
 CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
@@ -84,6 +95,9 @@ NukiLockAutoUpdateEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoUpdateEnabled
 NukiLockLedBrightnessNumber = nuki_lock_ns.class_("NukiLockLedBrightnessNumber", number.Number, cg.Component)
 NukiLockSingleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockSingleButtonPressActionSelect", select.Select, cg.Component)
 NukiLockDoubleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockDoubleButtonPressActionSelect", select.Select, cg.Component)
+NukiLockFobAction1Select = nuki_lock_ns.class_("NukiLockFobAction1Select", select.Select, cg.Component)
+NukiLockFobAction2Select = nuki_lock_ns.class_("NukiLockFobAction2Select", select.Select, cg.Component)
+NukiLockFobAction3Select = nuki_lock_ns.class_("NukiLockFobAction3Select", select.Select, cg.Component)
 
 NukiLockUnpairAction = nuki_lock_ns.class_(
     "NukiLockUnpairAction", automation.Action
@@ -215,6 +229,21 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
     ),
     cv.Optional(CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT): select.select_schema(
         NukiLockDoubleButtonPressActionSelect,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+        icon="mdi:gesture-tap",
+    ),
+    cv.Optional(CONF_FOB_ACTION_1_SELECT): select.select_schema(
+        NukiLockFobAction1Select,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+        icon="mdi:gesture-tap",
+    ),
+    cv.Optional(CONF_FOB_ACTION_2_SELECT): select.select_schema(
+        NukiLockFobAction2Select,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+        icon="mdi:gesture-tap",
+    ),
+    cv.Optional(CONF_FOB_ACTION_3_SELECT): select.select_schema(
+        NukiLockFobAction3Select,
         entity_category=ENTITY_CATEGORY_CONFIG,
         icon="mdi:gesture-tap",
     ),
@@ -379,6 +408,30 @@ async def to_code(config):
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_double_button_press_action_select(sel))
+
+    if fob_action_1 := config.get(CONF_FOB_ACTION_1_SELECT):
+        sel = await select.new_select(
+            fob_action_1,
+            options=[CONF_FOB_ACTION_SELECT_OPTIONS],
+        )
+        await cg.register_parented(sel, config[CONF_ID])
+        cg.add(var.set_fob_action_1_select(sel))
+
+    if fob_action_2 := config.get(CONF_FOB_ACTION_2_SELECT):
+        sel = await select.new_select(
+            fob_action_2,
+            options=[CONF_FOB_ACTION_SELECT_OPTIONS],
+        )
+        await cg.register_parented(sel, config[CONF_ID])
+        cg.add(var.set_fob_action_2_select(sel))
+
+    if fob_action_3 := config.get(CONF_FOB_ACTION_3_SELECT):
+        sel = await select.new_select(
+            fob_action_3,
+            options=[CONF_FOB_ACTION_SELECT_OPTIONS],
+        )
+        await cg.register_parented(sel, config[CONF_ID])
+        cg.add(var.set_fob_action_3_select(sel))
 
 
     # Callback

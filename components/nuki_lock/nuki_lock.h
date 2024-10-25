@@ -56,6 +56,9 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
     #ifdef USE_SELECT
     SUB_SELECT(single_button_press_action)
     SUB_SELECT(double_button_press_action)
+    SUB_SELECT(fob_action_1)
+    SUB_SELECT(fob_action_2)
+    SUB_SELECT(fob_action_3)
     #endif
     #ifdef USE_BUTTON
     SUB_BUTTON(unpair)
@@ -121,6 +124,9 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
         bool nuki_doorsensor_to_binary(Nuki::DoorSensorState);
         std::string nuki_doorsensor_to_string(Nuki::DoorSensorState nukiDoorSensorState);
 
+        uint8_t fob_action_to_int(std::string str);
+        std::string fob_action_to_string(uint_8_t action);
+
         NukiLock::ButtonPressAction nuki_button_press_action_to_enum(std::string str);
         const char* nuki_button_press_action_to_string(NukiLock::ButtonPressAction action);
 
@@ -143,6 +149,9 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
 
         void set_single_button_press_action(const std::string &action);
         void set_double_button_press_action(const std::string &action);
+        void set_fob_action_1(const std::string &action);
+        void set_fob_action_2(const std::string &action);
+        void set_fob_action_3(const std::string &action);
 
     protected:
         void control(const lock::LockCall &call) override;
@@ -269,6 +278,26 @@ class NukiLockSingleButtonPressActionSelect : public select::Select, public Pare
 class NukiLockDoubleButtonPressActionSelect : public select::Select, public Parented<NukiLockComponent> {
     public:
         NukiLockDoubleButtonPressActionSelect() = default;
+    protected:
+        void control(const std::string &value) override;
+};
+
+class NukiLockFobAction1Select : public select::Select, public Parented<NukiLockComponent> {
+    public:
+        NukiLockFobAction1Select() = default;
+    protected:
+        void control(const std::string &value) override;
+};
+
+class NukiLockFobAction2Select : public select::Select, public Parented<NukiLockComponent> {
+    public:
+        NukiLockFobAction2Select() = default;
+    protected:
+        void control(const std::string &value) override;
+};
+class NukiLockFobAction3Select : public select::Select, public Parented<NukiLockComponent> {
+    public:
+        NukiLockFobAction3Select() = default;
     protected:
         void control(const std::string &value) override;
 };

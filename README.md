@@ -40,16 +40,17 @@ lock:
   # Optional:
     battery_critical:
       name: "Nuki Battery Critical"
-    battery_level:
-      name: "Nuki Battery Level"
     door_sensor:
       name: "Nuki Door Sensor"
+
+    battery_level:
+      name: "Nuki Battery Level"
+
     door_sensor_state:
       name: "Nuki Door Sensor: State"
     last_unlock_user:
       name: "Nuki Last Unlock User"
-    unpair:
-      name: "Nuki Unpair Device"
+
     pairing_mode:
       name: "Nuki Pairing Mode"
     auto_unlatch:
@@ -58,8 +59,10 @@ lock:
       name: "Nuki Button: Locking operations"
     led_enabled:
       name: "Nuki LED Signal"
+
     led_brightness:
       name: "Nuki LED Brightness"
+
     night_mode_enabled:
       name: "Nuki Night Mode"
     night_mode_auto_lock_enabled:
@@ -76,10 +79,20 @@ lock:
       name: "Nuki Auto Lock: Immediately"
     auto_update_enabled:
       name: "Nuki Automatic Updates"
+      
     single_buton_press_action:
       name: "Nuki Single Button Press Action"
     double_buton_press_action:
       name: "Nuki Double Button Press Action"
+    fob_action_1:
+      name: "Nuki Fob Action 1"
+    fob_action_2:
+      name: "Nuki Fob Action 2"
+    fob_action_3:
+      name: "Nuki Fob Action 3"
+
+    unpair:
+      name: "Nuki Unpair Device"
 
   # Optional: Settings
     security_pin: 1234

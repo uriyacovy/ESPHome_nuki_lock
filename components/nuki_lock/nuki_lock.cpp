@@ -80,6 +80,26 @@ const char* NukiLockComponent::nuki_button_press_action_to_string(NukiLock::Butt
     }
 }
 
+uint8_t NukiLockComponent::fob_action_to_int(std::string str)
+{
+    if(str == "No Action") return 0;
+    if(str == "Unlock") return 1;
+    if(str == "Lock") return 2;
+    if(str == "Lock n Go") return 3;
+    if(str == "Intelligent") return 4;
+    return 99;
+}
+
+std::string NukiLockComponent::fob_action_to_string(uint8_t action)
+{
+    if(action == 0) return "No Action";
+    if(action == 1) return "Unlock";
+    if(action == 2) return "Lock";
+    if(action == 3) return "Lock n Go";
+    if(action == 4) return "Intelligent";
+    return 99;
+}
+
 void NukiLockComponent::update_status()
 {
     this->status_update_ = false;
@@ -172,6 +192,14 @@ void NukiLockComponent::update_config() {
         if (this->led_brightness_number_ != nullptr)
             this->led_brightness_number_->publish_state(config.ledBrightness);
         #endif
+        #ifdef USE_SELECT
+        if (this->fob_action_1_select_ != nullptr)
+            this->fob_action_1_select_->publish_state(this->fob_action_to_string(config.fobAction1));
+        if (this->fob_action_2_select_ != nullptr)
+            this->fob_action_2_select_->publish_state(this->fob_action_to_string(config.fobAction2));
+        if (this->fob_action_3_select_ != nullptr)
+            this->fob_action_3_select_->publish_state(this->fob_action_to_string(config.fobAction3));
+        #endif
 
     } else {
         ESP_LOGE(TAG, "requestConfig has resulted in %s (%d)", confReqResultAsString, confReqResult);
@@ -215,7 +243,6 @@ void NukiLockComponent::update_advanced_config() {
         if (this->auto_update_enabled_switch_ != nullptr)
             this->auto_update_enabled_switch_->publish_state(advanced_config.autoUpdateEnabled);
         #endif
-
         #ifdef USE_SELECT
         if (this->single_button_press_action_select_ != nullptr)
             this->single_button_press_action_select_->publish_state(this->nuki_button_press_action_to_string(advanced_config.singleButtonPressAction));
@@ -929,6 +956,57 @@ void NukiLockComponent::set_double_button_press_action(const std::string &action
     #endif
 }
 
+void NukiLockComponent::set_fob_action_1(const std::string &action) {
+
+    const uint8_t fob_action = this->fob_action_to_int(jsonchar);
+
+    if(fob_action != 99)
+    {
+        Nuki::CmdResult cmdResult = this->nuki_lock_.setFobAction(3, fob_action);
+
+        #ifdef USE_SELECT
+        if (cmdResult == Nuki::CmdResult::Success && this->fob_action_1_select_ != nullptr) {
+            this->fob_action_1_select_->publish_state(action);
+            this->config_update_ = true;
+        }
+        #endif
+    }
+}
+
+void NukiLockComponent::set_fob_action_2(const std::string &action) {
+
+    const uint8_t fob_action = this->fob_action_to_int(jsonchar);
+
+    if(fob_action != 99)
+    {
+        Nuki::CmdResult cmdResult = this->nuki_lock_.setFobAction(3, fob_action);
+
+        #ifdef USE_SELECT
+        if (cmdResult == Nuki::CmdResult::Success && this->fob_action_2_select_ != nullptr) {
+            this->fob_action_2_select_->publish_state(action);
+            this->config_update_ = true;
+        }
+        #endif
+    }
+}
+
+void NukiLockComponent::set_fob_action_3(const std::string &action) {
+
+    const uint8_t fob_action = this->fob_action_to_int(jsonchar);
+
+    if(fob_action != 99)
+    {
+        Nuki::CmdResult cmdResult = this->nuki_lock_.setFobAction(3, fob_action);
+
+        #ifdef USE_SELECT
+        if (cmdResult == Nuki::CmdResult::Success && this->fob_action_3_select_ != nullptr) {
+            this->fob_action_3_select_->publish_state(action);
+            this->config_update_ = true;
+        }
+        #endif
+    }
+}
+
 void NukiLockComponent::set_pairing_mode(bool enabled) {
     this->pairing_mode_ = enabled;
 
@@ -1109,6 +1187,15 @@ void NukiLockSingleButtonPressActionSelect::control(const std::string &action) {
 }
 void NukiLockDoubleButtonPressActionSelect::control(const std::string &action) {
     this->parent_->set_double_button_press_action(action);
+}
+void NukiLockFobAction1Select::control(const std::string &action) {
+    this->parent_->set_fob_action_1(action);
+}
+void NukiLockFobAction2Select::control(const std::string &action) {
+    this->parent_->set_fob_action_2(action);
+}
+void NukiLockFobAction3Select::control(const std::string &action) {
+    this->parent_->set_fob_action_3(action);
 }
 #endif
 #ifdef USE_SWITCH
