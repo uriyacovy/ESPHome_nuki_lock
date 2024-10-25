@@ -1,6 +1,6 @@
 # ESPHome Nuki Lock Component (ESP32) [![Build Component](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml/badge.svg)](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml)
 
-This module builds an ESPHome lock platform for Nuki Smartlocks (nuki_lock) that creates [24 entities](#entites) in Home Assistant.
+This module builds an ESPHome lock platform for Nuki Smartlocks (nuki_lock) that creates [24 entities](#entities) in Home Assistant.
 
 The lock entity is updated whenever the look changes state (via Nuki App, HA, or manually) using the Nuki BLE advertisement mechanism.
 
@@ -16,7 +16,7 @@ esphome:
   - Preferences
   - https://github.com/h2zero/NimBLE-Arduino#1.4.0
   - Crc16
-  - https://github.com/I-Connect/NukiBleEsp32#93e7da927171c8973b7ef857c7fa644c174ed47d
+  - https://github.com/uriyacovy/NukiBleEsp32
 
 external_components:
   - source: github://uriyacovy/ESPHome_nuki_lock
@@ -158,8 +158,9 @@ on_paired_action:
 ```
 
 ### Events
-By default this component sends auth eventlog events to Home Assistant.
+By default this component sends the event logs as events to Home Assistant.
 You can use them in automations. If you want to disable events, set the `event` property in your yaml to `none`.
+If you want to check the log events, go to the Homne Assistant Developer tools -> Events and listen for `esphome.nuki` events.
 ```yaml
 event_type: esphome.nuki
 data:
@@ -185,7 +186,7 @@ context:
   user_id: null
 ```
 
-## Entites
+## Entities
 
 **Lock:**  
 - Lock
@@ -219,6 +220,9 @@ context:
 **Select:**  
 - Single Button Press Action
 - Double Button Press Action
+- Fob Action 1
+- Fob Action 2
+- Fob Action 3
 
 **Number:**  
 - LED Brightness
