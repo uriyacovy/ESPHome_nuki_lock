@@ -383,11 +383,6 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
             }
         }
 
-        #ifdef USE_TEXT_SENSOR
-        if (this->last_unlock_user_text_sensor_ != nullptr)
-            this->last_unlock_user_text_sensor_->publish_state(this->auth_name_);
-        #endif
-
         if (strcmp(event_, "esphome.none") != 0)
         {
             std::map<std::string, std::string> event_data;
@@ -497,6 +492,11 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
             }
         }
     }
+
+    #ifdef USE_TEXT_SENSOR
+    if (this->last_unlock_user_text_sensor_ != nullptr)
+        this->last_unlock_user_text_sensor_->publish_state(this->auth_name_);
+    #endif
 }
 
 bool NukiLockComponent::execute_lock_action(NukiLock::LockAction lock_action) {
