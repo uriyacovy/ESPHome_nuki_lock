@@ -573,6 +573,8 @@ void NukiLockComponent::setup() {
         this->config_update_ = true;
         this->advanced_config_update_ = true;
 
+        // First auth data request, then every 2nd time
+        this->auth_data_required_ = true;
         this->auth_data_update_ = true;
 
         ESP_LOGI(TAG, "%s Nuki paired", this->deviceName_);
@@ -929,7 +931,16 @@ void NukiLockComponent::notify(Nuki::EventType event_type) {
     this->status_update_ = true;
     this->config_update_ = true;
     this->advanced_config_update_ = true;
-    this->auth_data_update_ = true;
+    
+    // Request Auth Data on every second notify, otherwise just event logs
+    // Event logs are always requested after Auth Data requests
+    this->auth_data_required_ = !this->auth_data_required_;
+    if(this->auth_data_required_) {
+        this->auth_data_update_ = true;
+    } else {
+        this->event_log_update_ = true;
+    }
+
     ESP_LOGI(TAG, "event notified %d", event_type);
 }
 

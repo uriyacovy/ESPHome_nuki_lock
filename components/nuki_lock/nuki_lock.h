@@ -175,6 +175,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
         bool advanced_config_update_;
         bool auth_data_update_;
         bool event_log_update_;
+        bool auth_data_required_;
         bool open_latch_;
         bool lock_n_go_;
 
