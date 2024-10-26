@@ -4,7 +4,7 @@ This module builds an ESPHome lock platform for Nuki Smartlocks (nuki_lock) that
 
 The lock entity is updated whenever the look changes state (via Nuki App, HA, or manually) using the Nuki BLE advertisement mechanism.
 
-![dashboard](./docs/nuki_dashboard.png)
+![some dashboard entites](./docs/nuki_dashboard.png)
 
 
 ## How to use
@@ -158,9 +158,9 @@ on_paired_action:
 ```
 
 ### Events
-By default this component sends the event logs as events to Home Assistant.
+By default this component sends the Nuki logs as events to Home Assistant.
 You can use them in automations. If you want to disable events, set the `event` property in your yaml to `none`.
-If you want to check the log events, go to the Homne Assistant Developer tools -> Events and listen for `esphome.nuki` events.
+If you want to check the log events, go to the Home Assistant Developer tools -> Events and listen for `esphome.nuki` events.
 ```yaml
 event_type: esphome.nuki
 data:

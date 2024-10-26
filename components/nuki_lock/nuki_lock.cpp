@@ -143,9 +143,6 @@ void NukiLockComponent::update_status()
             this->door_sensor_state_text_sensor_->publish_state(this->nuki_doorsensor_to_string(this->retrieved_key_turner_state_.doorSensorState));
         #endif
 
-        this->auth_data_update_ = true;
-        this->event_log_update_ = true;
-
         if (
             this->retrieved_key_turner_state_.lockState == NukiLock::LockState::Locking
             || this->retrieved_key_turner_state_.lockState == NukiLock::LockState::Unlocking
@@ -282,27 +279,29 @@ void NukiLockComponent::update_auth_data()
         }
     }
 
-    App.feed_wdt();
-    delay(5000);
+    this->set_timeout("wait_for_auth_data", 5000, [this]() {
+        std::list<NukiLock::AuthorizationEntry> authEntries;
+        this->nuki_lock_.getAuthorizationEntries(&authEntries);
 
-    std::list<NukiLock::AuthorizationEntry> authEntries;
-    this->nuki_lock_.getAuthorizationEntries(&authEntries);
+        authEntries.sort([](const NukiLock::AuthorizationEntry& a, const NukiLock::AuthorizationEntry& b)
+        {
+            return a.authId < b.authId;
+        });
 
-    authEntries.sort([](const NukiLock::AuthorizationEntry& a, const NukiLock::AuthorizationEntry& b)
-    {
-        return a.authId < b.authId;
+        if(authEntries.size() > MAX_AUTH_DATA_ENTRIES)
+        {
+            authEntries.resize(MAX_AUTH_DATA_ENTRIES);
+        }
+
+        for(const auto& entry : authEntries)
+        {
+            ESP_LOGD(TAG, "Authorization entry[%d] type: %d name: %s", entry.authId, entry.idType, entry.name);
+            this->auth_entries_[entry.authId] = std::string(reinterpret_cast<const char*>(entry.name));
+        }
+
+        // Request Event logs when Auth Data is available
+        this->event_log_update_ = true;
     });
-
-    if(authEntries.size() > MAX_AUTH_DATA_ENTRIES)
-    {
-        authEntries.resize(MAX_AUTH_DATA_ENTRIES);
-    }
-
-    for(const auto& entry : authEntries)
-    {
-        ESP_LOGD(TAG, "Authorization entry[%d] type: %d name: %s", entry.authId, entry.idType, entry.name);
-        this->auth_entries_[entry.authId] = std::string(reinterpret_cast<const char*>(entry.name));
-    }
 }
 
 void NukiLockComponent::update_event_logs()
@@ -327,26 +326,25 @@ void NukiLockComponent::update_event_logs()
         }
     }
 
-    App.feed_wdt();
-    delay(5000);
+    this->set_timeout("wait_for_log_entries", 5000, [this]() {
+        std::list<NukiLock::LogEntry> log;
+        this->nuki_lock_.getLogEntries(&log);
 
-    std::list<NukiLock::LogEntry> log;
-    this->nuki_lock_.getLogEntries(&log);
+        if(log.size() > MAX_EVENT_LOG_ENTRIES)
+        {
+            log.resize(MAX_EVENT_LOG_ENTRIES);
+        }
 
-    if(log.size() > MAX_EVENT_LOG_ENTRIES)
-    {
-        log.resize(MAX_EVENT_LOG_ENTRIES);
-    }
+        log.sort([](const NukiLock::LogEntry& a, const NukiLock::LogEntry& b)
+        {
+            return a.index < b.index;
+        });
 
-    log.sort([](const NukiLock::LogEntry& a, const NukiLock::LogEntry& b)
-    {
-        return a.index < b.index;
+        if(log.size() > 0)
+        {
+            this->process_log_entries(log);
+        }
     });
-
-    if(log.size() > 0)
-    {
-        this->process_log_entries(log);
-    }
 }
 
 void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>& log_entries)
@@ -354,7 +352,6 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
     char str[50];
     char auth_name[33];
     uint32_t auth_index = 0;
-    std::map<std::string, std::string> event_data;
 
     for(const auto& log : log_entries)
     {
@@ -386,119 +383,120 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
             }
         }
 
-        event_data["index"] = std::to_string(log.index);
-        event_data["authorizationId"] = std::to_string(log.authId);
-        event_data["authorizationName"] = auth_name;
+        #ifdef USE_TEXT_SENSOR
+        if (this->last_unlock_user_text_sensor_ != nullptr)
+            this->last_unlock_user_text_sensor_->publish_state(this->auth_name_);
+        #endif
 
-        if(this->auth_entries_.count(log.authId) > 0)
+        if (strcmp(event_, "esphome.none") != 0)
         {
-            event_data["authorizationName"] = this->auth_entries_[log.authId];
-        }
+            std::map<std::string, std::string> event_data;
+            event_data["index"] = std::to_string(log.index);
+            event_data["authorizationId"] = std::to_string(log.authId);
+            event_data["authorizationName"] = auth_name;
 
-        event_data["timeYear"] = std::to_string(log.timeStampYear);
-        event_data["timeMonth"] = std::to_string(log.timeStampMonth);
-        event_data["timeDay"] = std::to_string(log.timeStampDay);
-        event_data["timeHour"] = std::to_string(log.timeStampHour);
-        event_data["timeMinute"] = std::to_string(log.timeStampMinute);
-        event_data["timeSecond"] = std::to_string(log.timeStampSecond);
-
-        memset(str, 0, sizeof(str));
-        NukiLock::loggingTypeToString(log.loggingType, str);
-        event_data["type"] = str;
-
-        switch(log.loggingType)
-        {
-            case NukiLock::LoggingType::LockAction:
-                memset(str, 0, sizeof(str));
-                NukiLock::lockactionToString((NukiLock::LockAction)log.data[0], str);
-                event_data["action"] = str;
-
-                memset(str, 0, sizeof(str));
-                NukiLock::triggerToString((NukiLock::Trigger)log.data[1], str);
-                event_data["trigger"] = str;
-
-                memset(str, 0, sizeof(str));
-                NukiLock::completionStatusToString((NukiLock::CompletionStatus)log.data[3], str);
-                event_data["completionStatus"] = str;
-                break;
-
-            case NukiLock::LoggingType::KeypadAction:
-                memset(str, 0, sizeof(str));
-                NukiLock::lockactionToString((NukiLock::LockAction)log.data[0], str);
-                event_data["action"] = str;
-
-                switch(log.data[1])
-                {
-                    case 0:
-                        event_data["trigger"] = "arrowkey";
-                        break;
-                    case 1:
-                        event_data["trigger"] = "code";
-                        break;
-                    case 2:
-                        event_data["trigger"] = "fingerprint";
-                        break;
-                    default:
-                        event_data["trigger"] = "unknown";
-                        break;
-                }
-
-                memset(str, 0, sizeof(str));
-
-                if(log.data[2] == 9)
-                {
-                    event_data["trigger"] = "notAuthorized";
-                }
-                else if (log.data[2] == 224)
-                {
-                    event_data["trigger"] = "invalidCode";
-                }
-                else
-                {
-                    NukiLock::completionStatusToString((NukiLock::CompletionStatus)log.data[2], str);
-                    event_data["completionStatus"] = str;
-                }
-
-                event_data["codeId"] = std::to_string(256U*log.data[4]+log.data[3]);
-                break;
-
-            case NukiLock::LoggingType::DoorSensor:
-                switch(log.data[0])
-                {
-                    case 0:
-                        event_data["action"] = "DoorOpened";
-                        break;
-                    case 1:
-                        event_data["action"] = "DoorClosed";
-                        break;
-                    case 2:
-                        event_data["action"] = "SensorJammed";
-                        break;
-                    default:
-                        event_data["action"] = "Unknown";
-                        break;
-                }
-                break;
-        }
-        
-        // Send as Home Assistant Event
-        if(log.index > this->last_rolling_log_id)
-        {
-            this->last_rolling_log_id = log.index;
-
-            if (strcmp(event_, "esphome.none") != 0)
+            if(this->auth_entries_.count(log.authId) > 0)
             {
+                event_data["authorizationName"] = this->auth_entries_[log.authId];
+            }
+
+            event_data["timeYear"] = std::to_string(log.timeStampYear);
+            event_data["timeMonth"] = std::to_string(log.timeStampMonth);
+            event_data["timeDay"] = std::to_string(log.timeStampDay);
+            event_data["timeHour"] = std::to_string(log.timeStampHour);
+            event_data["timeMinute"] = std::to_string(log.timeStampMinute);
+            event_data["timeSecond"] = std::to_string(log.timeStampSecond);
+
+            memset(str, 0, sizeof(str));
+            NukiLock::loggingTypeToString(log.loggingType, str);
+            event_data["type"] = str;
+
+            switch(log.loggingType)
+            {
+                case NukiLock::LoggingType::LockAction:
+                    memset(str, 0, sizeof(str));
+                    NukiLock::lockactionToString((NukiLock::LockAction)log.data[0], str);
+                    event_data["action"] = str;
+
+                    memset(str, 0, sizeof(str));
+                    NukiLock::triggerToString((NukiLock::Trigger)log.data[1], str);
+                    event_data["trigger"] = str;
+
+                    memset(str, 0, sizeof(str));
+                    NukiLock::completionStatusToString((NukiLock::CompletionStatus)log.data[3], str);
+                    event_data["completionStatus"] = str;
+                    break;
+
+                case NukiLock::LoggingType::KeypadAction:
+                    memset(str, 0, sizeof(str));
+                    NukiLock::lockactionToString((NukiLock::LockAction)log.data[0], str);
+                    event_data["action"] = str;
+
+                    switch(log.data[1])
+                    {
+                        case 0:
+                            event_data["trigger"] = "arrowkey";
+                            break;
+                        case 1:
+                            event_data["trigger"] = "code";
+                            break;
+                        case 2:
+                            event_data["trigger"] = "fingerprint";
+                            break;
+                        default:
+                            event_data["trigger"] = "unknown";
+                            break;
+                    }
+
+                    memset(str, 0, sizeof(str));
+
+                    if(log.data[2] == 9)
+                    {
+                        event_data["trigger"] = "notAuthorized";
+                    }
+                    else if (log.data[2] == 224)
+                    {
+                        event_data["trigger"] = "invalidCode";
+                    }
+                    else
+                    {
+                        NukiLock::completionStatusToString((NukiLock::CompletionStatus)log.data[2], str);
+                        event_data["completionStatus"] = str;
+                    }
+
+                    event_data["codeId"] = std::to_string(256U*log.data[4]+log.data[3]);
+                    break;
+
+                case NukiLock::LoggingType::DoorSensor:
+                    switch(log.data[0])
+                    {
+                        case 0:
+                            event_data["action"] = "DoorOpened";
+                            break;
+                        case 1:
+                            event_data["action"] = "DoorClosed";
+                            break;
+                        case 2:
+                            event_data["action"] = "SensorJammed";
+                            break;
+                        default:
+                            event_data["action"] = "Unknown";
+                            break;
+                    }
+                    break;
+            }
+            
+            // Send as Home Assistant Event
+            if(log.index > this->last_rolling_log_id)
+            {
+                this->last_rolling_log_id = log.index;
+                
                 auto capi = new esphome::api::CustomAPIDevice();
                 ESP_LOGD(TAG, "Send event to Home Assistant on %s", event_);
                 capi->fire_homeassistant_event(event_, event_data);
             }
         }
     }
-
-    #ifdef USE_TEXT_SENSOR
-    if (this->last_unlock_user_text_sensor_ != nullptr)
-        this->last_unlock_user_text_sensor_->publish_state(this->auth_name_);
-    #endif
 }
 
 bool NukiLockComponent::execute_lock_action(NukiLock::LockAction lock_action) {
@@ -571,10 +569,12 @@ void NukiLockComponent::setup() {
     
     if (this->nuki_lock_.isPairedWithLock()) {
         this->status_update_ = true;
+
         this->config_update_ = true;
         this->advanced_config_update_ = true;
+
         this->auth_data_update_ = true;
-        this->event_log_update_ = true;
+
         ESP_LOGI(TAG, "%s Nuki paired", this->deviceName_);
         #ifdef USE_BINARY_SENSOR
         if (this->is_paired_binary_sensor_ != nullptr)
@@ -930,7 +930,6 @@ void NukiLockComponent::notify(Nuki::EventType event_type) {
     this->config_update_ = true;
     this->advanced_config_update_ = true;
     this->auth_data_update_ = true;
-    this->event_log_update_ = true;
     ESP_LOGI(TAG, "event notified %d", event_type);
 }
 
