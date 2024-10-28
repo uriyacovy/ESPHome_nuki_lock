@@ -1,20 +1,10 @@
-# Nuki Lock for ESPHome (ESP32)
-[![Build Component](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml/badge.svg)](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml)
+# ESPHome Nuki Lock Component (ESP32) [![Build Component](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml/badge.svg)](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml)
 
-This module builds an ESPHome lock platform for Nuki Smartlock (nuki_lock) that creates 9 new entities in Home Assistant:
-- Lock 
-- Binary Sensor: Is Paired
-- Binary Sensor: Is Connected
-- Binary Sensor: Critical Battery 
-- Sensor: Battery Level
-- Binary Sensor: Door Sensor
-- Text Sensor: Door Sensor State
-- Switch: Pairing Mode
-- Button: Unpair
+This module builds an ESPHome lock platform for Nuki Smartlocks (nuki_lock) that creates [24 entities](#entities) in Home Assistant.
 
-The lock entity is updated whenever the look changes state (via Nuki App, HA, or manually) using Nuki BT advertisement mechanism.
+The lock entity is updated whenever the look changes state (via Nuki App, HA, or manually) using the Nuki BLE advertisement mechanism.
 
-![dashboard](./docs/nuki_dashboard.png)
+![some dashboard entites](./docs/nuki_dashboard.png)
 
 
 ## How to use
@@ -50,20 +40,64 @@ lock:
   # Optional:
     battery_critical:
       name: "Nuki Battery Critical"
-    battery_level:
-      name: "Nuki Battery Level"
     door_sensor:
       name: "Nuki Door Sensor"
+
+    battery_level:
+      name: "Nuki Battery Level"
+
     door_sensor_state:
-      name: "Nuki Door Sensor State"
-    unpair:
-      name: "Nuki Unpair"
+      name: "Nuki Door Sensor: State"
+    last_unlock_user:
+      name: "Nuki Last Unlock User"
+
     pairing_mode:
       name: "Nuki Pairing Mode"
+    auto_unlatch:
+      name: "Nuki Auto unlatch"
+    button_enabled:
+      name: "Nuki Button: Locking operations"
+    led_enabled:
+      name: "Nuki LED Signal"
+
+    led_brightness:
+      name: "Nuki LED Brightness"
+
+    night_mode_enabled:
+      name: "Nuki Night Mode"
+    night_mode_auto_lock_enabled:
+      name: "Nuki Night Mode: Auto Lock"
+    night_mode_auto_unlock_disabled:
+      name: "Nuki Night Mode: Reject Auto Unlock"
+    night_mode_immediate_lock_on_start_enabled:
+      name: "Nuki Night Mode: Lock at Start Time"
+    auto_lock_enabled:
+      name: "Nuki Auto Lock"
+    auto_unlock_disabled:
+      name: "Nuki Auto Unlock: Disable"
+    immediate_auto_lock_enabled:
+      name: "Nuki Auto Lock: Immediately"
+    auto_update_enabled:
+      name: "Nuki Automatic Updates"
+      
+    single_buton_press_action:
+      name: "Nuki Button: Single Press Action"
+    double_buton_press_action:
+      name: "Nuki Button: Double Press Action"
+    fob_action_1:
+      name: "Nuki Fob: Action 1"
+    fob_action_2:
+      name: "Nuki Fob: Action 2"
+    fob_action_3:
+      name: "Nuki Fob: Action 3"
+
+    unpair:
+      name: "Nuki Unpair Device"
 
   # Optional: Settings
     security_pin: 1234
     pairing_mode_timeout: 300s
+    event: "nuki"
 
   # Optional: Callbacks
     on_pairing_mode_on_action:
@@ -96,8 +130,8 @@ service: esphome.<NODE_NAME>_lock_n_go
 data: {}
 ```
 
-## Automation ##
-### Action: Pairing Mode ###
+## Automation
+### Action: Pairing Mode
 You can use this action to turn on/off the pairing mode: 
 ```yaml
 on_...:
@@ -106,7 +140,7 @@ on_...:
 ```
 
 ### Action: Unpair
-You can use this action to unpair your Nuki: 
+You can use this action to unpair your Nuki Smartlock: 
 ```yaml
 on_...:
   - nuki_lock.unpair:
@@ -122,6 +156,79 @@ on_pairing_mode_off_action:
 on_paired_action:
   - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
 ```
+
+### Events
+By default this component sends the Nuki logs as events to Home Assistant.
+You can use them in automations. If you want to disable events, set the `event` property in your yaml to `none`.
+If you want to check the log events, go to the Home Assistant Developer tools -> Events and listen for `esphome.nuki` events.
+```yaml
+event_type: esphome.nuki
+data:
+  device_id: 373c62d6788cf81d322763235513310e
+  action: Unlatch
+  authorizationId: "3902896895"
+  authorizationName: Nuki ESPHome
+  completionStatus: success
+  index: "92"
+  timeDay: "25"
+  timeHour: "0"
+  timeMinute: "46"
+  timeMonth: "10"
+  timeSecond: "11"
+  timeYear: "2024"
+  trigger: system
+  type: LockAction
+origin: LOCAL
+time_fired: "2024-10-25T00:46:33.398284+00:00"
+context:
+  id: 01JB0J7AXPMS5DWHG188Y6XFCP
+  parent_id: null
+  user_id: null
+```
+
+## Entities
+
+**Lock:**  
+- Lock
+
+**Binary Sensor:**  
+- Is Paired
+- Is Connected
+- Critical Battery 
+- Door Sensor
+
+**Sensor:**
+- Battery Level
+
+**Text Sensor:**  
+- Door Sensor State
+- Last Unlock User
+
+**Switch:**  
+- Pairing Mode
+- Button Enabled
+- LED Enabled
+- Night Mode
+- Night Mode: Auto Lock
+- Night Mode: Reject Auto Unlock
+- Night Mode: Lock at Start Time
+- Auto Lock
+- Auto Unlock: Disable
+- Auto Lock: Immediately
+- Automatic Updates
+
+**Select:**  
+- Single Button Press Action
+- Double Button Press Action
+- Fob Action 1
+- Fob Action 2
+- Fob Action 3
+
+**Number:**  
+- LED Brightness
+
+**Button:**  
+- Unpair Device
 
 ## Dependencies
 The module depends on the work done by [I-Connect](https://github.com/I-Connect) with [NukiBleEsp32](https://github.com/I-Connect/NukiBleEsp32).
