@@ -130,6 +130,7 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
     ),
     cv.Optional(CONF_BATTERY_CRITICAL): binary_sensor.binary_sensor_schema(
         device_class=DEVICE_CLASS_BATTERY,
+        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
         icon="mdi:battery-alert-variant-outline",
     ),
     cv.Optional(CONF_DOOR_SENSOR): binary_sensor.binary_sensor_schema(
@@ -148,6 +149,7 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
 
     cv.Optional(CONF_BATTERY_LEVEL): sensor.sensor_schema(
         device_class=DEVICE_CLASS_BATTERY,
+        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
         unit_of_measurement=UNIT_PERCENT,
         icon="mdi:battery-50",
     ),
@@ -349,7 +351,7 @@ async def to_code(config):
 
     if security_pin := config.get(CONF_SECURITY_PIN_NUMBER):
         n = await number.new_number(
-            security_pin, min_value=0, max_value=65535, step=0
+            security_pin, min_value=0, max_value=65535, step=1
         )
         await cg.register_parented(n, config[CONF_ID])
         cg.add(var.set_security_pin_number(n))
