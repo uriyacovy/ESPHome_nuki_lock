@@ -71,6 +71,8 @@ lock:
 
     led_brightness:
       name: "Nuki LED Brightness"
+    security_pin:
+      name: "Nuki Security Pin"
 
     single_buton_press_action:
       name: "Nuki Single Button Press Action"
@@ -83,7 +85,6 @@ lock:
     fob_action_3:
       name: "Nuki Fob Action 3"
 
-    security_pin: 1234
     pairing_mode_timeout: 300s
     event: "nuki"
 

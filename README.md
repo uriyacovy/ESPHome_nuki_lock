@@ -87,8 +87,10 @@ lock:
     unpair:
       name: "Nuki Unpair Device"
 
+    security_pin:
+      name: "Nuki Security Pin"
+
   # Optional: Settings
-    security_pin: 1234
     pairing_mode_timeout: 300s
     event: "nuki"
 
@@ -263,15 +265,16 @@ context:
 - Auto Lock: Immediately
 - Automatic Updates
 
-**Select:**  
+**Select Input:**  
 - Single Button Press Action
 - Double Button Press Action
 - Fob Action 1
 - Fob Action 2
 - Fob Action 3
 
-**Number:**  
+**Number Input:**  
 - LED Brightness
+- Security Pin
 
 **Button:**  
 - Unpair Device

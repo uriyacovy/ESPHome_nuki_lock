@@ -1,8 +1,12 @@
 #pragma once
 
 #include "esphome/core/component.h"
-#include "esphome/components/api/custom_api_device.h"
 #include "esphome/components/lock/lock.h"
+#include "esphome/core/preferences.h"
+
+#ifdef USE_API
+#include "esphome/components/api/custom_api_device.h"
+#endif
 
 #ifdef USE_BUTTON
 #include "esphome/components/button/button.h"
@@ -35,7 +39,12 @@ namespace nuki_lock {
 
 static const char *TAG = "nuki_lock.lock";
 
-class NukiLockComponent : public lock::Lock, public PollingComponent, public api::CustomAPIDevice, public Nuki::SmartlockEventHandler {
+struct NukiLockSettings
+{
+    uint16_t security_pin;
+};
+
+class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuki::SmartlockEventHandler {
     
     #ifdef USE_BINARY_SENSOR
     SUB_BINARY_SENSOR(is_connected)
@@ -52,6 +61,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
     #endif
     #ifdef USE_NUMBER
     SUB_NUMBER(led_brightness)
+    SUB_NUMBER(security_pin)
     #endif
     #ifdef USE_SELECT
     SUB_SELECT(single_button_press_action)
@@ -108,7 +118,6 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
         void notify(Nuki::EventType event_type) override;
         float get_setup_priority() const override { return setup_priority::HARDWARE - 1.0f; }
 
-        void set_security_pin(uint16_t security_pin) { this->security_pin_ = security_pin; }
         void set_pairing_mode_timeout(uint16_t pairing_mode_timeout) { this->pairing_mode_timeout_ = pairing_mode_timeout; }
         void set_event(const char *event) { this->event_ = event; }
 
@@ -132,6 +141,9 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
 
         void unpair();
         void set_pairing_mode(bool enabled);
+
+        void set_security_pin(uint16_t security_pin);
+        void save_settings();
 
         #ifdef USE_NUMBER
         void set_config_number(std::string config, float value);
@@ -161,6 +173,10 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
         NukiLock::KeyTurnerState retrieved_key_turner_state_;
         NukiLock::LockAction lock_action_;
 
+        #ifdef USE_API
+        api::CustomAPIDevice custom_api_device_;
+        #endif
+
         std::map<uint32_t, std::string> auth_entries_;
         uint32_t auth_id_ = 0;
         char auth_name_[33];
@@ -181,12 +197,14 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public api
 
         uint16_t security_pin_ = 0;
         const char* event_;
-        uint16_t pairing_mode_timeout_ = 0;
 
+        uint16_t pairing_mode_timeout_ = 0;
         bool pairing_mode_ = false;
         uint32_t pairing_mode_timer_ = 0;
 
         uint32_t last_rolling_log_id = 0;
+
+        ESPPreferenceObject pref_;
 
     private:
         NukiLock::NukiLock nuki_lock_;
@@ -395,6 +413,13 @@ class NukiLockAutoUpdateEnabledSwitch : public switch_::Switch, public Parented<
 class NukiLockLedBrightnessNumber : public number::Number, public Parented<NukiLockComponent> {
     public:
         NukiLockLedBrightnessNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+class NukiLockSecurityPinNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockSecurityPinNumber() = default;
 
     protected:
         void control(float value) override;
