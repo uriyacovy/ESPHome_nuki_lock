@@ -2,12 +2,6 @@
 esphome:
   name: test-nuki
 
-  libraries:
-    - Preferences
-    - https://github.com/h2zero/NimBLE-Arduino#1.4.0
-    - Crc16
-    - https://github.com/I-Connect/NukiBleEsp32#93e7da927171c8973b7ef857c7fa644c174ed47d
-
 esp32:
   framework:
     type: arduino

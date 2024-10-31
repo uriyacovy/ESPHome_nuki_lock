@@ -11,13 +11,6 @@ The lock entity is updated whenever the look changes state (via Nuki App, HA, or
 Add the following to the ESPHome yaml file:
 
 ```yaml
-esphome:
-  libraries:
-  - Preferences
-  - https://github.com/h2zero/NimBLE-Arduino#1.4.0
-  - Crc16
-  - https://github.com/uriyacovy/NukiBleEsp32
-
 external_components:
   - source: github://uriyacovy/ESPHome_nuki_lock
 
