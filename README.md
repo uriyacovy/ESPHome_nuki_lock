@@ -1,14 +1,14 @@
 # ESPHome Nuki Lock Component (ESP32) [![Build Component](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml/badge.svg)](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml)
 
-This module builds an ESPHome lock platform for Nuki Smartlocks (nuki_lock) that creates [24 entities](#entities) in Home Assistant.
+This module brings seamless integration of Nuki Smartlocks into ESPHome, creating a rich Home Assistant lock platform with [24 entities](#entities).
 
-The lock entity is updated whenever the look changes state (via Nuki App, HA, or manually) using the Nuki BLE advertisement mechanism.
+The lock entity updates whenever the lock's state changes - whether through the Nuki app, Home Assistant, or manually. This is achieved via the efficient Nuki BLE advertisement mechanism, ensuring your lock status is always up-to-date.
 
 ![some dashboard entites](./docs/nuki_dashboard.png)
 
 
-## How to use
-Add the following to the ESPHome yaml file:
+## How to Use
+To integrate your Nuki Smartlock, add the following code snippet to your ESPHome YAML file:
 
 ```yaml
 external_components:
@@ -101,14 +101,20 @@ lock:
       - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
 ```
 
-After running ESPHome (esphome run <yamlfile.yaml>), you have to activate the pairing mode of the ESPHome Component to pair your Nuki.
-You can use the `Pairing Mode` Switch Entity or use the `nuki_lock.set_pairing_mode` Automation Action to do so.
-To set Nuki for paring mode, press the Button on your Smart Lock for 5 seconds until the led turns on.
-Once Nuki is paired, the new ESPHome entities will get the updated state and pairing mode is turned off.
+After running ESPHome (`esphome run <yamlfile.yaml>`), follow these steps to pair your Nuki Smartlock:
 
-## Supported Services ##
-### Unlatch ###
-To unlatch doors without a handle, call open service from Home Assistant:
+1. **Activate Pairing Mode**: Enable pairing mode on the ESPHome component. You can do this by toggling the `Pairing Mode` switch entity in Home Assistant or by triggering the `nuki_lock.set_pairing_mode` action in an automation.
+
+2. **Set Nuki to Pairing Mode**: On your Nuki Smart Lock, press and hold the button for 5 seconds until the LED lights up to enter pairing mode.
+
+3. **Complete Pairing**: Once paired, the ESPHome entities will automatically update with the current lock status, and pairing mode will turn off.
+
+Your Nuki Smartlock is now connected and ready to use!
+
+
+## Supported Services
+### Unlatch
+To unlatch doors without a handle, call the `open` service in Home Assistant:
 ```yaml
 service: lock.open
 data: {}
@@ -117,15 +123,55 @@ target:
 ```
 
 ### Lock and Go
-To run lock and go, call this service from Home Assistant: 
+To activate the Lock 'n' Go feature on your Nuki Smart Lock, call the following service in Home Assistant:
+
 ```yaml
 service: esphome.<NODE_NAME>_lock_n_go
 data: {}
 ```
 
-## Automation
+### Print Keypad Entries
+To print the Keypad Entries in the ESPHome Console call the following service in Home Assistant:
+
+```yaml
+service: esphome.<NODE_NAME>_print_keypad_entries
+data: {}
+```
+
+### Add a Keypad Entry
+To add a Keypad Entry, call the following service in Home Assistant:
+
+```yaml
+service: esphome.<NODE_NAME>_add_keypad_entry
+data:
+  name: "Name"
+  code: 12345678
+```
+
+### Remove a Keypad Entry
+To remove a Keypad Entry, call the following service in Home Assistant:
+
+```yaml
+service: esphome.<NODE_NAME>_delete_keypad_entry
+data:
+  id: 1
+```
+
+### Update a Keypad Entry
+To update a Keypad Entry, call the following service in Home Assistant:
+
+```yaml
+service: esphome.<NODE_NAME>_update_keypad_entry
+data:
+  id: 1
+  name: "Name"
+  code: 12345678
+  enabled: True
+```
+
+## ESPHome Automations
 ### Action: Pairing Mode
-You can use this action to turn on/off the pairing mode: 
+To toggle the components Pairing Mode, use the following action:
 ```yaml
 on_...:
   - nuki_lock.set_pairing_mode:
@@ -133,14 +179,14 @@ on_...:
 ```
 
 ### Action: Unpair
-You can use this action to unpair your Nuki Smartlock: 
+To unpair your Nuki Smart Lock, use the following action:
 ```yaml
 on_...:
   - nuki_lock.unpair:
 ```
 
 ### Callbacks
-You can use this callbacks to run specific actions: 
+To run specific actions when certain events occur, you can use the following callbacks:
 ```yaml
 on_pairing_mode_on_action:
   - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
@@ -151,9 +197,16 @@ on_paired_action:
 ```
 
 ### Events
-By default this component sends the Nuki logs as events to Home Assistant.
-You can use them in automations. If you want to disable events, set the `event` property in your yaml to `none`.
-If you want to check the log events, go to the Home Assistant Developer tools -> Events and listen for `esphome.nuki` events.
+By default, this component sends Nuki logs as events to Home Assistant, enabling you to use them in automations. 
+
+- **To Disable Logs**: Set the `event` property in your YAML configuration to `none` if you don't want to receive log events.
+  
+- **To View Log Events**: Go to **Home Assistant Developer Tools** -> **Events**, and listen for `esphome.nuki` events to monitor log activity.
+
+These log events provide insights into lock operations and help fine-tune automations based on real-time lock data.
+
+
+Example Event:
 ```yaml
 event_type: esphome.nuki
 data:
