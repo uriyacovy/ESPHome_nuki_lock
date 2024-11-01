@@ -50,6 +50,7 @@ CONF_FOB_ACTION_1_SELECT = "fob_action_1"
 CONF_FOB_ACTION_2_SELECT = "fob_action_2"
 CONF_FOB_ACTION_3_SELECT = "fob_action_3"
 CONF_TIMEZONE_SELECT = "timezone"
+CONF_ADVERTISING_MODE_SELECT = "advertising_mode"
 
 CONF_LED_BRIGHTNESS_NUMBER = "led_brightness"
 CONF_SECURITY_PIN_NUMBER = "security_pin"
@@ -61,7 +62,7 @@ CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS = [
     "Lock",
     "Unlatch",
     "Lock n Go",
-    "Show Status",
+    "Show Status"
 ]
 
 CONF_FOB_ACTION_SELECT_OPTIONS = [
@@ -69,7 +70,7 @@ CONF_FOB_ACTION_SELECT_OPTIONS = [
     "Unlock",
     "Lock",
     "Lock n Go",
-    "Intelligent",
+    "Intelligent"
 ]
 
 CONF_TIMEZONE_SELECT_OPTIONS = [
@@ -122,6 +123,13 @@ CONF_TIMEZONE_SELECT_OPTIONS = [
     "None"
 ]
 
+CONF_ADVERTISING_MODE_SELECT_OPTIONS = [
+    "Automatic",
+    "Normal",
+    "Slow", 
+    "Slowest"
+]
+
 CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_EVENT = "event"
 
@@ -155,6 +163,7 @@ NukiLockFobAction1Select = nuki_lock_ns.class_("NukiLockFobAction1Select", selec
 NukiLockFobAction2Select = nuki_lock_ns.class_("NukiLockFobAction2Select", select.Select, cg.Component)
 NukiLockFobAction3Select = nuki_lock_ns.class_("NukiLockFobAction3Select", select.Select, cg.Component)
 NukiLockTimeZoneSelect = nuki_lock_ns.class_("NukiLockTimeZoneSelect", select.Select, cg.Component)
+NukiLockAdvertisingModeSelect = nuki_lock_ns.class_("NukiLockAdvertisingModeSelect", select.Select, cg.Component)
 
 NukiLockUnpairAction = nuki_lock_ns.class_(
     "NukiLockUnpairAction", automation.Action
@@ -326,6 +335,11 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         NukiLockTimeZoneSelect,
         entity_category=ENTITY_CATEGORY_CONFIG,
         icon="mdi:map-clock",
+    ),
+    cv.Optional(CONF_ADVERTISING_MODE_SELECT): select.select_schema(
+        NukiLockAdvertisingModeSelect,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+        icon="mdi:timer-cog",
     ),
 
     cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
@@ -522,6 +536,14 @@ async def to_code(config):
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_timezone_select(sel))
+
+    if advertising_mode := config.get(CONF_ADVERTISING_MODE_SELECT):
+        sel = await select.new_select(
+            advertising_mode,
+            options=[CONF_ADVERTISING_MODE_SELECT_OPTIONS],
+        )
+        await cg.register_parented(sel, config[CONF_ID])
+        cg.add(var.set_advertising_mode_select(sel))
 
 
     # Callback

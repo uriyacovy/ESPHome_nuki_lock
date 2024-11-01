@@ -109,7 +109,7 @@ std::string NukiLockComponent::fob_action_to_string(uint8_t action)
     return "No Action";
 }
 
-Nuki::TimeZoneId NukiLockComponent::nuki_timezone_to_enum(std:string str)
+Nuki::TimeZoneId NukiLockComponent::timezone_to_enum(std:string str)
 {
     static const std::unordered_map<std::string, Nuki::TimeZoneId> timezoneMap = {
         {"Africa/Cairo", Nuki::TimeZoneId::Africa_Cairo},
@@ -165,7 +165,7 @@ Nuki::TimeZoneId NukiLockComponent::nuki_timezone_to_enum(std:string str)
     return (it != timezoneMap.end()) ? it->second : Nuki::TimeZoneId::None;
 }
 
-std::string NukiLockComponent::nuki_timezone_to_string(Nuki::TimeZoneId timezoneId)
+std::string NukiLockComponent::timezone_to_string(Nuki::TimeZoneId timezoneId)
 {
     static const std::unordered_map<Nuki::TimeZoneId, std::string> idToStringMap = {
         {Nuki::TimeZoneId::Africa_Cairo, "Africa/Cairo"},
@@ -219,6 +219,27 @@ std::string NukiLockComponent::nuki_timezone_to_string(Nuki::TimeZoneId timezone
 
     auto it = idToStringMap.find(timezoneId);
     return (it != idToStringMap.end()) ? it->second : "None";
+}
+
+Nuki::AdvertisingMode NukiLockComponent::advertising_mode_to_enum(std::string str)
+{
+    if(str == "Automatic") return Nuki::AdvertisingMode::Automatic;
+    if(str == "Normal") return Nuki::AdvertisingMode::Normal;
+    if(str == "Slow") return Nuki::AdvertisingMode::Slow;
+    if(str == "Slowest") return Nuki::AdvertisingMode::Slowest;
+    return Nuki::AdvertisingMode::Automatic;
+}
+
+std::string NukiLockComponent::advertising_mode_to_string(Nuki::AdvertisingMode mode)
+{
+    switch (mode)
+    {
+        case Nuki::AdvertisingMode::Automatic: return "Automatic";
+        case Nuki::AdvertisingMode::Normal: return "Normal";
+        case Nuki::AdvertisingMode::Slow: return "Slow";
+        case Nuki::AdvertisingMode::Slowest: return "Slowest";
+        default: return "Automatic";
+    }
 }
 
 void NukiLockComponent::save_settings()
@@ -334,6 +355,8 @@ void NukiLockComponent::update_config() {
             this->fob_action_3_select_->publish_state(this->fob_action_to_string(config.fobAction3));
         if (this->timezone_select_ != nullptr)
             this->timezone_select_->publish_state(this->timezone_to_string(config.timeZoneId));
+        if (this->advertising_mode_select_ != nullptr)
+            this->advertising_mode_select_->publish_state(this->advertising_mode_to_string(config.advertisingMode));
         #endif
 
     } else {
@@ -1088,6 +1111,7 @@ void NukiLockComponent::dump_config() {
     LOG_SELECT(TAG, "Fob Action 2", this->fob_action_2_select_);
     LOG_SELECT(TAG, "Fob Action 3", this->fob_action_3_select_);
     LOG_SELECT(TAG, "Timezone", this->timezone_select_);
+    LOG_SELECT(TAG, "Advertising Mode", this->advertising_mode_select_);
     #endif
 }
 
@@ -1190,6 +1214,11 @@ void NukiLockComponent::set_config_select(std::string config, const std::string 
         Nuki::TimeZoneId tzid = this->timezone_to_enum(value);
         cmd_result = this->nuki_lock_.setTimeZoneId(tzid);
     }
+    else if(config == "advertising_mode")
+    {
+        Nuki::AdvertisingMode mode = this->advertising_mode_to_enum(value);
+        cmd_result = this->nuki_lock_.setAdvertisingMode(mode);
+    }
 
     if(cmd_result == Nuki::CmdResult::Success)
     {
@@ -1216,6 +1245,10 @@ void NukiLockComponent::set_config_select(std::string config, const std::string 
         else if(config == "timezone")
         {
             if (this->timezone_select_ != nullptr) this->timezone_select_->publish_state(value);
+        } 
+        else if(config == "advertising_mode")
+        {
+            if (this->advertising_mode_select_ != nullptr) this->advertising_mode_select_->publish_state(value);
         } 
         
         this->config_update_ = !is_advanced;
@@ -1384,6 +1417,9 @@ void NukiLockFobAction3Select::control(const std::string &action) {
 }
 void NukiLockTimeZoneSelect::control(const std::string &zone) {
     this->parent_->set_config_select("timezone", zone);
+}
+void NukiLockAdvertisingModeSelect::control(const std::string &mode) {
+    this->parent_->set_config_select("advertising_mode", mode);
 }
 #endif
 #ifdef USE_SWITCH
