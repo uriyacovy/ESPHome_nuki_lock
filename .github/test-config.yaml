@@ -84,6 +84,10 @@ lock:
       name: "Nuki Fob Action 2"
     fob_action_3:
       name: "Nuki Fob Action 3"
+    timezone:
+      name: "Nuki Timezone"
+    advertising_mode:
+      name: "Nuki Advertising Mode"
 
     pairing_mode_timeout: 300s
     event: "nuki"

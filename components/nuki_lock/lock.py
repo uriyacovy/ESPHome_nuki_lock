@@ -143,6 +143,7 @@ nuki_lock_ns = cg.esphome_ns.namespace('nuki_lock')
 NukiLock = nuki_lock_ns.class_('NukiLockComponent', lock.Lock, switch.Switch, cg.Component)
 
 NukiLockUnpairButton = nuki_lock_ns.class_("NukiLockUnpairButton", button.Button, cg.Component)
+
 NukiLockPairingModeSwitch = nuki_lock_ns.class_("NukiLockPairingModeSwitch", switch.Switch, cg.Component)
 NukiLockAutoUnlatchEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoUnlatchEnabledSwitch", switch.Switch, cg.Component)
 NukiLockButtonEnabledSwitch = nuki_lock_ns.class_("NukiLockButtonEnabledSwitch", switch.Switch, cg.Component)
@@ -155,8 +156,10 @@ NukiLockAutoLockEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoLockEnabledSwit
 NukiLockAutoUnlockDisabledSwitch = nuki_lock_ns.class_("NukiLockAutoUnlockDisabledSwitch", switch.Switch, cg.Component)
 NukiLockImmediateAutoLockEnabledSwitch = nuki_lock_ns.class_("NukiLockImmediateAutoLockEnabledSwitch", switch.Switch, cg.Component)
 NukiLockAutoUpdateEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoUpdateEnabledSwitch", switch.Switch, cg.Component)
+
 NukiLockLedBrightnessNumber = nuki_lock_ns.class_("NukiLockLedBrightnessNumber", number.Number, cg.Component)
 NukiLockSecurityPinNumber = nuki_lock_ns.class_("NukiLockSecurityPinNumber", number.Number, cg.Component)
+
 NukiLockSingleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockSingleButtonPressActionSelect", select.Select, cg.Component)
 NukiLockDoubleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockDoubleButtonPressActionSelect", select.Select, cg.Component)
 NukiLockFobAction1Select = nuki_lock_ns.class_("NukiLockFobAction1Select", select.Select, cg.Component)
@@ -179,12 +182,12 @@ PairedTrigger = nuki_lock_ns.class_("PairedTrigger", automation.Trigger.template
 
 CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
     cv.GenerateID(): cv.declare_id(NukiLock),
-    cv.Required(CONF_IS_CONNECTED): binary_sensor.binary_sensor_schema(
+    cv.Optional(CONF_IS_CONNECTED): binary_sensor.binary_sensor_schema(
         device_class=DEVICE_CLASS_CONNECTIVITY,
         entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
         icon="mdi:link"
     ),
-    cv.Required(CONF_IS_PAIRED): binary_sensor.binary_sensor_schema(
+    cv.Optional(CONF_IS_PAIRED): binary_sensor.binary_sensor_schema(
         device_class=DEVICE_CLASS_CONNECTIVITY,
         entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
         icon="mdi:link"
