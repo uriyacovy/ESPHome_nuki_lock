@@ -6,6 +6,8 @@
 #include "esphome/components/api/custom_api_device.h"
 #endif
 
+#include <unordered_map>
+
 #include "nuki_lock.h"
 
 namespace esphome {
@@ -60,7 +62,7 @@ std::string NukiLockComponent::nuki_doorsensor_to_string(Nuki::DoorSensorState n
     }
 }
 
-NukiLock::ButtonPressAction NukiLockComponent::nuki_button_press_action_to_enum(std::string str)
+NukiLock::ButtonPressAction NukiLockComponent::button_press_action_to_enum(std::string str)
 {
     if (str == "No Action") return NukiLock::ButtonPressAction::NoAction;
     if (str == "Intelligent") return NukiLock::ButtonPressAction::Intelligent;
@@ -69,10 +71,10 @@ NukiLock::ButtonPressAction NukiLockComponent::nuki_button_press_action_to_enum(
     if (str == "Unlatch") return NukiLock::ButtonPressAction::Unlatch;
     if (str == "Lock n Go") return NukiLock::ButtonPressAction::LockNgo;
     if (str == "Show Status") return NukiLock::ButtonPressAction::ShowStatus;
-    return (NukiLock::ButtonPressAction)0xff;
+    return NukiLock::ButtonPressAction::NoAction;
 }
 
-const char* NukiLockComponent::nuki_button_press_action_to_string(NukiLock::ButtonPressAction action)
+const char* NukiLockComponent::button_press_action_to_string(NukiLock::ButtonPressAction action)
 {
     switch (action)
     {
@@ -94,7 +96,7 @@ uint8_t NukiLockComponent::fob_action_to_int(std::string str)
     if(str == "Lock") return 2;
     if(str == "Lock n Go") return 3;
     if(str == "Intelligent") return 4;
-    return 99;
+    return 0;
 }
 
 std::string NukiLockComponent::fob_action_to_string(uint8_t action)
@@ -105,6 +107,118 @@ std::string NukiLockComponent::fob_action_to_string(uint8_t action)
     if(action == 3) return "Lock n Go";
     if(action == 4) return "Intelligent";
     return "No Action";
+}
+
+Nuki::TimeZoneId NukiLockComponent::nuki_timezone_to_enum(std:string str)
+{
+    static const std::unordered_map<std::string, Nuki::TimeZoneId> timezoneMap = {
+        {"Africa/Cairo", Nuki::TimeZoneId::Africa_Cairo},
+        {"Africa/Lagos", Nuki::TimeZoneId::Africa_Lagos},
+        {"Africa/Maputo", Nuki::TimeZoneId::Africa_Maputo},
+        {"Africa/Nairobi", Nuki::TimeZoneId::Africa_Nairobi},
+        {"America/Anchorage", Nuki::TimeZoneId::America_Anchorage},
+        {"America/Argentina/Buenos_Aires", Nuki::TimeZoneId::America_Argentina_Buenos_Aires},
+        {"America/Chicago", Nuki::TimeZoneId::America_Chicago},
+        {"America/Denver", Nuki::TimeZoneId::America_Denver},
+        {"America/Halifax", Nuki::TimeZoneId::America_Halifax},
+        {"America/Los_Angeles", Nuki::TimeZoneId::America_Los_Angeles},
+        {"America/Manaus", Nuki::TimeZoneId::America_Manaus},
+        {"America/Mexico_City", Nuki::TimeZoneId::America_Mexico_City},
+        {"America/New_York", Nuki::TimeZoneId::America_New_York},
+        {"America/Phoenix", Nuki::TimeZoneId::America_Phoenix},
+        {"America/Regina", Nuki::TimeZoneId::America_Regina},
+        {"America/Santiago", Nuki::TimeZoneId::America_Santiago},
+        {"America/Sao_Paulo", Nuki::TimeZoneId::America_Sao_Paulo},
+        {"America/St_Johns", Nuki::TimeZoneId::America_St_Johns},
+        {"Asia/Bangkok", Nuki::TimeZoneId::Asia_Bangkok},
+        {"Asia/Dubai", Nuki::TimeZoneId::Asia_Dubai},
+        {"Asia/Hong_Kong", Nuki::TimeZoneId::Asia_Hong_Kong},
+        {"Asia/Jerusalem", Nuki::TimeZoneId::Asia_Jerusalem},
+        {"Asia/Karachi", Nuki::TimeZoneId::Asia_Karachi},
+        {"Asia/Kathmandu", Nuki::TimeZoneId::Asia_Kathmandu},
+        {"Asia/Kolkata", Nuki::TimeZoneId::Asia_Kolkata},
+        {"Asia/Riyadh", Nuki::TimeZoneId::Asia_Riyadh},
+        {"Asia/Seoul", Nuki::TimeZoneId::Asia_Seoul},
+        {"Asia/Shanghai", Nuki::TimeZoneId::Asia_Shanghai},
+        {"Asia/Tehran", Nuki::TimeZoneId::Asia_Tehran},
+        {"Asia/Tokyo", Nuki::TimeZoneId::Asia_Tokyo},
+        {"Asia/Yangon", Nuki::TimeZoneId::Asia_Yangon},
+        {"Australia/Adelaide", Nuki::TimeZoneId::Australia_Adelaide},
+        {"Australia/Brisbane", Nuki::TimeZoneId::Australia_Brisbane},
+        {"Australia/Darwin", Nuki::TimeZoneId::Australia_Darwin},
+        {"Australia/Hobart", Nuki::TimeZoneId::Australia_Hobart},
+        {"Australia/Perth", Nuki::TimeZoneId::Australia_Perth},
+        {"Australia/Sydney", Nuki::TimeZoneId::Australia_Sydney},
+        {"Europe/Berlin", Nuki::TimeZoneId::Europe_Berlin},
+        {"Europe/Helsinki", Nuki::TimeZoneId::Europe_Helsinki},
+        {"Europe/Istanbul", Nuki::TimeZoneId::Europe_Istanbul},
+        {"Europe/London", Nuki::TimeZoneId::Europe_London},
+        {"Europe/Moscow", Nuki::TimeZoneId::Europe_Moscow},
+        {"Pacific/Auckland", Nuki::TimeZoneId::Pacific_Auckland},
+        {"Pacific/Guam", Nuki::TimeZoneId::Pacific_Guam},
+        {"Pacific/Honolulu", Nuki::TimeZoneId::Pacific_Honolulu},
+        {"Pacific/Pago_Pago", Nuki::TimeZoneId::Pacific_Pago_Pago},
+        {"None", Nuki::TimeZoneId::None}
+    };
+
+    auto it = timezoneMap.find(str);
+    return (it != timezoneMap.end()) ? it->second : Nuki::TimeZoneId::None;
+}
+
+std::string NukiLockComponent::nuki_timezone_to_string(Nuki::TimeZoneId timezoneId)
+{
+    static const std::unordered_map<Nuki::TimeZoneId, std::string> idToStringMap = {
+        {Nuki::TimeZoneId::Africa_Cairo, "Africa/Cairo"},
+        {Nuki::TimeZoneId::Africa_Lagos, "Africa/Lagos"},
+        {Nuki::TimeZoneId::Africa_Maputo, "Africa/Maputo"},
+        {Nuki::TimeZoneId::Africa_Nairobi, "Africa/Nairobi"},
+        {Nuki::TimeZoneId::America_Anchorage, "America/Anchorage"},
+        {Nuki::TimeZoneId::America_Argentina_Buenos_Aires, "America/Argentina/Buenos_Aires"},
+        {Nuki::TimeZoneId::America_Chicago, "America/Chicago"},
+        {Nuki::TimeZoneId::America_Denver, "America/Denver"},
+        {Nuki::TimeZoneId::America_Halifax, "America/Halifax"},
+        {Nuki::TimeZoneId::America_Los_Angeles, "America/Los_Angeles"},
+        {Nuki::TimeZoneId::America_Manaus, "America/Manaus"},
+        {Nuki::TimeZoneId::America_Mexico_City, "America/Mexico_City"},
+        {Nuki::TimeZoneId::America_New_York, "America/New_York"},
+        {Nuki::TimeZoneId::America_Phoenix, "America/Phoenix"},
+        {Nuki::TimeZoneId::America_Regina, "America/Regina"},
+        {Nuki::TimeZoneId::America_Santiago, "America/Santiago"},
+        {Nuki::TimeZoneId::America_Sao_Paulo, "America/Sao_Paulo"},
+        {Nuki::TimeZoneId::America_St_Johns, "America/St_Johns"},
+        {Nuki::TimeZoneId::Asia_Bangkok, "Asia/Bangkok"},
+        {Nuki::TimeZoneId::Asia_Dubai, "Asia/Dubai"},
+        {Nuki::TimeZoneId::Asia_Hong_Kong, "Asia/Hong_Kong"},
+        {Nuki::TimeZoneId::Asia_Jerusalem, "Asia/Jerusalem"},
+        {Nuki::TimeZoneId::Asia_Karachi, "Asia/Karachi"},
+        {Nuki::TimeZoneId::Asia_Kathmandu, "Asia/Kathmandu"},
+        {Nuki::TimeZoneId::Asia_Kolkata, "Asia/Kolkata"},
+        {Nuki::TimeZoneId::Asia_Riyadh, "Asia/Riyadh"},
+        {Nuki::TimeZoneId::Asia_Seoul, "Asia/Seoul"},
+        {Nuki::TimeZoneId::Asia_Shanghai, "Asia/Shanghai"},
+        {Nuki::TimeZoneId::Asia_Tehran, "Asia/Tehran"},
+        {Nuki::TimeZoneId::Asia_Tokyo, "Asia/Tokyo"},
+        {Nuki::TimeZoneId::Asia_Yangon, "Asia/Yangon"},
+        {Nuki::TimeZoneId::Australia_Adelaide, "Australia/Adelaide"},
+        {Nuki::TimeZoneId::Australia_Brisbane, "Australia/Brisbane"},
+        {Nuki::TimeZoneId::Australia_Darwin, "Australia/Darwin"},
+        {Nuki::TimeZoneId::Australia_Hobart, "Australia/Hobart"},
+        {Nuki::TimeZoneId::Australia_Perth, "Australia/Perth"},
+        {Nuki::TimeZoneId::Australia_Sydney, "Australia/Sydney"},
+        {Nuki::TimeZoneId::Europe_Berlin, "Europe/Berlin"},
+        {Nuki::TimeZoneId::Europe_Helsinki, "Europe/Helsinki"},
+        {Nuki::TimeZoneId::Europe_Istanbul, "Europe/Istanbul"},
+        {Nuki::TimeZoneId::Europe_London, "Europe/London"},
+        {Nuki::TimeZoneId::Europe_Moscow, "Europe/Moscow"},
+        {Nuki::TimeZoneId::Pacific_Auckland, "Pacific/Auckland"},
+        {Nuki::TimeZoneId::Pacific_Guam, "Pacific/Guam"},
+        {Nuki::TimeZoneId::Pacific_Honolulu, "Pacific/Honolulu"},
+        {Nuki::TimeZoneId::Pacific_Pago_Pago, "Pacific/Pago_Pago"},
+        {Nuki::TimeZoneId::None, "None"}
+    };
+
+    auto it = idToStringMap.find(timezoneId);
+    return (it != idToStringMap.end()) ? it->second : "None";
 }
 
 void NukiLockComponent::save_settings()
@@ -218,6 +332,8 @@ void NukiLockComponent::update_config() {
             this->fob_action_2_select_->publish_state(this->fob_action_to_string(config.fobAction2));
         if (this->fob_action_3_select_ != nullptr)
             this->fob_action_3_select_->publish_state(this->fob_action_to_string(config.fobAction3));
+        if (this->timezone_select_ != nullptr)
+            this->timezone_select_->publish_state(this->timezone_to_string(config.timeZoneId));
         #endif
 
     } else {
@@ -264,10 +380,10 @@ void NukiLockComponent::update_advanced_config() {
         #endif
         #ifdef USE_SELECT
         if (this->single_button_press_action_select_ != nullptr)
-            this->single_button_press_action_select_->publish_state(this->nuki_button_press_action_to_string(advanced_config.singleButtonPressAction));
+            this->single_button_press_action_select_->publish_state(this->button_press_action_to_string(advanced_config.singleButtonPressAction));
 
         if (this->double_button_press_action_select_ != nullptr)
-            this->double_button_press_action_select_->publish_state(this->nuki_button_press_action_to_string(advanced_config.doubleButtonPressAction));
+            this->double_button_press_action_select_->publish_state(this->button_press_action_to_string(advanced_config.doubleButtonPressAction));
         #endif
 
     } else {
@@ -971,6 +1087,7 @@ void NukiLockComponent::dump_config() {
     LOG_SELECT(TAG, "Fob Action 1", this->fob_action_1_select_);
     LOG_SELECT(TAG, "Fob Action 2", this->fob_action_2_select_);
     LOG_SELECT(TAG, "Fob Action 3", this->fob_action_3_select_);
+    LOG_SELECT(TAG, "Timezone", this->timezone_select_);
     #endif
 }
 
@@ -1034,13 +1151,13 @@ void NukiLockComponent::set_config_select(std::string config, const std::string 
     // Update Config
     if(config == "single_button_press_action")
     {
-        NukiLock::ButtonPressAction action = this->nuki_button_press_action_to_enum(value);
+        NukiLock::ButtonPressAction action = this->button_press_action_to_enum(value);
         cmd_result = this->nuki_lock_.setSingleButtonPressAction(action);
         is_advanced = true;
     }
     else if(config == "double_button_press_action")
     {
-        NukiLock::ButtonPressAction action = this->nuki_button_press_action_to_enum(value);
+        NukiLock::ButtonPressAction action = this->button_press_action_to_enum(value);
         cmd_result = this->nuki_lock_.setDoubleButtonPressAction(action);
         is_advanced = true;
     }
@@ -1068,6 +1185,11 @@ void NukiLockComponent::set_config_select(std::string config, const std::string 
             cmd_result = this->nuki_lock_.setFobAction(3, action);
         }
     }
+    else if(config == "timezone")
+    {
+        Nuki::TimeZoneId tzid = this->timezone_to_enum(value);
+        cmd_result = this->nuki_lock_.setTimeZoneId(tzid);
+    }
 
     if(cmd_result == Nuki::CmdResult::Success)
     {
@@ -1090,6 +1212,10 @@ void NukiLockComponent::set_config_select(std::string config, const std::string 
         else if(config == "fob_action_3")
         {
             if (this->fob_action_3_select_ != nullptr) this->fob_action_3_select_->publish_state(value);
+        } 
+        else if(config == "timezone")
+        {
+            if (this->timezone_select_ != nullptr) this->timezone_select_->publish_state(value);
         } 
         
         this->config_update_ = !is_advanced;
@@ -1255,6 +1381,9 @@ void NukiLockFobAction2Select::control(const std::string &action) {
 }
 void NukiLockFobAction3Select::control(const std::string &action) {
     this->parent_->set_config_select("fob_action_3", action);
+}
+void NukiLockTimeZoneSelect::control(const std::string &zone) {
+    this->parent_->set_config_select("timezone", zone);
 }
 #endif
 #ifdef USE_SWITCH

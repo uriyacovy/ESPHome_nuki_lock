@@ -353,3 +353,6 @@ MigrationBackup/
 __pycache__
 .esphome
 /*.yaml
+
+# VSCode
+.vscode

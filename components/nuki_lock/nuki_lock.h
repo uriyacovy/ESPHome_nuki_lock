@@ -69,6 +69,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
     SUB_SELECT(fob_action_1)
     SUB_SELECT(fob_action_2)
     SUB_SELECT(fob_action_3)
+    SUB_SELECT(timezone)
     #endif
     #ifdef USE_BUTTON
     SUB_BUTTON(unpair)
@@ -136,8 +137,11 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         uint8_t fob_action_to_int(std::string str);
         std::string fob_action_to_string(uint8_t action);
 
-        NukiLock::ButtonPressAction nuki_button_press_action_to_enum(std::string str);
-        const char* nuki_button_press_action_to_string(NukiLock::ButtonPressAction action);
+        NukiLock::ButtonPressAction button_press_action_to_enum(std::string str);
+        const char* button_press_action_to_string(NukiLock::ButtonPressAction action);
+
+        Nuki::TimeZoneId timezone_to_enum(std:string str);
+        std::string timezone_to_string(Nuki::TimeZoneId timezoneId);
 
         void unpair();
         void set_pairing_mode(bool enabled);
@@ -304,9 +308,17 @@ class NukiLockFobAction2Select : public select::Select, public Parented<NukiLock
     protected:
         void control(const std::string &value) override;
 };
+
 class NukiLockFobAction3Select : public select::Select, public Parented<NukiLockComponent> {
     public:
         NukiLockFobAction3Select() = default;
+    protected:
+        void control(const std::string &value) override;
+};
+
+class NukiLockTimeZoneSelect : public select::Select, public Parented<NukiLockComponent> {
+    public:
+        NukiLockTimeZoneSelect() = default;
     protected:
         void control(const std::string &value) override;
 };

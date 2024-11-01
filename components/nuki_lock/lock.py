@@ -49,6 +49,7 @@ CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT = "double_buton_press_action"
 CONF_FOB_ACTION_1_SELECT = "fob_action_1"
 CONF_FOB_ACTION_2_SELECT = "fob_action_2"
 CONF_FOB_ACTION_3_SELECT = "fob_action_3"
+CONF_TIMEZONE_SELECT = "timezone"
 
 CONF_LED_BRIGHTNESS_NUMBER = "led_brightness"
 CONF_SECURITY_PIN_NUMBER = "security_pin"
@@ -69,6 +70,56 @@ CONF_FOB_ACTION_SELECT_OPTIONS = [
     "Lock",
     "Lock n Go",
     "Intelligent",
+]
+
+CONF_TIMEZONE_SELECT_OPTIONS = [
+    "Africa/Cairo",
+    "Africa/Lagos",
+    "Africa/Maputo",
+    "Africa/Nairobi",
+    "America/Anchorage",
+    "America/Argentina/Buenos_Aires",
+    "America/Chicago",
+    "America/Denver",
+    "America/Halifax",
+    "America/Los_Angeles",
+    "America/Manaus",
+    "America/Mexico_City",
+    "America/New_York",
+    "America/Phoenix",
+    "America/Regina",
+    "America/Santiago",
+    "America/Sao_Paulo",
+    "America/St_Johns",
+    "Asia/Bangkok",
+    "Asia/Dubai",
+    "Asia/Hong_Kong",
+    "Asia/Jerusalem",
+    "Asia/Karachi",
+    "Asia/Kathmandu",
+    "Asia/Kolkata",
+    "Asia/Riyadh",
+    "Asia/Seoul",
+    "Asia/Shanghai",
+    "Asia/Tehran",
+    "Asia/Tokyo",
+    "Asia/Yangon",
+    "Australia/Adelaide",
+    "Australia/Brisbane",
+    "Australia/Darwin",
+    "Australia/Hobart",
+    "Australia/Perth",
+    "Australia/Sydney",
+    "Europe/Berlin",
+    "Europe/Helsinki",
+    "Europe/Istanbul",
+    "Europe/London",
+    "Europe/Moscow",
+    "Pacific/Auckland",
+    "Pacific/Guam",
+    "Pacific/Honolulu",
+    "Pacific/Pago_Pago",
+    "None"
 ]
 
 CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
@@ -103,6 +154,7 @@ NukiLockDoubleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockDoubleButto
 NukiLockFobAction1Select = nuki_lock_ns.class_("NukiLockFobAction1Select", select.Select, cg.Component)
 NukiLockFobAction2Select = nuki_lock_ns.class_("NukiLockFobAction2Select", select.Select, cg.Component)
 NukiLockFobAction3Select = nuki_lock_ns.class_("NukiLockFobAction3Select", select.Select, cg.Component)
+NukiLockTimeZoneSelect = nuki_lock_ns.class_("NukiLockTimeZoneSelect", select.Select, cg.Component)
 
 NukiLockUnpairAction = nuki_lock_ns.class_(
     "NukiLockUnpairAction", automation.Action
@@ -269,6 +321,11 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         NukiLockFobAction3Select,
         entity_category=ENTITY_CATEGORY_CONFIG,
         icon="mdi:gesture-tap",
+    ),
+    cv.Optional(CONF_TIMEZONE_SELECT): select.select_schema(
+        NukiLockTimeZoneSelect,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+        icon="mdi:map-clock",
     ),
 
     cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
@@ -457,6 +514,14 @@ async def to_code(config):
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_fob_action_3_select(sel))
+
+    if timezone := config.get(CONF_TIMEZONE_SELECT):
+        sel = await select.new_select(
+            timezone,
+            options=[CONF_TIMEZONE_SELECT_OPTIONS],
+        )
+        await cg.register_parented(sel, config[CONF_ID])
+        cg.add(var.set_timezone_select(sel))
 
 
     # Callback
