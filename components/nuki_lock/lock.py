@@ -166,7 +166,7 @@ NukiLockDstModeEnabledSwitch = nuki_lock_ns.class_("NukiLockDstModeEnabledSwitch
 
 NukiLockLedBrightnessNumber = nuki_lock_ns.class_("NukiLockLedBrightnessNumber", number.Number, cg.Component)
 NukiLockSecurityPinNumber = nuki_lock_ns.class_("NukiLockSecurityPinNumber", number.Number, cg.Component)
-NukiLockTimezoneOffsetNumber = nuki_lock_ns.class_("NukiLockTimezoneOffsetNumber", number.Number, cg.Component)
+NukiLockTimeZoneOffsetNumber = nuki_lock_ns.class_("NukiLockTimeZoneOffsetNumber", number.Number, cg.Component)
 NukiLockLatitudeNumber = nuki_lock_ns.class_("NukiLockLatitudeNumber", number.Number, cg.Component)
 NukiLockLongitudeNumber = nuki_lock_ns.class_("NukiLockLongitudeNumber", number.Number, cg.Component)
 
@@ -329,7 +329,7 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         icon="mdi:shield-key",
     ).extend({ cv.Optional(CONF_MODE, default="BOX"): cv.enum(NUMBER_MODES, upper=True), }),
     cv.Optional(CONF_TIMEZONE_OFFSET_NUMBER): number.number_schema(
-        NukiLockTimezoneOffsetNumber,
+        NukiLockTimeZoneOffsetNumber,
         entity_category=ENTITY_CATEGORY_CONFIG,
         icon="mdi:clock-end",
     ),
