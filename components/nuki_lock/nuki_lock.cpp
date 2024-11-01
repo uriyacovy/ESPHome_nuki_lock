@@ -109,7 +109,7 @@ std::string NukiLockComponent::fob_action_to_string(uint8_t action)
     return "No Action";
 }
 
-Nuki::TimeZoneId NukiLockComponent::timezone_to_enum(std:string str)
+Nuki::TimeZoneId NukiLockComponent::timezone_to_enum(std::string str)
 {
     static const std::unordered_map<std::string, Nuki::TimeZoneId> timezoneMap = {
         {"Africa/Cairo", Nuki::TimeZoneId::Africa_Cairo},
