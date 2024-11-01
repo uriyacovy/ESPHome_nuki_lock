@@ -1415,7 +1415,7 @@ void NukiLockComponent::set_config_number(std::string config, float value) {
     }
     else if(config == "timezone_offset")
     {
-        if(value >= 0 && value <= 60)
+        if(value >= -60 && value <= 60)
         {
             cmd_result = this->nuki_lock_.setTimeZoneOffset(value);
         }
