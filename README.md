@@ -59,6 +59,8 @@ lock:
       name: "Nuki Security Pin"
     led_brightness:
       name: "Nuki LED Brightness"
+    timezone_offset:
+      name: "Nuki Timezone: Offset"
   # Optional: Switches
     night_mode_enabled:
       name: "Nuki Night Mode"
@@ -76,6 +78,10 @@ lock:
       name: "Nuki Auto Lock: Immediately"
     auto_update_enabled:
       name: "Nuki Automatic Updates"
+    single_lock_enabled:
+      name: "Nuki Single Lock"
+    dst_mode_enabled:
+      name: "Nuki Daylight Saving Time"
   # Optional: Select Inputs
     single_buton_press_action:
       name: "Nuki Button: Single Press Action"

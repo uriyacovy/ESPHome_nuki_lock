@@ -341,10 +341,16 @@ void NukiLockComponent::update_config() {
             this->button_enabled_switch_->publish_state(config.buttonEnabled);
         if (this->led_enabled_switch_ != nullptr)
             this->led_enabled_switch_->publish_state(config.ledEnabled);
+        if (this->single_lock_enabled_switch_ != nullptr)
+            this->single_lock_enabled_switch_->publish_state(config.singleLock);
+        if (this->dst_mode_enabled_switch_ != nullptr)
+            this->dst_mode_enabled_switch_->publish_state(config.dstMode);
         #endif
         #ifdef USE_NUMBER
         if (this->led_brightness_number_ != nullptr)
             this->led_brightness_number_->publish_state(config.ledBrightness);
+        if (this->timezone_offset_number_ != nullptr)
+            this->timezone_offset_number_->publish_state(config.timeZoneOffset);
         #endif
         #ifdef USE_SELECT
         if (this->fob_action_1_select_ != nullptr)
@@ -1100,9 +1106,13 @@ void NukiLockComponent::dump_config() {
     LOG_SWITCH(TAG, "Auto Unlock Disabled", this->auto_unlock_disabled_switch_);
     LOG_SWITCH(TAG, "Immediate Auto Lock", this->immediate_auto_lock_enabled_switch_);
     LOG_SWITCH(TAG, "Automatic Updates", this->auto_update_enabled_switch_);
+    LOG_SWITCH(TAG, "Single Lock Enabled", this->single_lock_enabled_switch_);
+    LOG_SWITCH(TAG, "DST Mode Enabled", this->dst_mode_enabled_switch_);
     #endif
     #ifdef USE_NUMBER
     LOG_NUMBER(TAG, "LED Brightness", this->led_brightness_number_);
+    LOG_NUMBER(TAG, "Security Pin", this->security_pin_number_);
+    LOG_NUMBER(TAG, "Timezone Offset", this->timezone_offset_number_);
     #endif
     #ifdef USE_SELECT
     LOG_SELECT(TAG, "Single Button Press Action", this->single_button_press_action_select_);
@@ -1316,6 +1326,14 @@ void NukiLockComponent::set_config_switch(std::string config, bool value) {
         cmd_result = this->nuki_lock_.enableAutoUpdate(value);
         is_advanced = true;
     }
+    else if(config == "single_lock_enabled")
+    {
+        cmd_result = this->nuki_lock_.enableSingleLock(value);
+    }
+    else if(config == "dst_mode_enabled")
+    {
+        cmd_result = this->nuki_lock_.enableDst(value);
+    }
 
     if(cmd_result == Nuki::CmdResult::Success)
     {
@@ -1363,6 +1381,14 @@ void NukiLockComponent::set_config_switch(std::string config, bool value) {
         {
             if (this->auto_update_enabled_switch_ != nullptr) this->auto_update_enabled_switch_->publish_state(value);
         }        
+        else if(config == "single_lock_enabled")
+        {
+            if (this->single_lock_enabled_switch_ != nullptr) this->single_lock_enabled_switch_->publish_state(value);
+        }        
+        else if(config == "dst_mode_enabled")
+        {
+            if (this->dst_mode_enabled_switch_ != nullptr) this->dst_mode_enabled_switch_->publish_state(value);
+        }        
         
         this->config_update_ = !is_advanced;
         this->advanced_config_update_ = is_advanced;
@@ -1380,12 +1406,23 @@ void NukiLockComponent::set_config_number(std::string config, float value) {
     {
         cmd_result = this->nuki_lock_.setLedBrightness(value);
     }
+    else if(config == "timezone_offset")
+    {
+        if(value >= 0 && value <= 60)
+        {
+            cmd_result = this->nuki_lock_.setTimeZoneOffset(value);
+        }
+    }
 
     if(cmd_result == Nuki::CmdResult::Success)
     {
         if(config == "led_brightness")
         {
             if (this->led_brightness_number_ != nullptr) this->led_brightness_number_->publish_state(value);
+        }
+        else if(config == "timezone_offset")
+        {
+            if (this->timezone_offset_number_ != nullptr) this->timezone_offset_number_->publish_state(value);
         } 
         
         this->config_update_ = !is_advanced;
@@ -1470,6 +1507,14 @@ void NukiLockImmediateAutoLockEnabledSwitch::write_state(bool state) {
 void NukiLockAutoUpdateEnabledSwitch::write_state(bool state) {
     this->parent_->set_config_switch("auto_update_enabled", state);
 }
+
+void NukiLockSingleLockEnabledSwitch::write_state(bool state) {
+    this->parent_->set_config_switch("single_lock_enabled", state);
+}
+
+void NukiLockDstModeEnabledSwitch::write_state(bool state) {
+    this->parent_->set_config_switch("dst_mode_enabled", state);
+}
 #endif
 #ifdef USE_NUMBER
 void NukiLockLedBrightnessNumber::control(float value) {
@@ -1479,6 +1524,9 @@ void NukiLockSecurityPinNumber::control(float value) {
     this->publish_state(value);
     this->parent_->set_security_pin(value);
     this->parent_->save_settings();
+}
+void NukiLockTimeZoneOffsetNumber::control(float value) {
+    this->parent_->set_config_number("timezone_offset", value);
 }
 #endif
 

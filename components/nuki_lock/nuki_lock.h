@@ -88,6 +88,8 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
     SUB_SWITCH(auto_unlock_disabled)
     SUB_SWITCH(immediate_auto_lock_enabled)
     SUB_SWITCH(auto_update_enabled)
+    SUB_SWITCH(single_lock_enabled)
+    SUB_SWITCH(dst_mode_enabled)
     #endif
 
     static const uint8_t BLE_CONNECT_TIMEOUT_SEC = 3;
@@ -430,6 +432,22 @@ class NukiLockAutoUpdateEnabledSwitch : public switch_::Switch, public Parented<
     protected:
         void write_state(bool state) override;
 };
+
+class NukiLockSingleLockEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockSingleLockEnabledSwitch() = default;
+
+    protected:
+        void write_state(bool state) override;
+};
+
+class NukiLockDstModeEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockDstModeEnabledSwitch() = default;
+
+    protected:
+        void write_state(bool state) override;
+};
 #endif
 
 #ifdef USE_NUMBER
@@ -443,6 +461,13 @@ class NukiLockLedBrightnessNumber : public number::Number, public Parented<NukiL
 class NukiLockSecurityPinNumber : public number::Number, public Parented<NukiLockComponent> {
     public:
         NukiLockSecurityPinNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+class NukiLockTimeZoneOffsetNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockTimeZoneOffsetNumber() = default;
 
     protected:
         void control(float value) override;
