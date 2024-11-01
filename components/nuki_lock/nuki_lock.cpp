@@ -386,6 +386,12 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
                 auth_name[sizeName] = '\0';
             }
 
+            if (std::string(auth_name) == "")
+            {
+                memset(auth_name, 0, sizeof(auth_name));
+                memcpy(auth_name, "Manual", strlen("Manual"));
+            }
+
             if(log.index > auth_index)
             {
                 auth_index = log.index;
@@ -407,7 +413,7 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
             std::map<std::string, std::string> event_data;
             event_data["index"] = std::to_string(log.index);
             event_data["authorizationId"] = std::to_string(log.authId);
-            event_data["authorizationName"] = auth_name;
+            event_data["authorizationName"] = this->auth_name_;
 
             if(this->auth_entries_.count(log.authId) > 0)
             {
