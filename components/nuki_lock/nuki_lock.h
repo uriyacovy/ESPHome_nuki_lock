@@ -141,11 +141,11 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         NukiLock::ButtonPressAction button_press_action_to_enum(std::string str);
         const char* button_press_action_to_string(NukiLock::ButtonPressAction action);
 
-        Nuki::TimeZoneId timezone_to_enum(std:string str);
+        Nuki::TimeZoneId timezone_to_enum(std::string str);
         std::string timezone_to_string(Nuki::TimeZoneId timezoneId);
 
-        Nuki::AdvertisingMode NukiLockComponent::advertising_mode_to_enum(std::string str)
-        std::string NukiLockComponent::advertising_mode_to_string(Nuki::AdvertisingMode mode)
+        Nuki::AdvertisingMode advertising_mode_to_enum(std::string str)
+        std::string advertising_mode_to_string(Nuki::AdvertisingMode mode)
 
         void unpair();
         void set_pairing_mode(bool enabled);
