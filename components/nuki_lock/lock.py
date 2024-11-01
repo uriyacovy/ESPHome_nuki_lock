@@ -57,6 +57,8 @@ CONF_ADVERTISING_MODE_SELECT = "advertising_mode"
 CONF_LED_BRIGHTNESS_NUMBER = "led_brightness"
 CONF_SECURITY_PIN_NUMBER = "security_pin"
 CONF_TIMEZONE_OFFSET_NUMBER = "timezone_offset"
+CONF_LATITUDE_NUMBER = "latitude"
+CONF_LONGITUDE_NUMBER = "longitude"
 
 CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS = [
     "No Action",
@@ -165,6 +167,8 @@ NukiLockDstModeEnabledSwitch = nuki_lock_ns.class_("NukiLockDstModeEnabledSwitch
 NukiLockLedBrightnessNumber = nuki_lock_ns.class_("NukiLockLedBrightnessNumber", number.Number, cg.Component)
 NukiLockSecurityPinNumber = nuki_lock_ns.class_("NukiLockSecurityPinNumber", number.Number, cg.Component)
 NukiLockTimezoneOffsetNumber = nuki_lock_ns.class_("NukiLockTimezoneOffsetNumber", number.Number, cg.Component)
+NukiLockLatitudeNumber = nuki_lock_ns.class_("NukiLockLatitudeNumber", number.Number, cg.Component)
+NukiLockLongitudeNumber = nuki_lock_ns.class_("NukiLockLongitudeNumber", number.Number, cg.Component)
 
 NukiLockSingleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockSingleButtonPressActionSelect", select.Select, cg.Component)
 NukiLockDoubleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockDoubleButtonPressActionSelect", select.Select, cg.Component)
@@ -329,6 +333,16 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         entity_category=ENTITY_CATEGORY_CONFIG,
         icon="mdi:clock-end",
     ),
+    cv.Optional(CONF_LATITUDE_NUMBER): number.number_schema(
+        NukiLockLatitudeNumber,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+        icon="mdi:map",
+    ).extend({ cv.Optional(CONF_MODE, default="BOX"): cv.enum(NUMBER_MODES, upper=True), }),
+    cv.Optional(CONF_LONGITUDE_NUMBER): number.number_schema(
+        NukiLockLongitudeNumber,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+        icon="mdi:map",
+    ).extend({ cv.Optional(CONF_MODE, default="BOX"): cv.enum(NUMBER_MODES, upper=True), }),
 
     cv.Optional(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT): select.select_schema(
         NukiLockSingleButtonPressActionSelect,
@@ -457,6 +471,20 @@ async def to_code(config):
         )
         await cg.register_parented(n, config[CONF_ID])
         cg.add(var.set_timezone_offset_number(n))
+
+    if latitude := config.get(CONF_LATITUDE_NUMBER):
+        n = await number.new_number(
+            latitude, min_value=0, max_value=180, step=0.000000000000001
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_latitude_number(n))
+
+    if longitude := config.get(CONF_LONGITUDE_NUMBER):
+        n = await number.new_number(
+            longitude, min_value=0, max_value=180, step=0.000000000000001
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_longitude_number(n))
 
     # Switch
     if pairing_mode := config.get(CONF_PAIRING_MODE_SWITCH):

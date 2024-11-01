@@ -62,6 +62,9 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
     #ifdef USE_NUMBER
     SUB_NUMBER(led_brightness)
     SUB_NUMBER(security_pin)
+    SUB_NUMBER(timezone_offset)
+    SUB_NUMBER(latitude)
+    SUB_NUMBER(longitude)
     #endif
     #ifdef USE_SELECT
     SUB_SELECT(single_button_press_action)
@@ -468,6 +471,20 @@ class NukiLockSecurityPinNumber : public number::Number, public Parented<NukiLoc
 class NukiLockTimeZoneOffsetNumber : public number::Number, public Parented<NukiLockComponent> {
     public:
         NukiLockTimeZoneOffsetNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+class NukiLockLatitudeNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockLatitudeNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+class NukiLockLongitudeNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockLongitudeNumber() = default;
 
     protected:
         void control(float value) override;
