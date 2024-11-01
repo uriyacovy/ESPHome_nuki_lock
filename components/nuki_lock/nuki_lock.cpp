@@ -304,6 +304,7 @@ void NukiLockComponent::update_status()
             // Schedule a status update without waiting for the next advertisement because the lock
             // is in a transition state. This will speed up the feedback.
             this->status_update_ = true;
+            this->event_log_update_ = true;
         }
     } else {
         ESP_LOGE(TAG, "requestKeyTurnerState failed with error %s (%d)", cmd_result_as_string, cmd_result);
