@@ -144,8 +144,8 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         Nuki::TimeZoneId timezone_to_enum(std::string str);
         std::string timezone_to_string(Nuki::TimeZoneId timezoneId);
 
-        Nuki::AdvertisingMode advertising_mode_to_enum(std::string str)
-        std::string advertising_mode_to_string(Nuki::AdvertisingMode mode)
+        Nuki::AdvertisingMode advertising_mode_to_enum(std::string str);
+        std::string advertising_mode_to_string(Nuki::AdvertisingMode mode);
 
         void unpair();
         void set_pairing_mode(bool enabled);
