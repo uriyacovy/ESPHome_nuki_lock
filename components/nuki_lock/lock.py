@@ -2,6 +2,7 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import automation
 from esphome.components import lock, binary_sensor, text_sensor, sensor, switch, button, number, select
+from esphome.components.number import NUMBER_MODES
 from esphome.const import (
     CONF_ID, 
     CONF_BATTERY_LEVEL, 
@@ -12,7 +13,8 @@ from esphome.const import (
     UNIT_PERCENT,
     ENTITY_CATEGORY_CONFIG, 
     ENTITY_CATEGORY_DIAGNOSTIC,
-    CONF_TRIGGER_ID
+    CONF_TRIGGER_ID,
+    CONF_MODE,
 )
 
 AUTO_LOAD = ["binary_sensor", "text_sensor", "sensor", "switch", "button", "number", "select"]
@@ -41,12 +43,15 @@ CONF_AUTO_LOCK_ENABLED_SWITCH = "auto_lock_enabled"
 CONF_AUTO_UNLOCK_DISABLED_SWITCH = "auto_unlock_disabled"
 CONF_IMMEDIATE_AUTO_LOCK_ENABLED_SWITCH = "immediate_auto_lock_enabled"
 CONF_AUTO_UPDATE_ENABLED_SWITCH = "auto_update_enabled"
+
 CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT = "single_buton_press_action"
 CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT = "double_buton_press_action"
 CONF_FOB_ACTION_1_SELECT = "fob_action_1"
 CONF_FOB_ACTION_2_SELECT = "fob_action_2"
 CONF_FOB_ACTION_3_SELECT = "fob_action_3"
+
 CONF_LED_BRIGHTNESS_NUMBER = "led_brightness"
+CONF_SECURITY_PIN_NUMBER = "security_pin"
 
 CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS = [
     "No Action",
@@ -67,7 +72,6 @@ CONF_FOB_ACTION_SELECT_OPTIONS = [
 ]
 
 CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
-CONF_SECURITY_PIN = "security_pin"
 CONF_EVENT = "event"
 
 CONF_SET_PAIRING_MODE = "pairing_mode"
@@ -93,6 +97,7 @@ NukiLockAutoUnlockDisabledSwitch = nuki_lock_ns.class_("NukiLockAutoUnlockDisabl
 NukiLockImmediateAutoLockEnabledSwitch = nuki_lock_ns.class_("NukiLockImmediateAutoLockEnabledSwitch", switch.Switch, cg.Component)
 NukiLockAutoUpdateEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoUpdateEnabledSwitch", switch.Switch, cg.Component)
 NukiLockLedBrightnessNumber = nuki_lock_ns.class_("NukiLockLedBrightnessNumber", number.Number, cg.Component)
+NukiLockSecurityPinNumber = nuki_lock_ns.class_("NukiLockSecurityPinNumber", number.Number, cg.Component)
 NukiLockSingleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockSingleButtonPressActionSelect", select.Select, cg.Component)
 NukiLockDoubleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockDoubleButtonPressActionSelect", select.Select, cg.Component)
 NukiLockFobAction1Select = nuki_lock_ns.class_("NukiLockFobAction1Select", select.Select, cg.Component)
@@ -125,6 +130,7 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
     ),
     cv.Optional(CONF_BATTERY_CRITICAL): binary_sensor.binary_sensor_schema(
         device_class=DEVICE_CLASS_BATTERY,
+        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
         icon="mdi:battery-alert-variant-outline",
     ),
     cv.Optional(CONF_DOOR_SENSOR): binary_sensor.binary_sensor_schema(
@@ -143,6 +149,7 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
 
     cv.Optional(CONF_BATTERY_LEVEL): sensor.sensor_schema(
         device_class=DEVICE_CLASS_BATTERY,
+        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
         unit_of_measurement=UNIT_PERCENT,
         icon="mdi:battery-50",
     ),
@@ -232,6 +239,12 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         icon="mdi:brightness-6",
     ),
 
+    cv.Optional(CONF_SECURITY_PIN_NUMBER): number.number_schema(
+        NukiLockSecurityPinNumber,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+        icon="mdi:shield-key",
+    ).extend({ cv.Optional(CONF_MODE, default="BOX"): cv.enum(NUMBER_MODES, upper=True), }),
+
     cv.Optional(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT): select.select_schema(
         NukiLockSingleButtonPressActionSelect,
         entity_category=ENTITY_CATEGORY_CONFIG,
@@ -258,7 +271,6 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         icon="mdi:gesture-tap",
     ),
 
-    cv.Optional(CONF_SECURITY_PIN, default=0): cv.uint16_t,
     cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
     cv.Optional(CONF_EVENT, default="nuki"): cv.string,
 
@@ -286,9 +298,6 @@ async def to_code(config):
     await lock.register_lock(var, config)
 
     # Component Settings
-    if CONF_SECURITY_PIN in config:
-        cg.add(var.set_security_pin(config[CONF_SECURITY_PIN]))
-
     if CONF_PAIRING_MODE_TIMEOUT in config:
         cg.add(var.set_pairing_mode_timeout(config[CONF_PAIRING_MODE_TIMEOUT]))
 
@@ -339,6 +348,13 @@ async def to_code(config):
         )
         await cg.register_parented(n, config[CONF_ID])
         cg.add(var.set_led_brightness_number(n))
+
+    if security_pin := config.get(CONF_SECURITY_PIN_NUMBER):
+        n = await number.new_number(
+            security_pin, min_value=0, max_value=65535, step=1
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_security_pin_number(n))
 
     # Switch
     if pairing_mode := config.get(CONF_PAIRING_MODE_SWITCH):

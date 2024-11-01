@@ -1,10 +1,17 @@
 #include "esphome/core/log.h"
 #include "esphome/core/application.h"
+#include "esphome/core/preferences.h"
+
+#ifdef USE_API
 #include "esphome/components/api/custom_api_device.h"
+#endif
+
 #include "nuki_lock.h"
 
 namespace esphome {
 namespace nuki_lock {
+
+uint32_t global_nuki_lock_id = 1912044085ULL;
 
 lock::LockState NukiLockComponent::nuki_to_lock_state(NukiLock::LockState nukiLockState) {
     switch(nukiLockState) {
@@ -98,6 +105,18 @@ std::string NukiLockComponent::fob_action_to_string(uint8_t action)
     if(action == 3) return "Lock n Go";
     if(action == 4) return "Intelligent";
     return "No Action";
+}
+
+void NukiLockComponent::save_settings()
+{
+    NukiLockSettings settings {
+        this->security_pin_
+    };
+
+    if (!this->pref_.save(&settings))
+    {
+        ESP_LOGW(TAG, "Failed to save settings");
+    }
 }
 
 void NukiLockComponent::update_status()
@@ -367,6 +386,12 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
                 auth_name[sizeName] = '\0';
             }
 
+            if (std::string(auth_name) == "")
+            {
+                memset(auth_name, 0, sizeof(auth_name));
+                memcpy(auth_name, "Manual", strlen("Manual"));
+            }
+
             if(log.index > auth_index)
             {
                 auth_index = log.index;
@@ -388,7 +413,7 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
             std::map<std::string, std::string> event_data;
             event_data["index"] = std::to_string(log.index);
             event_data["authorizationId"] = std::to_string(log.authId);
-            event_data["authorizationName"] = auth_name;
+            event_data["authorizationName"] = this->auth_name_;
 
             if(this->auth_entries_.count(log.authId) > 0)
             {
@@ -482,6 +507,7 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
             }
             
             // Send as Home Assistant Event
+            #ifdef USE_API
             if(log.index > this->last_rolling_log_id)
             {
                 this->last_rolling_log_id = log.index;
@@ -490,6 +516,7 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
                 ESP_LOGD(TAG, "Send event to Home Assistant on %s", event_);
                 capi->fire_homeassistant_event(event_, event_data);
             }
+            #endif
         }
     }
 
@@ -532,12 +559,39 @@ bool NukiLockComponent::execute_lock_action(NukiLock::LockAction lock_action) {
     }
 }
 
+void NukiLockComponent::set_security_pin(uint16_t security_pin)
+{
+    this->security_pin_ = security_pin;
+
+    bool result = this->nuki_lock_.saveSecurityPincode(this->security_pin_);
+    if (result) {
+        ESP_LOGI(TAG, "Set pincode done");
+    } else {
+        ESP_LOGE(TAG, "Set pincode failed!");
+    }
+
+    #ifdef USE_NUMBER
+    if (this->security_pin_number_ != nullptr)
+        this->security_pin_number_->publish_state(this->security_pin_);
+    #endif
+}
+
 void NukiLockComponent::setup() {
     ESP_LOGI(TAG, "Starting NUKI Lock...");
 
     // Increase Watchdog Timeout
     // Fixes Pairing Crash
     esp_task_wdt_init(15, false);
+
+    // Restore settings from flash
+    this->pref_ = global_preferences->make_preference<NukiLockSettings>(global_nuki_lock_id);
+
+    NukiLockSettings recovered;
+    if (!this->pref_.load(&recovered))
+    {
+        recovered = {0};
+    }
+    this->set_security_pin(recovered.security_pin);
 
     this->traits.set_supported_states(
         std::set<lock::LockState> {
@@ -557,15 +611,6 @@ void NukiLockComponent::setup() {
     this->nuki_lock_.initialize();
     this->nuki_lock_.setConnectTimeout(BLE_CONNECT_TIMEOUT_SEC);
     this->nuki_lock_.setConnectRetries(BLE_CONNECT_TIMEOUT_RETRIES);
-
-    if(this->security_pin_ > 0) {
-        bool result = this->nuki_lock_.saveSecurityPincode(this->security_pin_);
-        if (result) {
-            ESP_LOGI(TAG, "Set pincode done");
-        } else {
-            ESP_LOGE(TAG, "Set pincode failed!");
-        }
-    }
     
     if (this->nuki_lock_.isPairedWithLock()) {
         this->status_update_ = true;
@@ -592,11 +637,13 @@ void NukiLockComponent::setup() {
 
     this->publish_state(lock::LOCK_STATE_NONE);
 
-    register_service(&NukiLockComponent::lock_n_go, "lock_n_go");
-    register_service(&NukiLockComponent::print_keypad_entries, "print_keypad_entries");
-    register_service(&NukiLockComponent::add_keypad_entry, "add_keypad_entry", {"name", "code"});
-    register_service(&NukiLockComponent::update_keypad_entry, "update_keypad_entry", {"id", "name", "code", "enabled"});
-    register_service(&NukiLockComponent::delete_keypad_entry, "delete_keypad_entry", {"id"});
+    #ifdef USE_API
+    this->custom_api_device_.register_service(&NukiLockComponent::lock_n_go, "lock_n_go");
+    this->custom_api_device_.register_service(&NukiLockComponent::print_keypad_entries, "print_keypad_entries");
+    this->custom_api_device_.register_service(&NukiLockComponent::add_keypad_entry, "add_keypad_entry", {"name", "code"});
+    this->custom_api_device_.register_service(&NukiLockComponent::update_keypad_entry, "update_keypad_entry", {"id", "name", "code", "enabled"});
+    this->custom_api_device_.register_service(&NukiLockComponent::delete_keypad_entry, "delete_keypad_entry", {"id"});
+    #endif
 }
 
 void NukiLockComponent::update() {
@@ -1262,6 +1309,11 @@ void NukiLockAutoUpdateEnabledSwitch::write_state(bool state) {
 #ifdef USE_NUMBER
 void NukiLockLedBrightnessNumber::control(float value) {
     this->parent_->set_config_number("led_brightness", value);
+}
+void NukiLockSecurityPinNumber::control(float value) {
+    this->publish_state(value);
+    this->parent_->set_security_pin(value);
+    this->parent_->save_settings();
 }
 #endif
 
