@@ -1,6 +1,6 @@
 # ESPHome Nuki Lock Component (ESP32) [![Build Component](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml/badge.svg)](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml)
 
-This module brings seamless integration of Nuki Smartlocks into ESPHome, creating a rich Home Assistant lock platform with [24 entities](#entities).
+This module brings seamless integration of Nuki Smartlocks into ESPHome, creating a rich Home Assistant lock platform with [a bunch of entities](#entities).
 
 The lock entity updates whenever the lock's state changes - whether through the Nuki app, Home Assistant, or manually. This is achieved via the efficient Nuki BLE advertisement mechanism, ensuring your lock status is always up-to-date.
 
@@ -261,6 +261,8 @@ context:
 **Text Sensor:**  
 - Door Sensor State
 - Last Unlock User
+- Last Lock Action
+- Last Lock Action Trigger
 
 **Switch:**  
 - Pairing Mode
@@ -273,6 +275,8 @@ context:
 - Auto Lock
 - Auto Unlock: Disable
 - Auto Lock: Immediately
+- Single Lock
+- Daylight Saving Time
 - Automatic Updates
 
 **Select Input:**  
@@ -281,9 +285,12 @@ context:
 - Fob Action 1
 - Fob Action 2
 - Fob Action 3
+- Timezone
+- Advertising Mode
 
 **Number Input:**  
 - LED Brightness
+- Timezone Offset
 - Security Pin
 
 **Button:**  
