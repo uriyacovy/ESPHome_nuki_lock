@@ -61,10 +61,6 @@ lock:
       name: "Nuki LED Brightness"
     timezone_offset:
       name: "Nuki Timezone: Offset"
-    latitude:
-      name: "Nuki Latitude"
-    longitude:
-      name: "Nuki Longitude"
   # Optional: Switches
     night_mode_enabled:
       name: "Nuki Night Mode"

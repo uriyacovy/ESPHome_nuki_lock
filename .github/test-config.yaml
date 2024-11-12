@@ -79,11 +79,11 @@ lock:
       name: "Nuki Security Pin"
     timezone_offset:
       name: "Nuki Timezone: Offset"
-    latitude:
-      name: "Nuki Latitude"
-    longitude:
-      name: "Nuki Longitude"
-        
+    #latitude:
+    #  name: "Nuki Latitude"
+    #longitude:
+    #  name: "Nuki Longitude"
+
     single_buton_press_action:
       name: "Nuki Single Button Press Action"
     double_buton_press_action:
