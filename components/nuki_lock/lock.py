@@ -485,7 +485,7 @@ async def to_code(config):
 
     if timezone_offset := config.get(CONF_TIMEZONE_OFFSET_NUMBER):
         n = await number.new_number(
-            timezone_offset, min_value=0, max_value=60, step=1
+            timezone_offset, min_value=-60, max_value=60, step=1
         )
         await cg.register_parented(n, config[CONF_ID])
         cg.add(var.set_timezone_offset_number(n))
