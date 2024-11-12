@@ -263,16 +263,23 @@ void NukiLockComponent::update_status()
 
     if (cmd_result == Nuki::CmdResult::Success) {
         this->status_update_consecutive_errors_ = 0;
-        NukiLock::LockState currentLockState = this->retrieved_key_turner_state_.lockState;
-        char currentLockStateAsString[30];
-        NukiLock::lockstateToString(currentLockState, currentLockStateAsString);
+        NukiLock::LockState current_lock_state = this->retrieved_key_turner_state_.lockState;
 
-        ESP_LOGI(TAG, "Bat state: %#x, Bat crit: %d, Bat perc:%d lock state: %s (%d) %d:%d:%d",
+        char current_lock_state_as_string[30];
+        NukiLock::lockstateToString(current_lock_state, current_lock_state_as_string);
+
+        char last_lock_action[30];
+        NukiLock::lockactionToString(this->retrieved_key_turner_state_.lastLockAction, last_lock_action);
+
+        char last_lock_action_trigger[30];
+        NukiLock::triggerToString(this->retrieved_key_turner_state_.lastLockActionTrigger, last_lock_action_trigger);
+
+        ESP_LOGI(TAG, "Bat state: %#x, Bat crit: %d, Bat perc: %d lock state: %s (%d) %d:%d:%d",
             this->retrieved_key_turner_state_.criticalBatteryState,
             this->nuki_lock_.isBatteryCritical(),
             this->nuki_lock_.getBatteryPerc(),
-            currentLockStateAsString,
-            currentLockState,
+            current_lock_state_as_string,
+            current_lock_state,
             this->retrieved_key_turner_state_.currentTimeHour,
             this->retrieved_key_turner_state_.currentTimeMinute,
             this->retrieved_key_turner_state_.currentTimeSecond
@@ -295,6 +302,10 @@ void NukiLockComponent::update_status()
         #ifdef USE_TEXT_SENSOR
         if (this->door_sensor_state_text_sensor_ != nullptr)
             this->door_sensor_state_text_sensor_->publish_state(this->nuki_doorsensor_to_string(this->retrieved_key_turner_state_.doorSensorState));
+        if (this->last_lock_action_text_sensor_ != nullptr)
+            this->last_lock_action_text_sensor_->publish_state(last_lock_action);
+        if (this->last_lock_action_trigger_text_sensor_ != nullptr)
+            this->last_lock_action_trigger_text_sensor_->publish_state(last_lock_action_trigger);
         #endif
 
         if (
@@ -1094,6 +1105,8 @@ void NukiLockComponent::dump_config() {
     #ifdef USE_TEXT_SENSOR
     LOG_TEXT_SENSOR(TAG, "Door Sensor State", this->door_sensor_state_text_sensor_);
     LOG_TEXT_SENSOR(TAG, "Last Unlock User", this->last_unlock_user_text_sensor_);
+    LOG_TEXT_SENSOR(TAG, "Last Lock Action", this->last_lock_action_text_sensor_);
+    LOG_TEXT_SENSOR(TAG, "Last Lock Action Trigger", this->last_lock_action_trigger_text_sensor_);
     #endif
     #ifdef USE_SENSOR
     LOG_SENSOR(TAG, "Battery Level", this->battery_level_sensor_);

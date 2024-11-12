@@ -45,6 +45,10 @@ lock:
       name: "Nuki Door Sensor: State"
     last_unlock_user:
       name: "Nuki Last Unlock User"
+    last_lock_action:
+      name: "Nuki Last Lock Action"
+    last_lock_action_trigger:
+      name: "Nuki Last Lock Action Trigger"
   # Optional: Switches
     pairing_mode:
       name: "Nuki Pairing Mode"

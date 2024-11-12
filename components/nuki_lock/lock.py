@@ -28,6 +28,8 @@ CONF_BATTERY_LEVEL = "battery_level"
 
 CONF_DOOR_SENSOR_STATE = "door_sensor_state"
 CONF_LAST_UNLOCK_USER_TEXT_SENSOR = "last_unlock_user"
+CONF_LAST_LOCK_ACTION_TEXT_SENSOR = "last_lock_action"
+CONF_LAST_LOCK_ACTION_TRIGGER_TEXT_SENSOR = "last_lock_action_trigger"
 
 CONF_UNPAIR_BUTTON = "unpair"
 
@@ -217,6 +219,14 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         icon="mdi:door-open",
     ),
     cv.Optional(CONF_LAST_UNLOCK_USER_TEXT_SENSOR):  text_sensor.text_sensor_schema(
+        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+        icon="mdi:account-clock"
+    ),
+    cv.Optional(CONF_LAST_LOCK_ACTION_TEXT_SENSOR):  text_sensor.text_sensor_schema(
+        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+        icon="mdi:account-clock"
+    ),
+    cv.Optional(CONF_LAST_LOCK_ACTION_TRIGGER_TEXT_SENSOR):  text_sensor.text_sensor_schema(
         entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
         icon="mdi:account-clock"
     ),
@@ -443,6 +453,14 @@ async def to_code(config):
     if last_unlock_user := config.get(CONF_LAST_UNLOCK_USER_TEXT_SENSOR):
         sens = await text_sensor.new_text_sensor(last_unlock_user)
         cg.add(var.set_last_unlock_user_text_sensor(sens))
+
+    if last_lock_action_trigger := config.get(CONF_LAST_LOCK_ACTION_TRIGGER_TEXT_SENSOR):
+        sens = await text_sensor.new_text_sensor(last_lock_action_trigger)
+        cg.add(var.set_last_lock_action_trigger_text_sensor(sens))
+
+    if last_lock_action := config.get(CONF_LAST_LOCK_ACTION_TEXT_SENSOR):
+        sens = await text_sensor.new_text_sensor(last_lock_action)
+        cg.add(var.set_last_lock_action_text_sensor(sens))
 
     # Button
     if unpair := config.get(CONF_UNPAIR_BUTTON):

@@ -58,6 +58,8 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
     #ifdef USE_TEXT_SENSOR
     SUB_TEXT_SENSOR(door_sensor_state)
     SUB_TEXT_SENSOR(last_unlock_user)
+    SUB_TEXT_SENSOR(last_lock_action)
+    SUB_TEXT_SENSOR(last_lock_action_trigger)
     #endif
     #ifdef USE_NUMBER
     SUB_NUMBER(led_brightness)
