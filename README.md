@@ -1,6 +1,6 @@
 # ESPHome Nuki Lock Component (ESP32) [![Build Component](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml/badge.svg)](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml)
 
-This module brings seamless integration of Nuki Smartlocks into ESPHome, creating a rich Home Assistant lock platform with [24 entities](#entities).
+This module brings seamless integration of Nuki Smartlocks into ESPHome, creating a rich Home Assistant lock platform with [a bunch of entities](#entities).
 
 The lock entity updates whenever the lock's state changes - whether through the Nuki app, Home Assistant, or manually. This is achieved via the efficient Nuki BLE advertisement mechanism, ensuring your lock status is always up-to-date.
 
@@ -22,28 +22,34 @@ esp32:
     platform_version: 6.7.0
 
 lock:
-  # Required:
+  # Required
   - platform: nuki_lock
     name: Nuki Lock
+  # Optional: Settings
+    pairing_mode_timeout: 300s
+    event: "nuki"
+  # Optional: Binary Sensors
     is_connected:
       name: "Nuki Connected"
     is_paired:
       name: "Nuki Paired"
-
-  # Optional:
     battery_critical:
       name: "Nuki Battery Critical"
     door_sensor:
       name: "Nuki Door Sensor"
-
+  # Optional: Sensors
     battery_level:
       name: "Nuki Battery Level"
-
+  # Optional: Text Sensors
     door_sensor_state:
       name: "Nuki Door Sensor: State"
     last_unlock_user:
       name: "Nuki Last Unlock User"
-
+    last_lock_action:
+      name: "Nuki Last Lock Action"
+    last_lock_action_trigger:
+      name: "Nuki Last Lock Action Trigger"
+  # Optional: Switches
     pairing_mode:
       name: "Nuki Pairing Mode"
     auto_unlatch:
@@ -52,10 +58,14 @@ lock:
       name: "Nuki Button: Locking operations"
     led_enabled:
       name: "Nuki LED Signal"
-
+  # Optional: Number Inputs
+    security_pin:
+      name: "Nuki Security Pin"
     led_brightness:
       name: "Nuki LED Brightness"
-
+    timezone_offset:
+      name: "Nuki Timezone: Offset"
+  # Optional: Switches
     night_mode_enabled:
       name: "Nuki Night Mode"
     night_mode_auto_lock_enabled:
@@ -72,7 +82,11 @@ lock:
       name: "Nuki Auto Lock: Immediately"
     auto_update_enabled:
       name: "Nuki Automatic Updates"
-      
+    single_lock_enabled:
+      name: "Nuki Single Lock"
+    dst_mode_enabled:
+      name: "Nuki Daylight Saving Time"
+  # Optional: Select Inputs
     single_buton_press_action:
       name: "Nuki Button: Single Press Action"
     double_buton_press_action:
@@ -83,17 +97,13 @@ lock:
       name: "Nuki Fob: Action 2"
     fob_action_3:
       name: "Nuki Fob: Action 3"
-
+    timezone:
+      name: "Nuki Timezone"
+    advertising_mode:
+      name: "Nuki Advertising Mode"
+  # Optional: Buttons
     unpair:
       name: "Nuki Unpair Device"
-
-    security_pin:
-      name: "Nuki Security Pin"
-
-  # Optional: Settings
-    pairing_mode_timeout: 300s
-    event: "nuki"
-
   # Optional: Callbacks
     on_pairing_mode_on_action:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
@@ -251,6 +261,8 @@ context:
 **Text Sensor:**  
 - Door Sensor State
 - Last Unlock User
+- Last Lock Action
+- Last Lock Action Trigger
 
 **Switch:**  
 - Pairing Mode
@@ -263,6 +275,8 @@ context:
 - Auto Lock
 - Auto Unlock: Disable
 - Auto Lock: Immediately
+- Single Lock
+- Daylight Saving Time
 - Automatic Updates
 
 **Select Input:**  
@@ -271,9 +285,12 @@ context:
 - Fob Action 1
 - Fob Action 2
 - Fob Action 3
+- Timezone
+- Advertising Mode
 
 **Number Input:**  
 - LED Brightness
+- Timezone Offset
 - Security Pin
 
 **Button:**  

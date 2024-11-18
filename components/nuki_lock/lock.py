@@ -28,6 +28,8 @@ CONF_BATTERY_LEVEL = "battery_level"
 
 CONF_DOOR_SENSOR_STATE = "door_sensor_state"
 CONF_LAST_UNLOCK_USER_TEXT_SENSOR = "last_unlock_user"
+CONF_LAST_LOCK_ACTION_TEXT_SENSOR = "last_lock_action"
+CONF_LAST_LOCK_ACTION_TRIGGER_TEXT_SENSOR = "last_lock_action_trigger"
 
 CONF_UNPAIR_BUTTON = "unpair"
 
@@ -43,15 +45,20 @@ CONF_AUTO_LOCK_ENABLED_SWITCH = "auto_lock_enabled"
 CONF_AUTO_UNLOCK_DISABLED_SWITCH = "auto_unlock_disabled"
 CONF_IMMEDIATE_AUTO_LOCK_ENABLED_SWITCH = "immediate_auto_lock_enabled"
 CONF_AUTO_UPDATE_ENABLED_SWITCH = "auto_update_enabled"
+CONF_SINGLE_LOCK_ENABLED_SWITCH = "single_lock_enabled"
+CONF_DST_MODE_ENABLED_SWITCH = "dst_mode_enabled"
 
 CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT = "single_buton_press_action"
 CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT = "double_buton_press_action"
 CONF_FOB_ACTION_1_SELECT = "fob_action_1"
 CONF_FOB_ACTION_2_SELECT = "fob_action_2"
 CONF_FOB_ACTION_3_SELECT = "fob_action_3"
+CONF_TIMEZONE_SELECT = "timezone"
+CONF_ADVERTISING_MODE_SELECT = "advertising_mode"
 
 CONF_LED_BRIGHTNESS_NUMBER = "led_brightness"
 CONF_SECURITY_PIN_NUMBER = "security_pin"
+CONF_TIMEZONE_OFFSET_NUMBER = "timezone_offset"
 
 CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS = [
     "No Action",
@@ -60,7 +67,7 @@ CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS = [
     "Lock",
     "Unlatch",
     "Lock n Go",
-    "Show Status",
+    "Show Status"
 ]
 
 CONF_FOB_ACTION_SELECT_OPTIONS = [
@@ -68,7 +75,64 @@ CONF_FOB_ACTION_SELECT_OPTIONS = [
     "Unlock",
     "Lock",
     "Lock n Go",
-    "Intelligent",
+    "Intelligent"
+]
+
+CONF_TIMEZONE_SELECT_OPTIONS = [
+    "Africa/Cairo",
+    "Africa/Lagos",
+    "Africa/Maputo",
+    "Africa/Nairobi",
+    "America/Anchorage",
+    "America/Argentina/Buenos_Aires",
+    "America/Chicago",
+    "America/Denver",
+    "America/Halifax",
+    "America/Los_Angeles",
+    "America/Manaus",
+    "America/Mexico_City",
+    "America/New_York",
+    "America/Phoenix",
+    "America/Regina",
+    "America/Santiago",
+    "America/Sao_Paulo",
+    "America/St_Johns",
+    "Asia/Bangkok",
+    "Asia/Dubai",
+    "Asia/Hong_Kong",
+    "Asia/Jerusalem",
+    "Asia/Karachi",
+    "Asia/Kathmandu",
+    "Asia/Kolkata",
+    "Asia/Riyadh",
+    "Asia/Seoul",
+    "Asia/Shanghai",
+    "Asia/Tehran",
+    "Asia/Tokyo",
+    "Asia/Yangon",
+    "Australia/Adelaide",
+    "Australia/Brisbane",
+    "Australia/Darwin",
+    "Australia/Hobart",
+    "Australia/Perth",
+    "Australia/Sydney",
+    "Europe/Berlin",
+    "Europe/Helsinki",
+    "Europe/Istanbul",
+    "Europe/London",
+    "Europe/Moscow",
+    "Pacific/Auckland",
+    "Pacific/Guam",
+    "Pacific/Honolulu",
+    "Pacific/Pago_Pago",
+    "None"
+]
+
+CONF_ADVERTISING_MODE_SELECT_OPTIONS = [
+    "Automatic",
+    "Normal",
+    "Slow", 
+    "Slowest"
 ]
 
 CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
@@ -84,6 +148,7 @@ nuki_lock_ns = cg.esphome_ns.namespace('nuki_lock')
 NukiLock = nuki_lock_ns.class_('NukiLockComponent', lock.Lock, switch.Switch, cg.Component)
 
 NukiLockUnpairButton = nuki_lock_ns.class_("NukiLockUnpairButton", button.Button, cg.Component)
+
 NukiLockPairingModeSwitch = nuki_lock_ns.class_("NukiLockPairingModeSwitch", switch.Switch, cg.Component)
 NukiLockAutoUnlatchEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoUnlatchEnabledSwitch", switch.Switch, cg.Component)
 NukiLockButtonEnabledSwitch = nuki_lock_ns.class_("NukiLockButtonEnabledSwitch", switch.Switch, cg.Component)
@@ -96,13 +161,20 @@ NukiLockAutoLockEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoLockEnabledSwit
 NukiLockAutoUnlockDisabledSwitch = nuki_lock_ns.class_("NukiLockAutoUnlockDisabledSwitch", switch.Switch, cg.Component)
 NukiLockImmediateAutoLockEnabledSwitch = nuki_lock_ns.class_("NukiLockImmediateAutoLockEnabledSwitch", switch.Switch, cg.Component)
 NukiLockAutoUpdateEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoUpdateEnabledSwitch", switch.Switch, cg.Component)
+NukiLockSingleLockEnabledSwitch = nuki_lock_ns.class_("NukiLockSingleLockEnabledSwitch", switch.Switch, cg.Component)
+NukiLockDstModeEnabledSwitch = nuki_lock_ns.class_("NukiLockDstModeEnabledSwitch", switch.Switch, cg.Component)
+
 NukiLockLedBrightnessNumber = nuki_lock_ns.class_("NukiLockLedBrightnessNumber", number.Number, cg.Component)
 NukiLockSecurityPinNumber = nuki_lock_ns.class_("NukiLockSecurityPinNumber", number.Number, cg.Component)
+NukiLockTimeZoneOffsetNumber = nuki_lock_ns.class_("NukiLockTimeZoneOffsetNumber", number.Number, cg.Component)
+
 NukiLockSingleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockSingleButtonPressActionSelect", select.Select, cg.Component)
 NukiLockDoubleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockDoubleButtonPressActionSelect", select.Select, cg.Component)
 NukiLockFobAction1Select = nuki_lock_ns.class_("NukiLockFobAction1Select", select.Select, cg.Component)
 NukiLockFobAction2Select = nuki_lock_ns.class_("NukiLockFobAction2Select", select.Select, cg.Component)
 NukiLockFobAction3Select = nuki_lock_ns.class_("NukiLockFobAction3Select", select.Select, cg.Component)
+NukiLockTimeZoneSelect = nuki_lock_ns.class_("NukiLockTimeZoneSelect", select.Select, cg.Component)
+NukiLockAdvertisingModeSelect = nuki_lock_ns.class_("NukiLockAdvertisingModeSelect", select.Select, cg.Component)
 
 NukiLockUnpairAction = nuki_lock_ns.class_(
     "NukiLockUnpairAction", automation.Action
@@ -118,12 +190,12 @@ PairedTrigger = nuki_lock_ns.class_("PairedTrigger", automation.Trigger.template
 
 CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
     cv.GenerateID(): cv.declare_id(NukiLock),
-    cv.Required(CONF_IS_CONNECTED): binary_sensor.binary_sensor_schema(
+    cv.Optional(CONF_IS_CONNECTED): binary_sensor.binary_sensor_schema(
         device_class=DEVICE_CLASS_CONNECTIVITY,
         entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
         icon="mdi:link"
     ),
-    cv.Required(CONF_IS_PAIRED): binary_sensor.binary_sensor_schema(
+    cv.Optional(CONF_IS_PAIRED): binary_sensor.binary_sensor_schema(
         device_class=DEVICE_CLASS_CONNECTIVITY,
         entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
         icon="mdi:link"
@@ -143,6 +215,14 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         icon="mdi:door-open",
     ),
     cv.Optional(CONF_LAST_UNLOCK_USER_TEXT_SENSOR):  text_sensor.text_sensor_schema(
+        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+        icon="mdi:account-clock"
+    ),
+    cv.Optional(CONF_LAST_LOCK_ACTION_TEXT_SENSOR):  text_sensor.text_sensor_schema(
+        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+        icon="mdi:account-clock"
+    ),
+    cv.Optional(CONF_LAST_LOCK_ACTION_TRIGGER_TEXT_SENSOR):  text_sensor.text_sensor_schema(
         entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
         icon="mdi:account-clock"
     ),
@@ -223,8 +303,7 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         NukiLockImmediateAutoLockEnabledSwitch,
         device_class=DEVICE_CLASS_SWITCH,
         entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:lock-alert"
-        
+        icon="mdi:lock-alert" 
     ),
     cv.Optional(CONF_AUTO_UPDATE_ENABLED_SWITCH): switch.switch_schema(
         NukiLockAutoUpdateEnabledSwitch,
@@ -232,18 +311,34 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         entity_category=ENTITY_CATEGORY_CONFIG,
         icon="mdi:auto-download",
     ),
+    cv.Optional(CONF_SINGLE_LOCK_ENABLED_SWITCH): switch.switch_schema(
+        NukiLockSingleLockEnabledSwitch,
+        device_class=DEVICE_CLASS_SWITCH,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+        icon="mdi:lock-plus",
+    ),
+    cv.Optional(CONF_DST_MODE_ENABLED_SWITCH): switch.switch_schema(
+        NukiLockDstModeEnabledSwitch,
+        device_class=DEVICE_CLASS_SWITCH,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+        icon="mdi:sun-clock",
+    ),
 
     cv.Optional(CONF_LED_BRIGHTNESS_NUMBER): number.number_schema(
         NukiLockLedBrightnessNumber,
         entity_category=ENTITY_CATEGORY_CONFIG,
         icon="mdi:brightness-6",
     ),
-
     cv.Optional(CONF_SECURITY_PIN_NUMBER): number.number_schema(
         NukiLockSecurityPinNumber,
         entity_category=ENTITY_CATEGORY_CONFIG,
         icon="mdi:shield-key",
     ).extend({ cv.Optional(CONF_MODE, default="BOX"): cv.enum(NUMBER_MODES, upper=True), }),
+    cv.Optional(CONF_TIMEZONE_OFFSET_NUMBER): number.number_schema(
+        NukiLockTimeZoneOffsetNumber,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+        icon="mdi:clock-end",
+    ),
 
     cv.Optional(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT): select.select_schema(
         NukiLockSingleButtonPressActionSelect,
@@ -269,6 +364,16 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         NukiLockFobAction3Select,
         entity_category=ENTITY_CATEGORY_CONFIG,
         icon="mdi:gesture-tap",
+    ),
+    cv.Optional(CONF_TIMEZONE_SELECT): select.select_schema(
+        NukiLockTimeZoneSelect,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+        icon="mdi:map-clock",
+    ),
+    cv.Optional(CONF_ADVERTISING_MODE_SELECT): select.select_schema(
+        NukiLockAdvertisingModeSelect,
+        entity_category=ENTITY_CATEGORY_CONFIG,
+        icon="mdi:timer-cog",
     ),
 
     cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
@@ -335,6 +440,14 @@ async def to_code(config):
         sens = await text_sensor.new_text_sensor(last_unlock_user)
         cg.add(var.set_last_unlock_user_text_sensor(sens))
 
+    if last_lock_action_trigger := config.get(CONF_LAST_LOCK_ACTION_TRIGGER_TEXT_SENSOR):
+        sens = await text_sensor.new_text_sensor(last_lock_action_trigger)
+        cg.add(var.set_last_lock_action_trigger_text_sensor(sens))
+
+    if last_lock_action := config.get(CONF_LAST_LOCK_ACTION_TEXT_SENSOR):
+        sens = await text_sensor.new_text_sensor(last_lock_action)
+        cg.add(var.set_last_lock_action_text_sensor(sens))
+
     # Button
     if unpair := config.get(CONF_UNPAIR_BUTTON):
         b = await button.new_button(unpair)
@@ -355,6 +468,13 @@ async def to_code(config):
         )
         await cg.register_parented(n, config[CONF_ID])
         cg.add(var.set_security_pin_number(n))
+
+    if timezone_offset := config.get(CONF_TIMEZONE_OFFSET_NUMBER):
+        n = await number.new_number(
+            timezone_offset, min_value=-60, max_value=60, step=1
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_timezone_offset_number(n))
 
     # Switch
     if pairing_mode := config.get(CONF_PAIRING_MODE_SWITCH):
@@ -417,6 +537,16 @@ async def to_code(config):
         await cg.register_parented(s, config[CONF_ID])
         cg.add(var.set_auto_update_enabled_switch(s))
 
+    if single_lock_enabled := config.get(CONF_SINGLE_LOCK_ENABLED_SWITCH):
+        s = await switch.new_switch(single_lock_enabled)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_single_lock_enabled_switch(s))
+
+    if dst_mode := config.get(CONF_DST_MODE_ENABLED_SWITCH):
+        s = await switch.new_switch(dst_mode)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_dst_mode_enabled_switch(s))
+
     # Select
     if single_button_press_action := config.get(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT):
         sel = await select.new_select(
@@ -457,6 +587,22 @@ async def to_code(config):
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_fob_action_3_select(sel))
+
+    if timezone := config.get(CONF_TIMEZONE_SELECT):
+        sel = await select.new_select(
+            timezone,
+            options=[CONF_TIMEZONE_SELECT_OPTIONS],
+        )
+        await cg.register_parented(sel, config[CONF_ID])
+        cg.add(var.set_timezone_select(sel))
+
+    if advertising_mode := config.get(CONF_ADVERTISING_MODE_SELECT):
+        sel = await select.new_select(
+            advertising_mode,
+            options=[CONF_ADVERTISING_MODE_SELECT_OPTIONS],
+        )
+        await cg.register_parented(sel, config[CONF_ID])
+        cg.add(var.set_advertising_mode_select(sel))
 
 
     # Callback

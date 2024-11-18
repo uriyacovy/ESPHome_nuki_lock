@@ -40,6 +40,10 @@ lock:
       name: "Nuki Door Sensor: State"
     last_unlock_user:
       name: "Nuki Last Unlock User"
+    last_lock_action:
+      name: "Nuki Last Lock Action"
+    last_lock_action_trigger:
+      name: "Nuki Last Lock Action Trigger"
 
     unpair:
       name: "Nuki Unpair Device"
@@ -68,11 +72,17 @@ lock:
       name: "Nuki Auto Lock: Immediately"
     auto_update_enabled:
       name: "Nuki Automatic Updates"
+    single_lock_enabled:
+      name: "Nuki Single Lock"
+    dst_mode_enabled:
+      name: "Nuki Daylight Saving Time"
 
     led_brightness:
       name: "Nuki LED Brightness"
     security_pin:
       name: "Nuki Security Pin"
+    timezone_offset:
+      name: "Nuki Timezone: Offset"
 
     single_buton_press_action:
       name: "Nuki Single Button Press Action"
@@ -84,6 +94,10 @@ lock:
       name: "Nuki Fob Action 2"
     fob_action_3:
       name: "Nuki Fob Action 3"
+    timezone:
+      name: "Nuki Timezone"
+    advertising_mode:
+      name: "Nuki Advertising Mode"
 
     pairing_mode_timeout: 300s
     event: "nuki"

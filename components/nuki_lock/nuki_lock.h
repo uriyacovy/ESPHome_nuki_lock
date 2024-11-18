@@ -58,10 +58,13 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
     #ifdef USE_TEXT_SENSOR
     SUB_TEXT_SENSOR(door_sensor_state)
     SUB_TEXT_SENSOR(last_unlock_user)
+    SUB_TEXT_SENSOR(last_lock_action)
+    SUB_TEXT_SENSOR(last_lock_action_trigger)
     #endif
     #ifdef USE_NUMBER
     SUB_NUMBER(led_brightness)
     SUB_NUMBER(security_pin)
+    SUB_NUMBER(timezone_offset)
     #endif
     #ifdef USE_SELECT
     SUB_SELECT(single_button_press_action)
@@ -69,6 +72,8 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
     SUB_SELECT(fob_action_1)
     SUB_SELECT(fob_action_2)
     SUB_SELECT(fob_action_3)
+    SUB_SELECT(timezone)
+    SUB_SELECT(advertising_mode)
     #endif
     #ifdef USE_BUTTON
     SUB_BUTTON(unpair)
@@ -86,6 +91,8 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
     SUB_SWITCH(auto_unlock_disabled)
     SUB_SWITCH(immediate_auto_lock_enabled)
     SUB_SWITCH(auto_update_enabled)
+    SUB_SWITCH(single_lock_enabled)
+    SUB_SWITCH(dst_mode_enabled)
     #endif
 
     static const uint8_t BLE_CONNECT_TIMEOUT_SEC = 3;
@@ -136,8 +143,14 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         uint8_t fob_action_to_int(std::string str);
         std::string fob_action_to_string(uint8_t action);
 
-        NukiLock::ButtonPressAction nuki_button_press_action_to_enum(std::string str);
-        const char* nuki_button_press_action_to_string(NukiLock::ButtonPressAction action);
+        NukiLock::ButtonPressAction button_press_action_to_enum(std::string str);
+        const char* button_press_action_to_string(NukiLock::ButtonPressAction action);
+
+        Nuki::TimeZoneId timezone_to_enum(std::string str);
+        std::string timezone_to_string(Nuki::TimeZoneId timezoneId);
+
+        Nuki::AdvertisingMode advertising_mode_to_enum(std::string str);
+        std::string advertising_mode_to_string(Nuki::AdvertisingMode mode);
 
         void unpair();
         void set_pairing_mode(bool enabled);
@@ -304,9 +317,24 @@ class NukiLockFobAction2Select : public select::Select, public Parented<NukiLock
     protected:
         void control(const std::string &value) override;
 };
+
 class NukiLockFobAction3Select : public select::Select, public Parented<NukiLockComponent> {
     public:
         NukiLockFobAction3Select() = default;
+    protected:
+        void control(const std::string &value) override;
+};
+
+class NukiLockTimeZoneSelect : public select::Select, public Parented<NukiLockComponent> {
+    public:
+        NukiLockTimeZoneSelect() = default;
+    protected:
+        void control(const std::string &value) override;
+};
+
+class NukiLockAdvertisingModeSelect : public select::Select, public Parented<NukiLockComponent> {
+    public:
+        NukiLockAdvertisingModeSelect() = default;
     protected:
         void control(const std::string &value) override;
 };
@@ -407,6 +435,22 @@ class NukiLockAutoUpdateEnabledSwitch : public switch_::Switch, public Parented<
     protected:
         void write_state(bool state) override;
 };
+
+class NukiLockSingleLockEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockSingleLockEnabledSwitch() = default;
+
+    protected:
+        void write_state(bool state) override;
+};
+
+class NukiLockDstModeEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockDstModeEnabledSwitch() = default;
+
+    protected:
+        void write_state(bool state) override;
+};
 #endif
 
 #ifdef USE_NUMBER
@@ -420,6 +464,13 @@ class NukiLockLedBrightnessNumber : public number::Number, public Parented<NukiL
 class NukiLockSecurityPinNumber : public number::Number, public Parented<NukiLockComponent> {
     public:
         NukiLockSecurityPinNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+class NukiLockTimeZoneOffsetNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockTimeZoneOffsetNumber() = default;
 
     protected:
         void control(float value) override;
