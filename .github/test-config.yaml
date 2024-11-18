@@ -44,7 +44,7 @@ lock:
       name: "Nuki Last Lock Action"
     last_lock_action_trigger:
       name: "Nuki Last Lock Action Trigger"
-      
+
     unpair:
       name: "Nuki Unpair Device"
       
@@ -83,10 +83,6 @@ lock:
       name: "Nuki Security Pin"
     timezone_offset:
       name: "Nuki Timezone: Offset"
-    #latitude:
-    #  name: "Nuki Latitude"
-    #longitude:
-    #  name: "Nuki Longitude"
 
     single_buton_press_action:
       name: "Nuki Single Button Press Action"

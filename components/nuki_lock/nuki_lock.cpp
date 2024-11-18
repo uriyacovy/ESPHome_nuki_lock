@@ -363,10 +363,6 @@ void NukiLockComponent::update_config() {
             this->led_brightness_number_->publish_state(config.ledBrightness);
         if (this->timezone_offset_number_ != nullptr)
             this->timezone_offset_number_->publish_state(config.timeZoneOffset);
-        if (this->latitude_number_ != nullptr)
-            this->latitude_number_->publish_state(config.latitude);
-        if (this->longitude_number_ != nullptr)
-            this->longitude_number_->publish_state(config.longitude);
         #endif
         #ifdef USE_SELECT
         if (this->fob_action_1_select_ != nullptr)
@@ -1131,8 +1127,6 @@ void NukiLockComponent::dump_config() {
     LOG_NUMBER(TAG, "LED Brightness", this->led_brightness_number_);
     LOG_NUMBER(TAG, "Security Pin", this->security_pin_number_);
     LOG_NUMBER(TAG, "Timezone Offset", this->timezone_offset_number_);
-    LOG_NUMBER(TAG, "Latitude", this->latitude_number_);
-    LOG_NUMBER(TAG, "Longitude", this->longitude_number_);
     #endif
     #ifdef USE_SELECT
     LOG_SELECT(TAG, "Single Button Press Action", this->single_button_press_action_select_);
@@ -1433,20 +1427,6 @@ void NukiLockComponent::set_config_number(std::string config, float value) {
             cmd_result = this->nuki_lock_.setTimeZoneOffset(value);
         }
     }
-    else if(config == "latitude")
-    {
-        if(value > 0)
-        {
-            cmd_result = this->nuki_lock_.setLatitude(value);
-        }
-    }
-    else if(config == "longitude")
-    {
-        if(value > 0)
-        {
-            cmd_result = this->nuki_lock_.setLongitude(value);
-        }
-    }
 
     if(cmd_result == Nuki::CmdResult::Success)
     {
@@ -1457,15 +1437,7 @@ void NukiLockComponent::set_config_number(std::string config, float value) {
         else if(config == "timezone_offset")
         {
             if (this->timezone_offset_number_ != nullptr) this->timezone_offset_number_->publish_state(value);
-        } 
-        else if(config == "latitude")
-        {
-            if (this->latitude_number_ != nullptr) this->latitude_number_->publish_state(value);
-        } 
-        else if(config == "longitude")
-        {
-            if (this->longitude_number_ != nullptr) this->longitude_number_->publish_state(value);
-        } 
+        }
         
         this->config_update_ = !is_advanced;
         this->advanced_config_update_ = is_advanced;
@@ -1569,12 +1541,6 @@ void NukiLockSecurityPinNumber::control(float value) {
 }
 void NukiLockTimeZoneOffsetNumber::control(float value) {
     this->parent_->set_config_number("timezone_offset", value);
-}
-void NukiLockLatitudeNumber::control(float value) {
-    this->parent_->set_config_number("latitude", value);
-}
-void NukiLockLongitudeNumber::control(float value) {
-    this->parent_->set_config_number("longitude", value);
 }
 #endif
 
