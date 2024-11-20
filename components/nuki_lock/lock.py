@@ -620,7 +620,7 @@ async def to_code(config):
 
     # Libraries
     cg.add_library("Preferences", None)
-    cg.add_library("h2zero/NimBLE-Arduino", "1.4.0")
+    cg.add_library("h2zero/NimBLE-Arduino", "1.4.2")
     cg.add_library("Crc16", None)
     cg.add_library(
         None,
