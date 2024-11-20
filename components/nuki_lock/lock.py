@@ -620,14 +620,16 @@ async def to_code(config):
 
     # Libraries
     cg.add_library("Preferences", None)
-    cg.add_library("h2zero/NimBLE-Arduino", "1.4.0")
+    cg.add_library("h2zero/esp-nimble-cpp", None)
     cg.add_library("Crc16", None)
     cg.add_library(
         None,
         None,
-        "https://github.com/I-Connect/NukiBleEsp32#93e7da927171c8973b7ef857c7fa644c174ed47d",
+        "https://github.com/I-Connect/NukiBleEsp32",
     )
 
+    # Defines
+    cg.add_define("NUKI_USE_LATEST_NIMBLE")
 
 # Actions
 NukiLockUnpairAction = nuki_lock_ns.class_(
