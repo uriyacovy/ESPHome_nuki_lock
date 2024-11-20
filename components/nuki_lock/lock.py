@@ -620,7 +620,11 @@ async def to_code(config):
 
     # Libraries
     cg.add_library("Preferences", None)
-    cg.add_library("h2zero/esp-nimble-cpp", None)
+    cg.add_library(
+        None,
+        None,
+        "https://github.com/h2zero/esp-nimble-cpp",
+    )
     cg.add_library("Crc16", None)
     cg.add_library(
         None,
