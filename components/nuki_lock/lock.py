@@ -625,8 +625,10 @@ async def to_code(config):
     cg.add_library(
         None,
         None,
-        "https://github.com/I-Connect/NukiBleEsp32#93e7da927171c8973b7ef857c7fa644c174ed47d",
+        "https://github.com/I-Connect/NukiBleEsp32#edc9586",
     )
+
+    cg.add_define("NUKI_ALT_CONNECT")
 
 
 # Actions
