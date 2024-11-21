@@ -628,7 +628,7 @@ async def to_code(config):
         "https://github.com/I-Connect/NukiBleEsp32#edc9586",
     )
 
-    cg.add_build_flag("NUKI_ALT_CONNECT")
+    cg.add_define("NUKI_ALT_CONNECT")
 
 
 # Actions
