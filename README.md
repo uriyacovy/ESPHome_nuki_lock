@@ -209,7 +209,11 @@ on_paired_action:
 ```
 
 ### Events
-By default, this component sends Nuki logs as events to Home Assistant, enabling you to use them in automations. 
+By default, this component sends Nuki logs as events to Home Assistant, enabling you to use them in automations.
+
+> [!IMPORTANT]
+> To receive events, **you must set your security PIN**.
+> Without it, it's not possible to access any event logs from your lock.
 
 - **To Disable Logs**: Set the `event` property in your YAML configuration to `none` if you don't want to receive log events.
   
