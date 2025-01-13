@@ -700,20 +700,19 @@ bool NukiLockComponent::execute_lock_action(NukiLock::LockAction lock_action) {
     }
 }
 
-void NukiLockComponent::set_security_pin(uint16_t security_pin) {
+void NukiLockComponent::set_override_security_pin(uint16_t security_pin) {
     this->security_pin_ = security_pin;
+    save_settings();
+    use_security_pin();
+}
 
+void NukiLockComponent::use_security_pin() {
     bool result = this->nuki_lock_.saveSecurityPincode(this->security_pin_);
     if (result) {
         ESP_LOGI(TAG, "Set pincode done");
     } else {
         ESP_LOGE(TAG, "Set pincode failed!");
     }
-
-    #ifdef USE_NUMBER
-    if (this->security_pin_number_ != nullptr)
-        this->security_pin_number_->publish_state(this->security_pin_);
-    #endif
 }
 
 void NukiLockComponent::setup() {
@@ -730,7 +729,12 @@ void NukiLockComponent::setup() {
     if (!this->pref_.load(&recovered)) {
         recovered = {0};
     }
-    this->set_security_pin(recovered.security_pin);
+    
+    if(recovered.security_pin != 0)
+    {
+        this->security_pin_ = recovered.security_pin;
+    }
+    this->use_security_pin();
 
     this->traits.set_supported_states(
         std::set<lock::LockState> {
@@ -1107,7 +1111,6 @@ void NukiLockComponent::dump_config() {
     #endif
     #ifdef USE_NUMBER
     LOG_NUMBER(TAG, "LED Brightness", this->led_brightness_number_);
-    LOG_NUMBER(TAG, "Security Pin", this->security_pin_number_);
     LOG_NUMBER(TAG, "Timezone Offset", this->timezone_offset_number_);
     #endif
     #ifdef USE_SELECT
@@ -1515,11 +1518,6 @@ void NukiLockDstModeEnabledSwitch::write_state(bool state) {
 #ifdef USE_NUMBER
 void NukiLockLedBrightnessNumber::control(float value) {
     this->parent_->set_config_number("led_brightness", value);
-}
-void NukiLockSecurityPinNumber::control(float value) {
-    this->publish_state(value);
-    this->parent_->set_security_pin(value);
-    this->parent_->save_settings();
 }
 void NukiLockTimeZoneOffsetNumber::control(float value) {
     this->parent_->set_config_number("timezone_offset", value);

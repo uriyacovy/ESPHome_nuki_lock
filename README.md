@@ -28,6 +28,7 @@ lock:
   # Optional: Settings
     pairing_mode_timeout: 300s
     event: "nuki"
+    security_pin: 1234
   # Optional: Binary Sensors
     is_connected:
       name: "Nuki Connected"
@@ -59,8 +60,6 @@ lock:
     led_enabled:
       name: "Nuki LED Signal"
   # Optional: Number Inputs
-    security_pin:
-      name: "Nuki Security Pin"
     led_brightness:
       name: "Nuki LED Brightness"
     timezone_offset:
@@ -197,6 +196,14 @@ on_...:
   - nuki_lock.unpair:
 ```
 
+### Action: Security Pin
+To override the security pin without recompiling, use the following action:
+```yaml
+on_...:
+  - nuki_lock.set_security_pin:
+      security_pin: 1234
+```
+
 ### Callbacks
 To run specific actions when certain events occur, you can use the following callbacks:
 ```yaml
@@ -295,7 +302,6 @@ context:
 **Number Input:**  
 - LED Brightness
 - Timezone Offset
-- Security Pin
 
 **Button:**  
 - Unpair Device

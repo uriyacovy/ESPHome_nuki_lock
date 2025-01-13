@@ -79,8 +79,6 @@ lock:
 
     led_brightness:
       name: "Nuki LED Brightness"
-    security_pin:
-      name: "Nuki Security Pin"
     timezone_offset:
       name: "Nuki Timezone: Offset"
 
@@ -101,6 +99,7 @@ lock:
 
     pairing_mode_timeout: 300s
     event: "nuki"
+    security_pin: 1234
 
     on_pairing_mode_on_action:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");

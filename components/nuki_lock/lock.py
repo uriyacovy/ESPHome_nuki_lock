@@ -57,7 +57,7 @@ CONF_TIMEZONE_SELECT = "timezone"
 CONF_ADVERTISING_MODE_SELECT = "advertising_mode"
 
 CONF_LED_BRIGHTNESS_NUMBER = "led_brightness"
-CONF_SECURITY_PIN_NUMBER = "security_pin"
+CONF_SECURITY_PIN = "security_pin"
 CONF_TIMEZONE_OFFSET_NUMBER = "timezone_offset"
 
 CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS = [
@@ -139,6 +139,7 @@ CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_EVENT = "event"
 
 CONF_SET_PAIRING_MODE = "pairing_mode"
+CONF_SET_SECURITY_PIN = "security_pin"
 
 CONF_ON_PAIRING_MODE_ON = "on_pairing_mode_on_action"
 CONF_ON_PAIRING_MODE_OFF = "on_pairing_mode_off_action"
@@ -165,7 +166,6 @@ NukiLockSingleLockEnabledSwitch = nuki_lock_ns.class_("NukiLockSingleLockEnabled
 NukiLockDstModeEnabledSwitch = nuki_lock_ns.class_("NukiLockDstModeEnabledSwitch", switch.Switch, cg.Component)
 
 NukiLockLedBrightnessNumber = nuki_lock_ns.class_("NukiLockLedBrightnessNumber", number.Number, cg.Component)
-NukiLockSecurityPinNumber = nuki_lock_ns.class_("NukiLockSecurityPinNumber", number.Number, cg.Component)
 NukiLockTimeZoneOffsetNumber = nuki_lock_ns.class_("NukiLockTimeZoneOffsetNumber", number.Number, cg.Component)
 
 NukiLockSingleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockSingleButtonPressActionSelect", select.Select, cg.Component)
@@ -182,6 +182,10 @@ NukiLockUnpairAction = nuki_lock_ns.class_(
 
 NukiLockPairingModeAction = nuki_lock_ns.class_(
     "NukiLockPairingModeAction", automation.Action
+)
+
+NukiLockSecurityPinAction = nuki_lock_ns.class_(
+    "NukiLockSecurityPinAction", automation.Action
 )
 
 PairingModeOnTrigger = nuki_lock_ns.class_("PairingModeOnTrigger", automation.Trigger.template())
@@ -329,11 +333,7 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
         entity_category=ENTITY_CATEGORY_CONFIG,
         icon="mdi:brightness-6",
     ),
-    cv.Optional(CONF_SECURITY_PIN_NUMBER): number.number_schema(
-        NukiLockSecurityPinNumber,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:shield-key",
-    ).extend({ cv.Optional(CONF_MODE, default="BOX"): cv.enum(NUMBER_MODES, upper=True), }),
+
     cv.Optional(CONF_TIMEZONE_OFFSET_NUMBER): number.number_schema(
         NukiLockTimeZoneOffsetNumber,
         entity_category=ENTITY_CATEGORY_CONFIG,
@@ -378,6 +378,7 @@ CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
 
     cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
     cv.Optional(CONF_EVENT, default="nuki"): cv.string,
+    cv.Optional(CONF_SECURITY_PIN): cv.uint16_t,
 
     cv.Optional(CONF_ON_PAIRING_MODE_ON): automation.validate_automation(
         {
@@ -408,6 +409,9 @@ async def to_code(config):
 
     if CONF_EVENT in config:
         cg.add(var.set_event("esphome." + config[CONF_EVENT]))
+        
+    if CONF_SECURITY_PIN in config:
+        cg.add(var.set_security_pin(config[CONF_SECURITY_PIN]))
 
     # Binary Sensor
     if is_connected := config.get(CONF_IS_CONNECTED):
@@ -461,13 +465,6 @@ async def to_code(config):
         )
         await cg.register_parented(n, config[CONF_ID])
         cg.add(var.set_led_brightness_number(n))
-
-    if security_pin := config.get(CONF_SECURITY_PIN_NUMBER):
-        n = await number.new_number(
-            security_pin, min_value=0, max_value=65535, step=1
-        )
-        await cg.register_parented(n, config[CONF_ID])
-        cg.add(var.set_security_pin_number(n))
 
     if timezone_offset := config.get(CONF_TIMEZONE_OFFSET_NUMBER):
         n = await number.new_number(
@@ -668,4 +665,25 @@ async def nuki_lock_set_pairing_mode_to_code(config, action_id, template_arg, ar
     var = cg.new_Pvariable(action_id, template_arg, paren)
     pairing_mode_template_ = await cg.templatable(config[CONF_SET_PAIRING_MODE], args, cg.bool_)
     cg.add(var.set_pairing_mode(pairing_mode_template_))
+    return var
+
+
+
+
+NUKI_LOCK_SET_SECURITY_PIN_SCHEMA = automation.maybe_simple_id(
+    {
+        cv.GenerateID(): cv.use_id(NukiLock),
+        cv.Required(CONF_SET_SECURITY_PIN): cv.templatable(cv.uint16_t)
+    }
+)
+
+@automation.register_action(
+    "nuki_lock.set_security_pin", NukiLockSecurityPinAction, NUKI_LOCK_SET_SECURITY_PIN_SCHEMA
+)
+
+async def nuki_lock_set_security_pin_to_code(config, action_id, template_arg, args):
+    paren = await cg.get_variable(config[CONF_ID])
+    var = cg.new_Pvariable(action_id, template_arg, paren)
+    security_pin_template_ = await cg.templatable(config[CONF_SET_SECURITY_PIN], args, cg.uint16)
+    cg.add(var.set_security_pin(security_pin_template_))
     return var
