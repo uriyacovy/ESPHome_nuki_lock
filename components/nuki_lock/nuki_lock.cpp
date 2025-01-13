@@ -317,7 +317,10 @@ void NukiLockComponent::update_status()
             // Schedule a status update without waiting for the next advertisement because the lock
             // is in a transition state. This will speed up the feedback.
             this->status_update_ = true;
-            this->event_log_update_ = true;
+            
+            if (strcmp(event_, "esphome.none") != 0) {
+                this->event_log_update_ = true;
+            }
         }
     } else {
         ESP_LOGE(TAG, "requestKeyTurnerState failed with error %s (%d)", cmd_result_as_string, cmd_result);
@@ -762,8 +765,11 @@ void NukiLockComponent::setup() {
         this->advanced_config_update_ = true;
 
         // First auth data request, then every 2nd time
-        this->auth_data_required_ = true;
-        this->auth_data_update_ = true;
+        // Requesting only when events are enabled
+        if (strcmp(event_, "esphome.none") != 0) {
+            this->auth_data_required_ = true;
+            this->auth_data_update_ = true;
+        }
 
         ESP_LOGI(TAG, "%s Nuki paired", this->deviceName_);
         #ifdef USE_BINARY_SENSOR
@@ -1137,11 +1143,13 @@ void NukiLockComponent::notify(Nuki::EventType event_type) {
     
     // Request Auth Data on every second notify, otherwise just event logs
     // Event logs are always requested after Auth Data requests
-    this->auth_data_required_ = !this->auth_data_required_;
-    if(this->auth_data_required_) {
-        this->auth_data_update_ = true;
-    } else {
-        this->event_log_update_ = true;
+    if (strcmp(event_, "esphome.none") != 0) {
+        this->auth_data_required_ = !this->auth_data_required_;
+        if(this->auth_data_required_) {
+            this->auth_data_update_ = true;
+        } else {
+            this->event_log_update_ = true;
+        }
     }
 
     ESP_LOGI(TAG, "event notified %d", event_type);
