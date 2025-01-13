@@ -197,6 +197,11 @@ on_...:
 ```
 
 ### Action: Security Pin
+
+> [!IMPORTANT]  
+> Overriding the security PIN will save it to flash!  
+> To revert back to the PIN defined in your YAML configuration, you must set the override PIN to `0`.
+
 To override the security pin without recompiling, use the following action:
 ```yaml
 on_...:
@@ -226,8 +231,8 @@ By default, this component sends Nuki logs as events to Home Assistant, enabling
   
 - **To View Log Events**: Go to **Home Assistant Developer Tools** -> **Events**, and listen for `esphome.nuki` events to monitor log activity.
 
-These log events provide insights into lock operations and help fine-tune automations based on real-time lock data.
-
+These log events provide insights into lock operations and help fine-tune automations based on lock data.
+Keep in mind that the logs **are not displayed in real-time** and may take up to a minute to arrive.
 
 Example Event:
 ```yaml
@@ -256,6 +261,11 @@ context:
 ```
 
 ## Entities
+
+> [!IMPORTANT]  
+> Most settings entities **require the security PIN** to make changes.  
+> Without the PIN, modifying these settings is not possible.  
+> Additionally, the `Last Unlock User` feature will only function if events are enabled!  
 
 **Lock:**  
 - Lock
