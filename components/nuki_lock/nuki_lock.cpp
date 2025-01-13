@@ -729,7 +729,7 @@ void NukiLockComponent::setup() {
     if (!this->pref_.load(&recovered)) {
         recovered = {0};
     }
-    
+
     if(recovered.security_pin != 0)
     {
         this->security_pin_ = recovered.security_pin;
@@ -1125,6 +1125,12 @@ void NukiLockComponent::dump_config() {
 }
 
 void NukiLockComponent::notify(Nuki::EventType event_type) {
+    
+    // Ignore bad pin error to prevent loop
+    if(event_type == Nuki::EventType::ERROR_BAD_PIN) {
+        return;
+    }
+
     this->status_update_ = true;
     this->config_update_ = true;
     this->advanced_config_update_ = true;
