@@ -263,16 +263,18 @@ void NukiLockComponent::update_status()
 
     if (cmd_result == Nuki::CmdResult::Success) {
         this->status_update_consecutive_errors_ = 0;
-        NukiLock::LockState current_lock_state = this->retrieved_key_turner_state_.lockState;
 
+        NukiLock::LockState current_lock_state = this->retrieved_key_turner_state_.lockState;
         char current_lock_state_as_string[30];
         NukiLock::lockstateToString(current_lock_state, current_lock_state_as_string);
 
-        char last_lock_action[30];
-        NukiLock::lockactionToString(this->retrieved_key_turner_state_.lastLockAction, last_lock_action);
+        NukiLock::LockAction last_lock_action = this->retrieved_key_turner_state_.lastLockAction;
+        char last_lock_action_str[30];
+        NukiLock::lockactionToString(last_lock_action, last_lock_action_str);
 
-        char last_lock_action_trigger[30];
-        NukiLock::triggerToString(this->retrieved_key_turner_state_.lastLockActionTrigger, last_lock_action_trigger);
+        NukiLock::Trigger last_lock_action_trigger = this->retrieved_key_turner_state_.lastLockActionTrigger;
+        char last_lock_action_trigger_str[30];
+        NukiLock::triggerToString(last_lock_action_trigger, last_lock_action_trigger_str);
 
         ESP_LOGI(TAG, "Bat state: %#x, Bat crit: %d, Bat perc: %d lock state: %s (%d) %d:%d:%d",
             this->retrieved_key_turner_state_.criticalBatteryState,
@@ -303,9 +305,9 @@ void NukiLockComponent::update_status()
         if (this->door_sensor_state_text_sensor_ != nullptr)
             this->door_sensor_state_text_sensor_->publish_state(this->nuki_doorsensor_to_string(this->retrieved_key_turner_state_.doorSensorState));
         if (this->last_lock_action_text_sensor_ != nullptr)
-            this->last_lock_action_text_sensor_->publish_state(last_lock_action);
+            this->last_lock_action_text_sensor_->publish_state(last_lock_action_str);
         if (this->last_lock_action_trigger_text_sensor_ != nullptr)
-            this->last_lock_action_trigger_text_sensor_->publish_state(last_lock_action_trigger);
+            this->last_lock_action_trigger_text_sensor_->publish_state(last_lock_action_trigger_str);
         #endif
 
         if (
@@ -315,7 +317,10 @@ void NukiLockComponent::update_status()
             // Schedule a status update without waiting for the next advertisement because the lock
             // is in a transition state. This will speed up the feedback.
             this->status_update_ = true;
-            this->event_log_update_ = true;
+            
+            if (strcmp(event_, "esphome.none") != 0) {
+                this->event_log_update_ = true;
+            }
         }
     } else {
         ESP_LOGE(TAG, "requestKeyTurnerState failed with error %s (%d)", cmd_result_as_string, cmd_result);
@@ -433,104 +438,99 @@ void NukiLockComponent::update_advanced_config() {
     }
 }
 
-void NukiLockComponent::update_auth_data()
-{
+void NukiLockComponent::update_auth_data() {
     this->auth_data_update_ = false;
+    this->cancel_timeout("wait_for_auth_data");
 
-    Nuki::CmdResult conf_req_result = (Nuki::CmdResult)-1;
-    int retryCount = 0;
-    while(retryCount < 3)
-    {
-        ESP_LOGD(TAG, "Retrieve Auth Data");
-        conf_req_result = this->nuki_lock_.retrieveAuthorizationEntries(0, MAX_AUTH_DATA_ENTRIES);
+    ESP_LOGD(TAG, "Retrieve Auth Data");
 
-        if(conf_req_result != Nuki::CmdResult::Success)
-        {
-            ++retryCount;
-            App.feed_wdt();
-        }
-        else
-        {
-            break;
-        }
-    }
+    Nuki::CmdResult auth_data_req_result = this->nuki_lock_.retrieveAuthorizationEntries(0, MAX_AUTH_DATA_ENTRIES);
+    char auth_data_req_result_as_string[30];
+    NukiLock::cmdResultToString(auth_data_req_result, auth_data_req_result_as_string);
 
-    this->set_timeout("wait_for_auth_data", 5000, [this]() {
-        std::list<NukiLock::AuthorizationEntry> authEntries;
-        this->nuki_lock_.getAuthorizationEntries(&authEntries);
+    if (auth_data_req_result == Nuki::CmdResult::Success) {
+        ESP_LOGD(TAG, "retrieveAuthorizationEntries has resulted in %s (%d)", auth_data_req_result_as_string, auth_data_req_result);
+    
+        this->set_timeout("wait_for_auth_data", 5000, [this]() {
 
-        authEntries.sort([](const NukiLock::AuthorizationEntry& a, const NukiLock::AuthorizationEntry& b)
-        {
-            return a.authId < b.authId;
+            std::list<NukiLock::AuthorizationEntry> authEntries;
+            this->nuki_lock_.getAuthorizationEntries(&authEntries);
+    
+            ESP_LOGD(TAG, "Authorization Entries: %d", authEntries.size());
+
+            if(authEntries.size() > 0) {
+                authEntries.sort([](const NukiLock::AuthorizationEntry& a, const NukiLock::AuthorizationEntry& b) {
+                    return a.authId < b.authId;
+                });
+        
+                if(authEntries.size() > MAX_AUTH_DATA_ENTRIES) {
+                    authEntries.resize(MAX_AUTH_DATA_ENTRIES);
+                }
+        
+                for(const auto& entry : authEntries) {
+                    ESP_LOGD(TAG, "Authorization entry[%d] type: %d name: %s", entry.authId, entry.idType, entry.name);
+                    this->auth_entries_[entry.authId] = std::string(reinterpret_cast<const char*>(entry.name));
+                }
+        
+                // Request Event logs when Auth Data is available
+                this->event_log_update_ = true;
+            } else {
+                ESP_LOGD(TAG, "No auth entries! Did you set the security pin?");
+            }
         });
-
-        if(authEntries.size() > MAX_AUTH_DATA_ENTRIES)
-        {
-            authEntries.resize(MAX_AUTH_DATA_ENTRIES);
-        }
-
-        for(const auto& entry : authEntries)
-        {
-            ESP_LOGD(TAG, "Authorization entry[%d] type: %d name: %s", entry.authId, entry.idType, entry.name);
-            this->auth_entries_[entry.authId] = std::string(reinterpret_cast<const char*>(entry.name));
-        }
-
-        // Request Event logs when Auth Data is available
-        this->event_log_update_ = true;
-    });
+    } else {
+        ESP_LOGE(TAG, "retrieveAuthorizationEntries has resulted in %s (%d)", auth_data_req_result_as_string, auth_data_req_result);
+        this->auth_data_update_ = true;
+    }
 }
 
-void NukiLockComponent::update_event_logs()
-{
+void NukiLockComponent::update_event_logs() {
     this->event_log_update_ = false;
+    this->cancel_timeout("wait_for_log_entries");
 
-    Nuki::CmdResult conf_req_result = (Nuki::CmdResult)-1;
-    int retryCount = 0;
-    while(retryCount < 3)
-    {
-        ESP_LOGD(TAG, "Retrieve Event Logs");
-        conf_req_result = this->nuki_lock_.retrieveLogEntries(0, MAX_EVENT_LOG_ENTRIES, 1, false);
+    ESP_LOGD(TAG, "Retrieve Event Log Entries");
 
-        if(conf_req_result != Nuki::CmdResult::Success)
-        {
-            ++retryCount;
-            App.feed_wdt();
-        }
-        else
-        {
-            break;
-        }
-    }
+    Nuki::CmdResult event_log_req_result = this->nuki_lock_.retrieveLogEntries(0, MAX_EVENT_LOG_ENTRIES, 1, false);
+    char event_log_req_result_as_string[30];
+    NukiLock::cmdResultToString(event_log_req_result, event_log_req_result_as_string);
 
-    this->set_timeout("wait_for_log_entries", 5000, [this]() {
-        std::list<NukiLock::LogEntry> log;
-        this->nuki_lock_.getLogEntries(&log);
+    if (event_log_req_result == Nuki::CmdResult::Success) {
+        ESP_LOGD(TAG, "retrieveLogEntries has resulted in %s (%d)", event_log_req_result_as_string, event_log_req_result);
+        
+        this->set_timeout("wait_for_log_entries", 5000, [this]() {
+            std::list<NukiLock::LogEntry> log;
+            this->nuki_lock_.getLogEntries(&log);
+    
+            ESP_LOGD(TAG, "Log Entries: %d", log.size());
 
-        if(log.size() > MAX_EVENT_LOG_ENTRIES)
-        {
-            log.resize(MAX_EVENT_LOG_ENTRIES);
-        }
+            if(log.size() > 0) {
+                if(log.size() > MAX_EVENT_LOG_ENTRIES) {
+                    log.resize(MAX_EVENT_LOG_ENTRIES);
+                }
+        
+                log.sort([](const NukiLock::LogEntry& a, const NukiLock::LogEntry& b) {
+                    return a.index < b.index;
+                });
 
-        log.sort([](const NukiLock::LogEntry& a, const NukiLock::LogEntry& b)
-        {
-            return a.index < b.index;
+                this->process_log_entries(log);
+            } else {
+                ESP_LOGD(TAG, "No log entries! Did you set the security pin?");
+            }
         });
-
-        if(log.size() > 0)
-        {
-            this->process_log_entries(log);
-        }
-    });
+    } else {
+        ESP_LOGE(TAG, "retrieveAuthorizationEntries has resulted in %s (%d)", event_log_req_result_as_string, event_log_req_result);
+        this->event_log_update_ = true;
+    }
 }
 
-void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>& log_entries)
-{
+void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>& log_entries) {
+    ESP_LOGD(TAG, "Process Event Log Entries");
+
     char str[50];
     char auth_name[33];
     uint32_t auth_index = 0;
 
-    for(const auto& log : log_entries)
-    {
+    for(const auto& log : log_entries) {
         memset(auth_name, 0, sizeof(auth_name));
         auth_name[0] = '\0';
 
@@ -538,42 +538,38 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
         {
             int sizeName = sizeof(log.name);
             memcpy(auth_name, log.name, sizeName);
-            if(auth_name[sizeName - 1] != '\0')
-            {
+            if(auth_name[sizeName - 1] != '\0') {
                 auth_name[sizeName] = '\0';
             }
 
-            if (std::string(auth_name) == "")
-            {
+            if (std::string(auth_name) == "") {
                 memset(auth_name, 0, sizeof(auth_name));
                 memcpy(auth_name, "Manual", strlen("Manual"));
             }
 
-            if(log.index > auth_index)
-            {
+            if(log.index > auth_index) {
                 auth_index = log.index;
                 this->auth_id_ = log.authId;
 
                 memset(this->auth_name_, 0, sizeof(this->auth_name_));
                 memcpy(this->auth_name_, auth_name, sizeof(auth_name));
 
-                if(auth_name[sizeName - 1] != '\0' && this->auth_entries_.count(this->auth_id_) > 0)
-                {
+                if(auth_name[sizeName - 1] != '\0' && this->auth_entries_.count(this->auth_id_) > 0) {
                     memset(this->auth_name_, 0, sizeof(this->auth_name_));
                     memcpy(this->auth_name_, this->auth_entries_[this->auth_id_].c_str(), sizeof(this->auth_entries_[this->auth_id_].c_str()));
                 }
             }
         }
 
-        if (strcmp(event_, "esphome.none") != 0)
-        {
+        if (strcmp(event_, "esphome.none") != 0) {
+            ESP_LOGD(TAG, "Prepare event data for %s", event_);
+
             std::map<std::string, std::string> event_data;
             event_data["index"] = std::to_string(log.index);
             event_data["authorizationId"] = std::to_string(log.authId);
             event_data["authorizationName"] = this->auth_name_;
 
-            if(this->auth_entries_.count(log.authId) > 0)
-            {
+            if(this->auth_entries_.count(log.authId) > 0) {
                 event_data["authorizationName"] = this->auth_entries_[log.authId];
             }
 
@@ -588,8 +584,7 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
             NukiLock::loggingTypeToString(log.loggingType, str);
             event_data["type"] = str;
 
-            switch(log.loggingType)
-            {
+            switch(log.loggingType) {
                 case NukiLock::LoggingType::LockAction:
                     memset(str, 0, sizeof(str));
                     NukiLock::lockactionToString((NukiLock::LockAction)log.data[0], str);
@@ -609,8 +604,7 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
                     NukiLock::lockactionToString((NukiLock::LockAction)log.data[0], str);
                     event_data["action"] = str;
 
-                    switch(log.data[1])
-                    {
+                    switch(log.data[1]) {
                         case 0:
                             event_data["trigger"] = "arrowkey";
                             break;
@@ -627,16 +621,11 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
 
                     memset(str, 0, sizeof(str));
 
-                    if(log.data[2] == 9)
-                    {
+                    if(log.data[2] == 9) {
                         event_data["trigger"] = "notAuthorized";
-                    }
-                    else if (log.data[2] == 224)
-                    {
+                    } else if (log.data[2] == 224) {
                         event_data["trigger"] = "invalidCode";
-                    }
-                    else
-                    {
+                    } else {
                         NukiLock::completionStatusToString((NukiLock::CompletionStatus)log.data[2], str);
                         event_data["completionStatus"] = str;
                     }
@@ -645,8 +634,7 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
                     break;
 
                 case NukiLock::LoggingType::DoorSensor:
-                    switch(log.data[0])
-                    {
+                    switch(log.data[0]) {
                         case 0:
                             event_data["action"] = "DoorOpened";
                             break;
@@ -665,8 +653,7 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
             
             // Send as Home Assistant Event
             #ifdef USE_API
-            if(log.index > this->last_rolling_log_id)
-            {
+            if(log.index > this->last_rolling_log_id) {
                 this->last_rolling_log_id = log.index;
                 
                 auto capi = new esphome::api::CustomAPIDevice();
@@ -716,21 +703,19 @@ bool NukiLockComponent::execute_lock_action(NukiLock::LockAction lock_action) {
     }
 }
 
-void NukiLockComponent::set_security_pin(uint16_t security_pin)
-{
+void NukiLockComponent::set_override_security_pin(uint16_t security_pin) {
     this->security_pin_ = security_pin;
+    save_settings();
+    use_security_pin();
+}
 
+void NukiLockComponent::use_security_pin() {
     bool result = this->nuki_lock_.saveSecurityPincode(this->security_pin_);
     if (result) {
         ESP_LOGI(TAG, "Set pincode done");
     } else {
         ESP_LOGE(TAG, "Set pincode failed!");
     }
-
-    #ifdef USE_NUMBER
-    if (this->security_pin_number_ != nullptr)
-        this->security_pin_number_->publish_state(this->security_pin_);
-    #endif
 }
 
 void NukiLockComponent::setup() {
@@ -744,11 +729,15 @@ void NukiLockComponent::setup() {
     this->pref_ = global_preferences->make_preference<NukiLockSettings>(global_nuki_lock_id);
 
     NukiLockSettings recovered;
-    if (!this->pref_.load(&recovered))
-    {
+    if (!this->pref_.load(&recovered)) {
         recovered = {0};
     }
-    this->set_security_pin(recovered.security_pin);
+
+    if(recovered.security_pin != 0)
+    {
+        this->security_pin_ = recovered.security_pin;
+    }
+    this->use_security_pin();
 
     this->traits.set_supported_states(
         std::set<lock::LockState> {
@@ -776,8 +765,11 @@ void NukiLockComponent::setup() {
         this->advanced_config_update_ = true;
 
         // First auth data request, then every 2nd time
-        this->auth_data_required_ = true;
-        this->auth_data_update_ = true;
+        // Requesting only when events are enabled
+        if (strcmp(event_, "esphome.none") != 0) {
+            this->auth_data_required_ = true;
+            this->auth_data_update_ = true;
+        }
 
         ESP_LOGI(TAG, "%s Nuki paired", this->deviceName_);
         #ifdef USE_BINARY_SENSOR
@@ -1125,7 +1117,6 @@ void NukiLockComponent::dump_config() {
     #endif
     #ifdef USE_NUMBER
     LOG_NUMBER(TAG, "LED Brightness", this->led_brightness_number_);
-    LOG_NUMBER(TAG, "Security Pin", this->security_pin_number_);
     LOG_NUMBER(TAG, "Timezone Offset", this->timezone_offset_number_);
     #endif
     #ifdef USE_SELECT
@@ -1140,17 +1131,25 @@ void NukiLockComponent::dump_config() {
 }
 
 void NukiLockComponent::notify(Nuki::EventType event_type) {
+    
+    // Ignore bad pin error to prevent loop
+    if(event_type == Nuki::EventType::ERROR_BAD_PIN) {
+        return;
+    }
+
     this->status_update_ = true;
     this->config_update_ = true;
     this->advanced_config_update_ = true;
     
     // Request Auth Data on every second notify, otherwise just event logs
     // Event logs are always requested after Auth Data requests
-    this->auth_data_required_ = !this->auth_data_required_;
-    if(this->auth_data_required_) {
-        this->auth_data_update_ = true;
-    } else {
-        this->event_log_update_ = true;
+    if (strcmp(event_, "esphome.none") != 0) {
+        this->auth_data_required_ = !this->auth_data_required_;
+        if(this->auth_data_required_) {
+            this->auth_data_update_ = true;
+        } else {
+            this->event_log_update_ = true;
+        }
     }
 
     ESP_LOGI(TAG, "event notified %d", event_type);
@@ -1533,11 +1532,6 @@ void NukiLockDstModeEnabledSwitch::write_state(bool state) {
 #ifdef USE_NUMBER
 void NukiLockLedBrightnessNumber::control(float value) {
     this->parent_->set_config_number("led_brightness", value);
-}
-void NukiLockSecurityPinNumber::control(float value) {
-    this->publish_state(value);
-    this->parent_->set_security_pin(value);
-    this->parent_->save_settings();
 }
 void NukiLockTimeZoneOffsetNumber::control(float value) {
     this->parent_->set_config_number("timezone_offset", value);

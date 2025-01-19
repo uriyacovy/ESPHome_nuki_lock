@@ -28,6 +28,7 @@ lock:
   # Optional: Settings
     pairing_mode_timeout: 300s
     event: "nuki"
+    security_pin: 1234
   # Optional: Binary Sensors
     is_connected:
       name: "Nuki Connected"
@@ -59,8 +60,6 @@ lock:
     led_enabled:
       name: "Nuki LED Signal"
   # Optional: Number Inputs
-    security_pin:
-      name: "Nuki Security Pin"
     led_brightness:
       name: "Nuki LED Brightness"
     timezone_offset:
@@ -197,6 +196,19 @@ on_...:
   - nuki_lock.unpair:
 ```
 
+### Action: Security Pin
+
+> [!IMPORTANT]  
+> Overriding the security PIN will save it to flash!  
+> To revert back to the PIN defined in your YAML configuration, you must set the override PIN to `0`.
+
+To override the security pin without recompiling, use the following action:
+```yaml
+on_...:
+  - nuki_lock.set_security_pin:
+      security_pin: 1234
+```
+
 ### Callbacks
 To run specific actions when certain events occur, you can use the following callbacks:
 ```yaml
@@ -209,14 +221,18 @@ on_paired_action:
 ```
 
 ### Events
-By default, this component sends Nuki logs as events to Home Assistant, enabling you to use them in automations. 
+By default, this component sends Nuki logs as events to Home Assistant, enabling you to use them in automations.
+
+> [!IMPORTANT]
+> To receive events, **you must set your security PIN**.
+> Without it, it's not possible to access any event logs from your lock.
 
 - **To Disable Logs**: Set the `event` property in your YAML configuration to `none` if you don't want to receive log events.
   
 - **To View Log Events**: Go to **Home Assistant Developer Tools** -> **Events**, and listen for `esphome.nuki` events to monitor log activity.
 
-These log events provide insights into lock operations and help fine-tune automations based on real-time lock data.
-
+These log events provide insights into lock operations and help fine-tune automations based on lock data.
+Keep in mind that the logs **are not displayed in real-time** and may take up to a minute to arrive.
 
 Example Event:
 ```yaml
@@ -245,6 +261,11 @@ context:
 ```
 
 ## Entities
+
+> [!IMPORTANT]  
+> Most settings entities **require the security PIN** to make changes.  
+> Without the PIN, modifying these settings is not possible.  
+> Additionally, the `Last Unlock User` feature will only function if events are enabled!  
 
 **Lock:**  
 - Lock
@@ -291,7 +312,6 @@ context:
 **Number Input:**  
 - LED Brightness
 - Timezone Offset
-- Security Pin
 
 **Button:**  
 - Unpair Device

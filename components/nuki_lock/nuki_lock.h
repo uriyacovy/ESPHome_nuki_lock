@@ -63,7 +63,6 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
     #endif
     #ifdef USE_NUMBER
     SUB_NUMBER(led_brightness)
-    SUB_NUMBER(security_pin)
     SUB_NUMBER(timezone_offset)
     #endif
     #ifdef USE_SELECT
@@ -127,6 +126,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
 
         void set_pairing_mode_timeout(uint16_t pairing_mode_timeout) { this->pairing_mode_timeout_ = pairing_mode_timeout; }
         void set_event(const char *event) { this->event_ = event; }
+        void set_security_pin(uint16_t security_pin) { this->security_pin_ = security_pin; }
 
         void add_pairing_mode_on_callback(std::function<void()> &&callback);
         void add_pairing_mode_off_callback(std::function<void()> &&callback);
@@ -154,8 +154,8 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
 
         void unpair();
         void set_pairing_mode(bool enabled);
-
-        void set_security_pin(uint16_t security_pin);
+        void use_security_pin();
+        void set_override_security_pin(uint16_t security_pin);
         void save_settings();
 
         #ifdef USE_NUMBER
@@ -252,6 +252,17 @@ template<typename... Ts> class NukiLockPairingModeAction : public Action<Ts...> 
         TEMPLATABLE_VALUE(bool, pairing_mode)
 
         void play(Ts... x) { this->parent_->set_pairing_mode(this->pairing_mode_.value(x...)); }
+
+    protected:
+        NukiLockComponent *parent_;
+};
+
+template<typename... Ts> class NukiLockSecurityPinAction : public Action<Ts...> {
+    public:
+        NukiLockSecurityPinAction(NukiLockComponent *parent) : parent_(parent) {}
+        TEMPLATABLE_VALUE(uint16_t, security_pin)
+
+        void play(Ts... x) { this->parent_->set_override_security_pin(this->security_pin_.value(x...)); }
 
     protected:
         NukiLockComponent *parent_;
@@ -457,13 +468,6 @@ class NukiLockDstModeEnabledSwitch : public switch_::Switch, public Parented<Nuk
 class NukiLockLedBrightnessNumber : public number::Number, public Parented<NukiLockComponent> {
     public:
         NukiLockLedBrightnessNumber() = default;
-
-    protected:
-        void control(float value) override;
-};
-class NukiLockSecurityPinNumber : public number::Number, public Parented<NukiLockComponent> {
-    public:
-        NukiLockSecurityPinNumber() = default;
 
     protected:
         void control(float value) override;
