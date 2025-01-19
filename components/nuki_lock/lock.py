@@ -137,9 +137,10 @@ CONF_ADVERTISING_MODE_SELECT_OPTIONS = [
 ]
 
 CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
+CONF_PAIRING_AS_APP = "pairing_as_app"
 CONF_SECURITY_PIN = "security_pin"
-CONF_EVENT = "event"
 CONF_ALT_CONNECT_MODE = "alternative_connect_mode"
+CONF_EVENT = "event"
 
 CONF_SET_PAIRING_MODE = "pairing_mode"
 CONF_SET_SECURITY_PIN = "security_pin"
@@ -377,6 +378,7 @@ CONFIG_SCHEMA = cv.All(
                 icon="mdi:timer-cog",
             ),
             cv.Optional(CONF_ALT_CONNECT_MODE, default="true"): cv.boolean,
+            cv.Optional(CONF_PAIRING_AS_APP, default="false"): cv.boolean,
             cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_EVENT, default="nuki"): cv.string,
             cv.Optional(CONF_SECURITY_PIN): cv.uint16_t,
@@ -416,6 +418,9 @@ async def to_code(config):
         
     if CONF_SECURITY_PIN in config:
         cg.add(var.set_security_pin(config[CONF_SECURITY_PIN]))
+        
+    if CONF_PAIRING_AS_APP in config:
+        cg.add(var.set_pairing_as_app(config[CONF_PAIRING_AS_APP]))
 
     # Binary Sensor
     if is_connected := config.get(CONF_IS_CONNECTED_BINARY_SENSOR):

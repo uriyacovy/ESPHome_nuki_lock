@@ -34,6 +34,7 @@ lock:
     event: "nuki"
     security_pin: 1234
     alternative_connect_mode: true
+    pairing_as_app: false
   # Optional: Binary Sensors
     is_connected:
       name: "Nuki Connected"

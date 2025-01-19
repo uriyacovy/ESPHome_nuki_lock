@@ -963,9 +963,9 @@ void NukiLockComponent::setup() {
 
     if(recovered.security_pin != 0) {
         this->security_pin_ = recovered.security_pin;
-        ESP_LOGD(TAG, "Using saved security pin: %s", this->security_pin_);
+        ESP_LOGD(TAG, "Using saved security pin: %i", this->security_pin_);
     } else {
-        ESP_LOGD(TAG, "Using security pin from configuration file: %s", this->security_pin_);
+        ESP_LOGD(TAG, "Using security pin from configuration file: %i", this->security_pin_);
     }
     this->use_security_pin();
 
@@ -1001,13 +1001,13 @@ void NukiLockComponent::setup() {
             this->auth_data_update_ = true;
         }
 
-        ESP_LOGI(TAG, "%s Nuki paired", this->deviceName_);
+        ESP_LOGI(TAG, "%s Nuki paired", this->deviceName_.c_str());
         #ifdef USE_BINARY_SENSOR
         if (this->is_paired_binary_sensor_ != nullptr)
             this->is_paired_binary_sensor_->publish_initial_state(true);
         #endif
     } else {
-        ESP_LOGW(TAG, "%s Nuki is not paired", this->deviceName_);
+        ESP_LOGW(TAG, "%s Nuki is not paired", this->deviceName_.c_str());
         #ifdef USE_BINARY_SENSOR
         if (this->is_paired_binary_sensor_ != nullptr)
             this->is_paired_binary_sensor_->publish_initial_state(false);
@@ -1132,9 +1132,11 @@ void NukiLockComponent::update() {
         // Pairing Mode is active
         if(this->pairing_mode_) {
             // Pair Nuki
-            bool paired = (this->nuki_lock_.pairNuki() == Nuki::PairingResult::Success);
+            Nuki::AuthorizationIdType type = this->pairing_as_app_ ? Nuki::AuthorizationIdType::App : Nuki::AuthorizationIdType::Bridge;
+            bool paired = this->nuki_lock_.pairNuki(type) == Nuki::PairingResult::Success;
+
             if (paired) {
-                ESP_LOGI(TAG, "Nuki paired successfuly!");
+                ESP_LOGI(TAG, "Nuki paired successfuly as %s!", this->pairing_as_app_ ? "App" : "Bridge");
                 this->update_status();
                 this->paired_callback_.call();
                 this->set_pairing_mode(false);

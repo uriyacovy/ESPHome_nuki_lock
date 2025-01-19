@@ -124,6 +124,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         void notify(Nuki::EventType event_type) override;
         float get_setup_priority() const override { return setup_priority::HARDWARE - 1.0f; }
 
+        void set_pairing_as_app(bool pairing_as_app) { this->pairing_as_app_ = pairing_as_app; }
         void set_pairing_mode_timeout(uint16_t pairing_mode_timeout) { this->pairing_mode_timeout_ = pairing_mode_timeout; }
         void set_event(const char *event) {
             this->event_ = event;
@@ -212,9 +213,10 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         bool open_latch_;
         bool lock_n_go_;
 
+        bool pairing_as_app_ = false;
         uint16_t security_pin_ = 0;
         const char* event_;
-        bool send_events_;
+        bool send_events_ = false;
 
         uint16_t pairing_mode_timeout_ = 0;
         bool pairing_mode_ = false;

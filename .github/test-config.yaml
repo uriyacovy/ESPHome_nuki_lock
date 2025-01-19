@@ -101,6 +101,7 @@ lock:
     event: "nuki"
     security_pin: 1234
     alternative_connect_mode: true
+    pairing_as_app: false
 
     on_pairing_mode_on_action:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
