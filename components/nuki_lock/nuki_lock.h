@@ -125,7 +125,12 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         float get_setup_priority() const override { return setup_priority::HARDWARE - 1.0f; }
 
         void set_pairing_mode_timeout(uint16_t pairing_mode_timeout) { this->pairing_mode_timeout_ = pairing_mode_timeout; }
-        void set_event(const char *event) { this->event_ = event; }
+        void set_event(const char *event) {
+            this->event_ = event;
+            if(strcmp(event, "esphome.none") != 0) {
+                this->send_events_ = true;
+            }
+        }
         void set_security_pin(uint16_t security_pin) { this->security_pin_ = security_pin; }
 
         void add_pairing_mode_on_callback(std::function<void()> &&callback);
@@ -138,19 +143,18 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
 
         lock::LockState nuki_to_lock_state(NukiLock::LockState);
         bool nuki_doorsensor_to_binary(Nuki::DoorSensorState);
-        std::string nuki_doorsensor_to_string(Nuki::DoorSensorState nuki_door_sensor_state);
 
-        uint8_t fob_action_to_int(std::string str);
-        std::string fob_action_to_string(uint8_t action);
+        uint8_t fob_action_to_int(const char *str);
+        void fob_action_to_string(const int action, char* str);
 
-        NukiLock::ButtonPressAction button_press_action_to_enum(std::string str);
-        const char* button_press_action_to_string(NukiLock::ButtonPressAction action);
+        NukiLock::ButtonPressAction button_press_action_to_enum(const char* str);
+        void button_press_action_to_string(NukiLock::ButtonPressAction action, char* str);
 
-        Nuki::TimeZoneId timezone_to_enum(std::string str);
-        std::string timezone_to_string(Nuki::TimeZoneId timezoneId);
+        Nuki::TimeZoneId timezone_to_enum(const char *str);
+        void timezone_to_string(const Nuki::TimeZoneId timeZoneId, char* str);
 
-        Nuki::AdvertisingMode advertising_mode_to_enum(std::string str);
-        std::string advertising_mode_to_string(Nuki::AdvertisingMode mode);
+        Nuki::AdvertisingMode advertising_mode_to_enum(const char *str);
+        void advertising_mode_to_string(const Nuki::AdvertisingMode mode, char* str);
 
         void unpair();
         void set_pairing_mode(bool enabled);
@@ -159,13 +163,13 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         void save_settings();
 
         #ifdef USE_NUMBER
-        void set_config_number(std::string config, float value);
+        void set_config_number(const char* config, float value);
         #endif
         #ifdef USE_SWITCH
-        void set_config_switch(std::string config, bool value);
+        void set_config_switch(const char* config, bool value);
         #endif
         #ifdef USE_SELECT
-        void set_config_select(std::string config, const std::string &value);
+        void set_config_select(const char* config, const char* value);
         #endif
 
     protected:
@@ -210,6 +214,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
 
         uint16_t security_pin_ = 0;
         const char* event_;
+        bool send_events_;
 
         uint16_t pairing_mode_timeout_ = 0;
         bool pairing_mode_ = false;
@@ -360,19 +365,19 @@ class NukiLockPairingModeSwitch : public switch_::Switch, public Parented<NukiLo
 };
 
 class NukiLockAutoUnlatchEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
-   public:
-      NukiLockAutoUnlatchEnabledSwitch() = default;
+    public:
+        NukiLockAutoUnlatchEnabledSwitch() = default;
 
-   protected:
-      void write_state(bool state) override;
+    protected:
+        void write_state(bool state) override;
 };
 
 class NukiLockButtonEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
-   public:
-      NukiLockButtonEnabledSwitch() = default;
+    public:
+        NukiLockButtonEnabledSwitch() = default;
 
-   protected:
-      void write_state(bool state) override;
+    protected:
+        void write_state(bool state) override;
 };
 
 class NukiLockLedEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
