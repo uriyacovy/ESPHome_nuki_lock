@@ -122,7 +122,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         void update() override;
         void dump_config() override;
         void notify(Nuki::EventType event_type) override;
-        float get_setup_priority() const override { return setup_priority::AFTER_WIFI; }
+        float get_setup_priority() const override { return setup_priority::HARDWARE - 1.0f; }
 
         void set_pairing_as_app(bool pairing_as_app) { this->pairing_as_app_ = pairing_as_app; }
         void set_pairing_mode_timeout(uint16_t pairing_mode_timeout) { this->pairing_mode_timeout_ = pairing_mode_timeout; }
