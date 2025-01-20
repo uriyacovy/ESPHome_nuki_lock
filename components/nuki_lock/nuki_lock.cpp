@@ -669,8 +669,6 @@ void NukiLockComponent::update_auth_data() {
     this->auth_data_update_ = false;
     this->cancel_timeout("wait_for_auth_data");
 
-    ESP_LOGD(TAG, "Retrieve Auth Data");
-
     Nuki::CmdResult auth_data_req_result = this->nuki_lock_.retrieveAuthorizationEntries(0, MAX_AUTH_DATA_ENTRIES);
     char auth_data_req_result_as_string[30];
     NukiLock::cmdResultToString(auth_data_req_result, auth_data_req_result_as_string);
@@ -686,6 +684,8 @@ void NukiLockComponent::update_auth_data() {
             ESP_LOGD(TAG, "Authorization Entries: %d", authEntries.size());
 
             if(authEntries.size() > 0) {
+                ESP_LOGD(TAG, "Authorization Entry Count: %d", authEntries.size());
+
                 authEntries.sort([](const NukiLock::AuthorizationEntry& a, const NukiLock::AuthorizationEntry& b) {
                     return a.authId < b.authId;
                 });
@@ -702,7 +702,7 @@ void NukiLockComponent::update_auth_data() {
                 // Request Event logs when Auth Data is available
                 this->event_log_update_ = true;
             } else {
-                ESP_LOGD(TAG, "No auth entries! Did you set the security pin?");
+                ESP_LOGW(TAG, "No auth entries! Did you set the security pin?");
             }
         });
     } else {
@@ -714,8 +714,6 @@ void NukiLockComponent::update_auth_data() {
 void NukiLockComponent::update_event_logs() {
     this->event_log_update_ = false;
     this->cancel_timeout("wait_for_log_entries");
-
-    ESP_LOGD(TAG, "Retrieve Event Log Entries");
 
     Nuki::CmdResult event_log_req_result = this->nuki_lock_.retrieveLogEntries(0, MAX_EVENT_LOG_ENTRIES, 1, false);
     char event_log_req_result_as_string[30];
@@ -741,7 +739,7 @@ void NukiLockComponent::update_event_logs() {
 
                 this->process_log_entries(log);
             } else {
-                ESP_LOGD(TAG, "No log entries! Did you set the security pin?");
+                ESP_LOGW(TAG, "No log entries! Did you set the security pin?");
             }
         });
     } else {
@@ -769,7 +767,7 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
                 auth_name[sizeName] = '\0';
             }
 
-            if (std::string(auth_name) == "") {
+            if (strcmp(auth_name, "") == 0) {
                 memset(auth_name, 0, sizeof(auth_name));
                 memcpy(auth_name, "Manual", strlen("Manual"));
             }
