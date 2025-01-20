@@ -10,9 +10,12 @@ The lock entity updates whenever the lock's state changes - whether through the 
 ## How to Use
 To integrate your Nuki Smartlock, add the following code snippet to your ESPHome YAML file.
 
-> [!NOTE]  
+> [!WARNING]  
 > This component relies on NimBLE, which is incompatible with the ESPHome BLE stack.
 > Please remove all Bluetooth components (esp32_ble, esp32_improv, ...) from your configuration to use this component.
+
+> [!TIP]  
+> If your ESP32 is equipped with PSRAM, you can add the `psram` component to enable the use of PSRAM for the NimBLE Stack, enhancing the reliability of this component.
 
 ```yaml
 external_components:
@@ -33,6 +36,7 @@ lock:
     pairing_mode_timeout: 300s
     event: "nuki"
     security_pin: 1234
+  # Optional: Advanced Settings
     alternative_connect_mode: true
     pairing_as_app: false
   # Optional: Binary Sensors
