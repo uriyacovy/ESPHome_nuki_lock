@@ -448,10 +448,10 @@ void NukiLockComponent::update_status()
     this->status_update_ = false;
 
     char str[50];
-    memset(&str, 0, sizeof(str));
+    memset(str, 0, sizeof(str));
 
     Nuki::CmdResult cmd_result = this->nuki_lock_.requestKeyTurnerState(&(this->retrieved_key_turner_state_));
-    memset(&str, 0, sizeof(str));
+    memset(str, 0, sizeof(str));
     NukiLock::cmdResultToString(cmd_result, str);
 
     if (cmd_result == Nuki::CmdResult::Success) {
@@ -492,17 +492,17 @@ void NukiLockComponent::update_status()
         #endif
         #ifdef USE_TEXT_SENSOR
         if (this->door_sensor_state_text_sensor_ != nullptr)
-            memset(&str, 0, sizeof(str));
+            memset(str, 0, sizeof(str));
             NukiLock::doorSensorStateToString(this->retrieved_key_turner_state_.doorSensorState, str);
             this->door_sensor_state_text_sensor_->publish_state(str);
 
         if (this->last_lock_action_text_sensor_ != nullptr)
-            memset(&str, 0, sizeof(str));
+            memset(str, 0, sizeof(str));
             NukiLock::lockactionToString(this->retrieved_key_turner_state_.lastLockAction, str);
             this->last_lock_action_text_sensor_->publish_state(str);
 
         if (this->last_lock_action_trigger_text_sensor_ != nullptr)
-            memset(&str, 0, sizeof(str));
+            memset(str, 0, sizeof(str));
             NukiLock::triggerToString(this->retrieved_key_turner_state_.lastLockActionTrigger, str);
             this->last_lock_action_trigger_text_sensor_->publish_state(str);
         #endif
