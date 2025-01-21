@@ -197,7 +197,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
 
         std::map<uint32_t, std::string> auth_entries_;
         uint32_t auth_id_ = 0;
-        char auth_name_[33];
+        char auth_name_[33] = {0};
 
         uint32_t last_command_executed_time_ = 0;
         uint32_t command_cooldown_millis = 0;
