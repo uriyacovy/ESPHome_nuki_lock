@@ -51,6 +51,8 @@ lock:
   # Optional: Sensors
     battery_level:
       name: "Nuki Battery Level"
+    bt_signal_strength:
+      name: "Bluetooth Signal Strength"
   # Optional: Text Sensors
     door_sensor_state:
       name: "Nuki Door Sensor: State"

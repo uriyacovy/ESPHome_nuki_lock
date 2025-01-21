@@ -467,6 +467,9 @@ void NukiLockComponent::update_status() {
         if (this->battery_level_sensor_ != nullptr) {
             this->battery_level_sensor_->publish_state(this->nuki_lock_.getBatteryPerc());
         }
+        if (this->bt_signal_sensor_ != nullptr) {
+            this->bt_signal_sensor_->publish_state(this->nuki_lock_.getRssi());
+        }
         #endif
         #ifdef USE_TEXT_SENSOR
         if (this->door_sensor_state_text_sensor_ != nullptr){
@@ -679,8 +682,6 @@ void NukiLockComponent::update_auth_data() {
             std::list<NukiLock::AuthorizationEntry> authEntries;
             this->nuki_lock_.getAuthorizationEntries(&authEntries);
     
-            ESP_LOGD(TAG, "Authorization Entries: %d", authEntries.size());
-
             if (!authEntries.empty()) {
                 ESP_LOGD(TAG, "Authorization Entry Count: %d", authEntries.size());
 
@@ -782,8 +783,6 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
         }
 
         if (this->send_events_) {
-            ESP_LOGD(TAG, "Prepare event data for %s", event_);
-
             std::map<std::string, std::string> event_data;
             event_data["index"] = std::to_string(log.index);
             event_data["authorizationId"] = std::to_string(log.authId);
@@ -1333,6 +1332,7 @@ void NukiLockComponent::dump_config() {
     #endif
     #ifdef USE_SENSOR
     LOG_SENSOR(TAG, "Battery Level", this->battery_level_sensor_);
+    LOG_SENSOR(TAG, "Bluetooth Signal", this->bt_signal_sensor_);
     #endif
     #ifdef USE_SWITCH
     LOG_SWITCH(TAG, "Pairing Mode", this->pairing_mode_switch_);

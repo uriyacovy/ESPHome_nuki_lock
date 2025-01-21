@@ -54,6 +54,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
     #endif
     #ifdef USE_SENSOR
     SUB_SENSOR(battery_level)
+    SUB_SENSOR(bt_signal)
     #endif
     #ifdef USE_TEXT_SENSOR
     SUB_TEXT_SENSOR(door_sensor_state)

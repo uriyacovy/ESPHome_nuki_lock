@@ -10,7 +10,9 @@ from esphome.const import (
     DEVICE_CLASS_BATTERY, 
     DEVICE_CLASS_DOOR, 
     DEVICE_CLASS_SWITCH,
+    DEVICE_CLASS_SIGNAL_STRENGTH,
     UNIT_PERCENT,
+    UNIT_DECIBEL_MILLIWATT,
     ENTITY_CATEGORY_CONFIG, 
     ENTITY_CATEGORY_DIAGNOSTIC,
     CONF_TRIGGER_ID,
@@ -27,6 +29,7 @@ CONF_BATTERY_CRITICAL_BINARY_SENSOR = "battery_critical"
 CONF_DOOR_SENSOR_BINARY_SENSOR = "door_sensor"
 
 CONF_BATTERY_LEVEL_SENSOR = "battery_level"
+CONF_BT_SIGNAL_SENSOR = "bt_signal_strength"
 
 CONF_DOOR_SENSOR_STATE_TEXT_SENSOR = "door_sensor_state"
 CONF_LAST_UNLOCK_USER_TEXT_SENSOR = "last_unlock_user"
@@ -244,6 +247,12 @@ CONFIG_SCHEMA = cv.All(
                 unit_of_measurement=UNIT_PERCENT,
                 icon="mdi:battery-50",
             ),
+            cv.Optional(CONF_BT_SIGNAL_SENSOR): sensor.sensor_schema(
+                device_class=DEVICE_CLASS_SIGNAL_STRENGTH,
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                unit_of_measurement=UNIT_DECIBEL_MILLIWATT,
+                icon="mdi:bluetooth-audio"
+            ),
             cv.Optional(CONF_UNPAIR_BUTTON): button.button_schema(
                 NukiLockUnpairButton,
                 entity_category=ENTITY_CATEGORY_CONFIG,
@@ -443,6 +452,10 @@ async def to_code(config):
     if battery_level := config.get(CONF_BATTERY_LEVEL_SENSOR):
         sens = await sensor.new_sensor(battery_level)
         cg.add(var.set_battery_level_sensor(sens))
+
+    if bt_signal := config.get(CONF_BT_SIGNAL_SENSOR):
+        sens = await sensor.new_sensor(bt_signal)
+        cg.add(var.set_bt_signal_sensor(sens))
 
     # Text Sensor
     if door_sensor_state := config.get(CONF_DOOR_SENSOR_STATE_TEXT_SENSOR):
