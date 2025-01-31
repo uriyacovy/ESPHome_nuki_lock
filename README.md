@@ -8,7 +8,14 @@ The lock entity updates whenever the lock's state changes - whether through the 
 
 
 ## How to Use
-To integrate your Nuki Smartlock, add the following code snippet to your ESPHome YAML file:
+To integrate your Nuki Smartlock, add the following code snippet to your ESPHome YAML file.
+
+> [!WARNING]  
+> This component relies on NimBLE, which is incompatible with the ESPHome BLE stack.
+> Please remove all Bluetooth components (esp32_ble, esp32_improv, ...) from your configuration to use this component.
+
+> [!TIP]  
+> If your ESP32 is equipped with PSRAM, you can add the `psram` component to enable the use of PSRAM for the NimBLE Stack, enhancing the reliability of this component.
 
 ```yaml
 external_components:
@@ -29,6 +36,9 @@ lock:
     pairing_mode_timeout: 300s
     event: "nuki"
     security_pin: 1234
+  # Optional: Advanced Settings
+    alternative_connect_mode: true
+    pairing_as_app: false
   # Optional: Binary Sensors
     is_connected:
       name: "Nuki Connected"
@@ -41,6 +51,8 @@ lock:
   # Optional: Sensors
     battery_level:
       name: "Nuki Battery Level"
+    bt_signal_strength:
+      name: "Bluetooth Signal Strength"
   # Optional: Text Sensors
     door_sensor_state:
       name: "Nuki Door Sensor: State"
@@ -198,7 +210,7 @@ on_...:
 
 ### Action: Security Pin
 
-> [!IMPORTANT]  
+> [!CAUTION]  
 > Overriding the security PIN will save it to flash!  
 > To revert back to the PIN defined in your YAML configuration, you must set the override PIN to `0`.
 
@@ -223,7 +235,7 @@ on_paired_action:
 ### Events
 By default, this component sends Nuki logs as events to Home Assistant, enabling you to use them in automations.
 
-> [!IMPORTANT]
+> [!NOTE]
 > To receive events, **you must set your security PIN**.
 > Without it, it's not possible to access any event logs from your lock.
 
@@ -262,7 +274,7 @@ context:
 
 ## Entities
 
-> [!IMPORTANT]  
+> [!NOTE]  
 > Most settings entities **require the security PIN** to make changes.  
 > Without the PIN, modifying these settings is not possible.  
 > Additionally, the `Last Unlock User` feature will only function if events are enabled!  
@@ -326,4 +338,3 @@ The module depends on the work done by [I-Connect](https://github.com/I-Connect)
 - Nuki smart lock v3
 - Nuki smart lock v2
 - Nuki door sensor
-

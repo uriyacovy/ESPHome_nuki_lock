@@ -1,32 +1,37 @@
+import logging
+from esphome.core import CORE
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import automation
 from esphome.components import lock, binary_sensor, text_sensor, sensor, switch, button, number, select
-from esphome.components.number import NUMBER_MODES
 from esphome.const import (
     CONF_ID, 
-    CONF_BATTERY_LEVEL, 
     DEVICE_CLASS_CONNECTIVITY, 
     DEVICE_CLASS_BATTERY, 
     DEVICE_CLASS_DOOR, 
     DEVICE_CLASS_SWITCH,
+    DEVICE_CLASS_SIGNAL_STRENGTH,
     UNIT_PERCENT,
+    UNIT_DECIBEL_MILLIWATT,
     ENTITY_CATEGORY_CONFIG, 
     ENTITY_CATEGORY_DIAGNOSTIC,
     CONF_TRIGGER_ID,
-    CONF_MODE,
 )
+import esphome.final_validate as fv
+
+LOGGER = logging.getLogger(__name__)
 
 AUTO_LOAD = ["binary_sensor", "text_sensor", "sensor", "switch", "button", "number", "select"]
 
-CONF_IS_CONNECTED = "is_connected"
-CONF_IS_PAIRED = "is_paired"
-CONF_BATTERY_CRITICAL = "battery_critical"
-CONF_DOOR_SENSOR = "door_sensor"
+CONF_IS_CONNECTED_BINARY_SENSOR = "is_connected"
+CONF_IS_PAIRED_BINARY_SENSOR = "is_paired"
+CONF_BATTERY_CRITICAL_BINARY_SENSOR = "battery_critical"
+CONF_DOOR_SENSOR_BINARY_SENSOR = "door_sensor"
 
-CONF_BATTERY_LEVEL = "battery_level"
+CONF_BATTERY_LEVEL_SENSOR = "battery_level"
+CONF_BT_SIGNAL_SENSOR = "bt_signal_strength"
 
-CONF_DOOR_SENSOR_STATE = "door_sensor_state"
+CONF_DOOR_SENSOR_STATE_TEXT_SENSOR = "door_sensor_state"
 CONF_LAST_UNLOCK_USER_TEXT_SENSOR = "last_unlock_user"
 CONF_LAST_LOCK_ACTION_TEXT_SENSOR = "last_lock_action"
 CONF_LAST_LOCK_ACTION_TRIGGER_TEXT_SENSOR = "last_lock_action_trigger"
@@ -57,7 +62,6 @@ CONF_TIMEZONE_SELECT = "timezone"
 CONF_ADVERTISING_MODE_SELECT = "advertising_mode"
 
 CONF_LED_BRIGHTNESS_NUMBER = "led_brightness"
-CONF_SECURITY_PIN = "security_pin"
 CONF_TIMEZONE_OFFSET_NUMBER = "timezone_offset"
 
 CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS = [
@@ -136,6 +140,9 @@ CONF_ADVERTISING_MODE_SELECT_OPTIONS = [
 ]
 
 CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
+CONF_PAIRING_AS_APP = "pairing_as_app"
+CONF_SECURITY_PIN = "security_pin"
+CONF_ALT_CONNECT_MODE = "alternative_connect_mode"
 CONF_EVENT = "event"
 
 CONF_SET_PAIRING_MODE = "pairing_mode"
@@ -192,210 +199,218 @@ PairingModeOnTrigger = nuki_lock_ns.class_("PairingModeOnTrigger", automation.Tr
 PairingModeOffTrigger = nuki_lock_ns.class_("PairingModeOffTrigger", automation.Trigger.template())
 PairedTrigger = nuki_lock_ns.class_("PairedTrigger", automation.Trigger.template())
 
-CONFIG_SCHEMA = lock.LOCK_SCHEMA.extend({
-    cv.GenerateID(): cv.declare_id(NukiLock),
-    cv.Optional(CONF_IS_CONNECTED): binary_sensor.binary_sensor_schema(
-        device_class=DEVICE_CLASS_CONNECTIVITY,
-        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
-        icon="mdi:link"
-    ),
-    cv.Optional(CONF_IS_PAIRED): binary_sensor.binary_sensor_schema(
-        device_class=DEVICE_CLASS_CONNECTIVITY,
-        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
-        icon="mdi:link"
-    ),
-    cv.Optional(CONF_BATTERY_CRITICAL): binary_sensor.binary_sensor_schema(
-        device_class=DEVICE_CLASS_BATTERY,
-        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
-        icon="mdi:battery-alert-variant-outline",
-    ),
-    cv.Optional(CONF_DOOR_SENSOR): binary_sensor.binary_sensor_schema(
-        device_class=DEVICE_CLASS_DOOR,
-        icon="mdi:door-open",
-    ),
+def _validate(config):
+    return config
 
-    cv.Optional(CONF_DOOR_SENSOR_STATE): text_sensor.text_sensor_schema(
-        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
-        icon="mdi:door-open",
-    ),
-    cv.Optional(CONF_LAST_UNLOCK_USER_TEXT_SENSOR):  text_sensor.text_sensor_schema(
-        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
-        icon="mdi:account-clock"
-    ),
-    cv.Optional(CONF_LAST_LOCK_ACTION_TEXT_SENSOR):  text_sensor.text_sensor_schema(
-        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
-        icon="mdi:account-clock"
-    ),
-    cv.Optional(CONF_LAST_LOCK_ACTION_TRIGGER_TEXT_SENSOR):  text_sensor.text_sensor_schema(
-        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
-        icon="mdi:account-clock"
-    ),
-
-    cv.Optional(CONF_BATTERY_LEVEL): sensor.sensor_schema(
-        device_class=DEVICE_CLASS_BATTERY,
-        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
-        unit_of_measurement=UNIT_PERCENT,
-        icon="mdi:battery-50",
-    ),
-
-    cv.Optional(CONF_UNPAIR_BUTTON): button.button_schema(
-        NukiLockUnpairButton,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:link-off",
-    ),
-
-    cv.Optional(CONF_PAIRING_MODE_SWITCH): switch.switch_schema(
-        NukiLockPairingModeSwitch,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:bluetooth"
-    ),
-    cv.Optional(CONF_BUTTON_ENABLED_SWITCH): switch.switch_schema(
-        NukiLockButtonEnabledSwitch,
-        device_class=DEVICE_CLASS_SWITCH,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:radiobox-marked"
-    ),
-    cv.Optional(CONF_AUTO_UNLATCH_SWITCH): switch.switch_schema(
-        NukiLockAutoUnlatchEnabledSwitch,
-        device_class=DEVICE_CLASS_SWITCH,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:auto-upload"
-    ),
-    cv.Optional(CONF_LED_ENABLED_SWITCH): switch.switch_schema(
-        NukiLockLedEnabledSwitch,
-        device_class=DEVICE_CLASS_SWITCH,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:led-on"
-    ),
-    cv.Optional(CONF_NIGHT_MODE_ENABLED_SWITCH): switch.switch_schema(
-        NukiLockNightModeEnabledSwitch,
-        device_class=DEVICE_CLASS_SWITCH,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:shield-moon",
-    ),
-    cv.Optional(CONF_NIGHT_MODE_AUTO_LOCK_ENABLED_SWITCH): switch.switch_schema(
-        NukiLockNightModeAutoLockEnabledSwitch,
-        device_class=DEVICE_CLASS_SWITCH,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:lock-clock"
-    ),
-    cv.Optional(CONF_NIGHT_MODE_AUTO_UNLOCK_DISABLED_SWITCH): switch.switch_schema(
-        NukiLockNightModeAutoUnlockDisabledSwitch,
-        device_class=DEVICE_CLASS_SWITCH,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:lock-remove"
-    ),
-    cv.Optional(CONF_NIGHT_MODE_IMMEDIATE_LOCK_ON_START_ENABLED_SWITCH): switch.switch_schema(
-        NukiLockNightModeImmediateLockOnStartEnabledSwitch,
-        device_class=DEVICE_CLASS_SWITCH,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:lock-alert"
-    ),
-    cv.Optional(CONF_AUTO_LOCK_ENABLED_SWITCH): switch.switch_schema(
-        NukiLockAutoLockEnabledSwitch,
-        device_class=DEVICE_CLASS_SWITCH,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:lock-clock"
-    ),
-    cv.Optional(CONF_AUTO_UNLOCK_DISABLED_SWITCH): switch.switch_schema(
-        NukiLockAutoUnlockDisabledSwitch,
-        device_class=DEVICE_CLASS_SWITCH,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:lock-remove"
-    ),
-    cv.Optional(CONF_IMMEDIATE_AUTO_LOCK_ENABLED_SWITCH): switch.switch_schema(
-        NukiLockImmediateAutoLockEnabledSwitch,
-        device_class=DEVICE_CLASS_SWITCH,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:lock-alert" 
-    ),
-    cv.Optional(CONF_AUTO_UPDATE_ENABLED_SWITCH): switch.switch_schema(
-        NukiLockAutoUpdateEnabledSwitch,
-        device_class=DEVICE_CLASS_SWITCH,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:auto-download",
-    ),
-    cv.Optional(CONF_SINGLE_LOCK_ENABLED_SWITCH): switch.switch_schema(
-        NukiLockSingleLockEnabledSwitch,
-        device_class=DEVICE_CLASS_SWITCH,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:lock-plus",
-    ),
-    cv.Optional(CONF_DST_MODE_ENABLED_SWITCH): switch.switch_schema(
-        NukiLockDstModeEnabledSwitch,
-        device_class=DEVICE_CLASS_SWITCH,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:sun-clock",
-    ),
-
-    cv.Optional(CONF_LED_BRIGHTNESS_NUMBER): number.number_schema(
-        NukiLockLedBrightnessNumber,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:brightness-6",
-    ),
-
-    cv.Optional(CONF_TIMEZONE_OFFSET_NUMBER): number.number_schema(
-        NukiLockTimeZoneOffsetNumber,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:clock-end",
-    ),
-
-    cv.Optional(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT): select.select_schema(
-        NukiLockSingleButtonPressActionSelect,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:gesture-tap",
-    ),
-    cv.Optional(CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT): select.select_schema(
-        NukiLockDoubleButtonPressActionSelect,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:gesture-tap",
-    ),
-    cv.Optional(CONF_FOB_ACTION_1_SELECT): select.select_schema(
-        NukiLockFobAction1Select,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:gesture-tap",
-    ),
-    cv.Optional(CONF_FOB_ACTION_2_SELECT): select.select_schema(
-        NukiLockFobAction2Select,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:gesture-tap",
-    ),
-    cv.Optional(CONF_FOB_ACTION_3_SELECT): select.select_schema(
-        NukiLockFobAction3Select,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:gesture-tap",
-    ),
-    cv.Optional(CONF_TIMEZONE_SELECT): select.select_schema(
-        NukiLockTimeZoneSelect,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:map-clock",
-    ),
-    cv.Optional(CONF_ADVERTISING_MODE_SELECT): select.select_schema(
-        NukiLockAdvertisingModeSelect,
-        entity_category=ENTITY_CATEGORY_CONFIG,
-        icon="mdi:timer-cog",
-    ),
-
-    cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
-    cv.Optional(CONF_EVENT, default="nuki"): cv.string,
-    cv.Optional(CONF_SECURITY_PIN): cv.uint16_t,
-
-    cv.Optional(CONF_ON_PAIRING_MODE_ON): automation.validate_automation(
+CONFIG_SCHEMA = cv.All(
+    lock.LOCK_SCHEMA.extend(
         {
-            cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairingModeOnTrigger),
+            cv.GenerateID(): cv.declare_id(NukiLock),
+            cv.Optional(CONF_IS_CONNECTED_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
+                device_class=DEVICE_CLASS_CONNECTIVITY,
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                icon="mdi:link"
+            ),
+            cv.Optional(CONF_IS_PAIRED_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
+                device_class=DEVICE_CLASS_CONNECTIVITY,
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                icon="mdi:link"
+            ),
+            cv.Optional(CONF_BATTERY_CRITICAL_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
+                device_class=DEVICE_CLASS_BATTERY,
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                icon="mdi:battery-alert-variant-outline",
+            ),
+            cv.Optional(CONF_DOOR_SENSOR_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
+                device_class=DEVICE_CLASS_DOOR,
+                icon="mdi:door-open",
+            ),
+            cv.Optional(CONF_DOOR_SENSOR_STATE_TEXT_SENSOR): text_sensor.text_sensor_schema(
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                icon="mdi:door-open",
+            ),
+            cv.Optional(CONF_LAST_UNLOCK_USER_TEXT_SENSOR):  text_sensor.text_sensor_schema(
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                icon="mdi:account-clock"
+            ),
+            cv.Optional(CONF_LAST_LOCK_ACTION_TEXT_SENSOR):  text_sensor.text_sensor_schema(
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                icon="mdi:account-clock"
+            ),
+            cv.Optional(CONF_LAST_LOCK_ACTION_TRIGGER_TEXT_SENSOR):  text_sensor.text_sensor_schema(
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                icon="mdi:account-clock"
+            ),
+            cv.Optional(CONF_BATTERY_LEVEL_SENSOR): sensor.sensor_schema(
+                device_class=DEVICE_CLASS_BATTERY,
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                unit_of_measurement=UNIT_PERCENT,
+                icon="mdi:battery-50",
+            ),
+            cv.Optional(CONF_BT_SIGNAL_SENSOR): sensor.sensor_schema(
+                device_class=DEVICE_CLASS_SIGNAL_STRENGTH,
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                unit_of_measurement=UNIT_DECIBEL_MILLIWATT,
+                icon="mdi:bluetooth-audio"
+            ),
+            cv.Optional(CONF_UNPAIR_BUTTON): button.button_schema(
+                NukiLockUnpairButton,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:link-off",
+            ),
+            cv.Optional(CONF_PAIRING_MODE_SWITCH): switch.switch_schema(
+                NukiLockPairingModeSwitch,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:bluetooth"
+            ),
+            cv.Optional(CONF_BUTTON_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockButtonEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:radiobox-marked"
+            ),
+            cv.Optional(CONF_AUTO_UNLATCH_SWITCH): switch.switch_schema(
+                NukiLockAutoUnlatchEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:auto-upload"
+            ),
+            cv.Optional(CONF_LED_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockLedEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:led-on"
+            ),
+            cv.Optional(CONF_NIGHT_MODE_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockNightModeEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:shield-moon",
+            ),
+            cv.Optional(CONF_NIGHT_MODE_AUTO_LOCK_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockNightModeAutoLockEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:lock-clock"
+            ),
+            cv.Optional(CONF_NIGHT_MODE_AUTO_UNLOCK_DISABLED_SWITCH): switch.switch_schema(
+                NukiLockNightModeAutoUnlockDisabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:lock-remove"
+            ),
+            cv.Optional(CONF_NIGHT_MODE_IMMEDIATE_LOCK_ON_START_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockNightModeImmediateLockOnStartEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:lock-alert"
+            ),
+            cv.Optional(CONF_AUTO_LOCK_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockAutoLockEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:lock-clock"
+            ),
+            cv.Optional(CONF_AUTO_UNLOCK_DISABLED_SWITCH): switch.switch_schema(
+                NukiLockAutoUnlockDisabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:lock-remove"
+            ),
+            cv.Optional(CONF_IMMEDIATE_AUTO_LOCK_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockImmediateAutoLockEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:lock-alert" 
+            ),
+            cv.Optional(CONF_AUTO_UPDATE_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockAutoUpdateEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:auto-download",
+            ),
+            cv.Optional(CONF_SINGLE_LOCK_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockSingleLockEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:lock-plus",
+            ),
+            cv.Optional(CONF_DST_MODE_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockDstModeEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:sun-clock",
+            ),
+            cv.Optional(CONF_LED_BRIGHTNESS_NUMBER): number.number_schema(
+                NukiLockLedBrightnessNumber,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:brightness-6",
+            ),
+            cv.Optional(CONF_TIMEZONE_OFFSET_NUMBER): number.number_schema(
+                NukiLockTimeZoneOffsetNumber,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:clock-end",
+            ),
+            cv.Optional(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT): select.select_schema(
+                NukiLockSingleButtonPressActionSelect,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:gesture-tap",
+            ),
+            cv.Optional(CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT): select.select_schema(
+                NukiLockDoubleButtonPressActionSelect,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:gesture-tap",
+            ),
+            cv.Optional(CONF_FOB_ACTION_1_SELECT): select.select_schema(
+                NukiLockFobAction1Select,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:gesture-tap",
+            ),
+            cv.Optional(CONF_FOB_ACTION_2_SELECT): select.select_schema(
+                NukiLockFobAction2Select,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:gesture-tap",
+            ),
+            cv.Optional(CONF_FOB_ACTION_3_SELECT): select.select_schema(
+                NukiLockFobAction3Select,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:gesture-tap",
+            ),
+            cv.Optional(CONF_TIMEZONE_SELECT): select.select_schema(
+                NukiLockTimeZoneSelect,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:map-clock",
+            ),
+            cv.Optional(CONF_ADVERTISING_MODE_SELECT): select.select_schema(
+                NukiLockAdvertisingModeSelect,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:timer-cog",
+            ),
+            cv.Optional(CONF_ALT_CONNECT_MODE, default="true"): cv.boolean,
+            cv.Optional(CONF_PAIRING_AS_APP, default="false"): cv.boolean,
+            cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
+            cv.Optional(CONF_EVENT, default="nuki"): cv.string,
+            cv.Optional(CONF_SECURITY_PIN): cv.uint16_t,
+            cv.Optional(CONF_ON_PAIRING_MODE_ON): automation.validate_automation(
+                {
+                    cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairingModeOnTrigger),
+                }
+            ),
+            cv.Optional(CONF_ON_PAIRING_MODE_OFF): automation.validate_automation(
+                {
+                    cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairingModeOffTrigger),
+                }
+            ),
+            cv.Optional(CONF_ON_PAIRED): automation.validate_automation(
+                {
+                    cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairedTrigger),
+                }
+            ),
         }
-    ),
-    cv.Optional(CONF_ON_PAIRING_MODE_OFF): automation.validate_automation(
-        {
-            cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairingModeOffTrigger),
-        }
-    ),
-    cv.Optional(CONF_ON_PAIRED): automation.validate_automation(
-        {
-            cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairedTrigger),
-        }
-    ),
-}).extend(cv.polling_component_schema("500ms"))
+    )
+    .extend(cv.polling_component_schema("500ms")),
+    _validate,
+)
 
 
 async def to_code(config):
@@ -412,31 +427,38 @@ async def to_code(config):
         
     if CONF_SECURITY_PIN in config:
         cg.add(var.set_security_pin(config[CONF_SECURITY_PIN]))
+        
+    if CONF_PAIRING_AS_APP in config:
+        cg.add(var.set_pairing_as_app(config[CONF_PAIRING_AS_APP]))
 
     # Binary Sensor
-    if is_connected := config.get(CONF_IS_CONNECTED):
+    if is_connected := config.get(CONF_IS_CONNECTED_BINARY_SENSOR):
         sens = await binary_sensor.new_binary_sensor(is_connected)
         cg.add(var.set_is_connected_binary_sensor(sens))
 
-    if is_paired := config.get(CONF_IS_PAIRED):
+    if is_paired := config.get(CONF_IS_PAIRED_BINARY_SENSOR):
         sens = await binary_sensor.new_binary_sensor(is_paired)
         cg.add(var.set_is_paired_binary_sensor(sens))
 
-    if battery_critical := config.get(CONF_BATTERY_CRITICAL):
+    if battery_critical := config.get(CONF_BATTERY_CRITICAL_BINARY_SENSOR):
         sens = await binary_sensor.new_binary_sensor(battery_critical)
         cg.add(var.set_battery_critical_binary_sensor(sens))
 
-    if door_sensor := config.get(CONF_DOOR_SENSOR):
+    if door_sensor := config.get(CONF_DOOR_SENSOR_BINARY_SENSOR):
         sens = await binary_sensor.new_binary_sensor(door_sensor)
         cg.add(var.set_door_sensor_binary_sensor(sens))
 
     # Sensor
-    if battery_level := config.get(CONF_BATTERY_LEVEL):
+    if battery_level := config.get(CONF_BATTERY_LEVEL_SENSOR):
         sens = await sensor.new_sensor(battery_level)
         cg.add(var.set_battery_level_sensor(sens))
 
+    if bt_signal := config.get(CONF_BT_SIGNAL_SENSOR):
+        sens = await sensor.new_sensor(bt_signal)
+        cg.add(var.set_bt_signal_sensor(sens))
+
     # Text Sensor
-    if door_sensor_state := config.get(CONF_DOOR_SENSOR_STATE):
+    if door_sensor_state := config.get(CONF_DOOR_SENSOR_STATE_TEXT_SENSOR):
         sens = await text_sensor.new_text_sensor(door_sensor_state)
         cg.add(var.set_door_sensor_state_text_sensor(sens))
 
@@ -625,7 +647,42 @@ async def to_code(config):
         "https://github.com/I-Connect/NukiBleEsp32#940d809",
     )
 
-    cg.add_define("NUKI_ALT_CONNECT")
+    # Enable alternative connect mode
+    if CONF_ALT_CONNECT_MODE in config and config[CONF_ALT_CONNECT_MODE]:
+        cg.add_define("NUKI_ALT_CONNECT")
+
+
+def _final_validate(config):
+    full_config = fv.full_config.get()
+
+    incompatible_components = [
+        "esp32_ble", 
+        "esp32_improv", 
+        "esp32_ble_beacon", 
+        "esp32_ble_client", 
+        "esp32_ble_tracker", 
+        "esp32_ble_server"
+    ]
+
+    if CORE.is_esp32:
+        # Check if any of the incompatible components are in the configuration
+        if any(component in full_config for component in incompatible_components):
+            raise cv.Invalid(f"The `nuki_lock` component relies on NimBLE, which is incompatible with the ESPHome BLE stack.\nTo use `nuki_lock`, please remove all Bluetooth components (esp32_ble, esp32_improv, ...) from your configuration.")
+        
+        # Check for PSRAM support
+        if "psram" in full_config:
+            cg.add_build_flag(f"-DCONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL=1")
+        else:
+            LOGGER.info("Consider enabling PSRAM support if it's available for the NimBLE Stack.")
+
+        # Check for API encryption
+        if "api" in full_config:
+            if "encryption" in full_config["api"]:
+                LOGGER.warning("You may need to disable API encryption to successfully pair with the Nuki Lock, as it consumes quite a bit of memory.")
+    
+    return config
+
+FINAL_VALIDATE_SCHEMA = _final_validate
 
 
 # Actions

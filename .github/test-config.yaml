@@ -35,6 +35,8 @@ lock:
 
     battery_level:
       name: "Nuki Battery Level"
+    bt_signal_strength:
+      name: "Bluetooth Signal Strength"
     
     door_sensor_state:
       name: "Nuki Door Sensor: State"
@@ -100,6 +102,8 @@ lock:
     pairing_mode_timeout: 300s
     event: "nuki"
     security_pin: 1234
+    alternative_connect_mode: true
+    pairing_as_app: false
 
     on_pairing_mode_on_action:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
