@@ -3,6 +3,7 @@ from esphome.core import CORE
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import automation
+from esphome.components.esp32 import add_idf_component
 from esphome.components import lock, binary_sensor, text_sensor, sensor, switch, button, number, select
 from esphome.const import (
     CONF_ID, 
@@ -638,14 +639,21 @@ async def to_code(config):
         await automation.build_automation(trigger, [], conf)
 
     # Libraries
-    cg.add_library("Preferences", None)
-    cg.add_library("h2zero/NimBLE-Arduino", "1.4.2")
-    cg.add_library("Crc16", None)
-    cg.add_library(
-        None,
-        None,
-        "https://github.com/I-Connect/NukiBleEsp32#940d809",
-    )
+    if CORE.using_esp_idf:
+        add_idf_component(
+            name="NukiBleEsp32",
+            repo="https://github.com/AzonInc/NukiBleEsp32.git",
+            ref="idf",
+        )
+    else:
+        cg.add_library("Preferences", None)
+        cg.add_library("h2zero/NimBLE-Arduino", "1.4.2")
+        cg.add_library("Crc16", None)
+        cg.add_library(
+            None,
+            None,
+            "https://github.com/I-Connect/NukiBleEsp32#940d809",
+        )
 
     # Enable alternative connect mode
     if CONF_ALT_CONNECT_MODE in config and config[CONF_ALT_CONNECT_MODE]:
