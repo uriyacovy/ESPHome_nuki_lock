@@ -45,7 +45,6 @@ struct NukiLockSettings
 };
 
 class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuki::SmartlockEventHandler {
-    
     #ifdef USE_BINARY_SENSOR
     SUB_BINARY_SENSOR(is_connected)
     SUB_BINARY_SENSOR(is_paired)
@@ -232,12 +231,12 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
 
         void lock_n_go();
         void print_keypad_entries();
-        void add_keypad_entry(std::string name, int code);
-        void update_keypad_entry(int id, std::string name, int code, bool enabled);
-        void delete_keypad_entry(int id);
-        bool valid_keypad_id(int id);
+        void add_keypad_entry(std::string name, int32_t code);
+        void update_keypad_entry(int32_t id, std::string name, int32_t code, bool enabled);
+        void delete_keypad_entry(int32_t id);
+        bool valid_keypad_id(int32_t id);
         bool valid_keypad_name(std::string name);
-        bool valid_keypad_code(int code);
+        bool valid_keypad_code(int32_t code);
 
         std::vector<uint16_t> keypad_code_ids_;
         bool keypad_paired_;

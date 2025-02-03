@@ -940,7 +940,15 @@ void NukiLockComponent::setup() {
 
     // Increase Watchdog Timeout
     // Fixes Pairing Crash
+    #ifdef USE_ESP_IDF
+    esp_task_wdt_config_t wdt_config = {
+        .timeout_ms = 15000,
+        .trigger_panic = false
+    }; 
+    esp_task_wdt_reconfigure(&wdt_config);
+    #else
     esp_task_wdt_init(15, false);
+    #endif
 
     // Restore settings from flash
     this->pref_ = global_preferences->make_preference<NukiLockSettings>(global_nuki_lock_id);
@@ -1196,7 +1204,7 @@ void NukiLockComponent::lock_n_go() {
     this->unlock();
 }
 
-bool NukiLockComponent::valid_keypad_id(int id) {
+bool NukiLockComponent::valid_keypad_id(int32_t id) {
     bool is_valid = std::find(keypad_code_ids_.begin(), keypad_code_ids_.end(), id) != keypad_code_ids_.end();
     if (!is_valid) {
         ESP_LOGE(TAG, "keypad id %d unknown.", id);
@@ -1212,7 +1220,7 @@ bool NukiLockComponent::valid_keypad_name(std::string name) {
     return name_valid;
 }
 
-bool NukiLockComponent::valid_keypad_code(int code) {
+bool NukiLockComponent::valid_keypad_code(int32_t code) {
     bool code_valid = (code > 100000 && code < 1000000 && (std::to_string(code).find('0') == std::string::npos));
     if (!code_valid) {
         ESP_LOGE(TAG, "keypad code %d is invalid. Code must be 6 digits, without 0.", code);
@@ -1220,7 +1228,7 @@ bool NukiLockComponent::valid_keypad_code(int code) {
     return code_valid;
 }
 
-void NukiLockComponent::add_keypad_entry(std::string name, int code) {
+void NukiLockComponent::add_keypad_entry(std::string name, int32_t code) {
     if (!keypad_paired_) {
         ESP_LOGE(TAG, "keypad is not paired to Nuki");
         return;
@@ -1244,7 +1252,7 @@ void NukiLockComponent::add_keypad_entry(std::string name, int code) {
     }
 }
 
-void NukiLockComponent::update_keypad_entry(int id, std::string name, int code, bool enabled) {
+void NukiLockComponent::update_keypad_entry(int32_t id, std::string name, int32_t code, bool enabled) {
     if (!keypad_paired_) {
         ESP_LOGE(TAG, "keypad is not paired to Nuki");
         return;
@@ -1270,7 +1278,7 @@ void NukiLockComponent::update_keypad_entry(int id, std::string name, int code, 
     }
 }
 
-void NukiLockComponent::delete_keypad_entry(int id) {
+void NukiLockComponent::delete_keypad_entry(int32_t id) {
     if (!keypad_paired_) {
         ESP_LOGE(TAG, "keypad is not paired to Nuki");
         return;
