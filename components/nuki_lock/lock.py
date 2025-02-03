@@ -3,7 +3,7 @@ from esphome.core import CORE
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import automation
-from esphome.components.esp32 import add_idf_component
+from esphome.components.esp32 import add_idf_component, add_idf_sdkconfig_option
 from esphome.components import lock, binary_sensor, text_sensor, sensor, switch, button, number, select
 from esphome.const import (
     CONF_ID, 
@@ -640,6 +640,27 @@ async def to_code(config):
 
     # Libraries
     if CORE.using_esp_idf:
+        add_idf_sdkconfig_option("CONFIG_BT_ENABLED", True)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ENABLED", True)
+        add_idf_sdkconfig_option("CONFIG_BT_BLUEDROID_ENABLED", False)
+        add_idf_sdkconfig_option("CONFIG_BTDM_CTRL_MODE_BLE_ONLY", True)
+        add_idf_sdkconfig_option("CONFIG_BTDM_CTRL_MODE_BR_EDR_ONLY", False)
+        add_idf_sdkconfig_option("CONFIG_BTDM_CTRL_MODE_BTDM", False)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL_NONE", True)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL", 0)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_MAX_CONNECTIONS", 4)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_MAX_BONDS", 8)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_NVS_PERSIST", True)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_GATT_MAX_PROCS", 8)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_PINNED_TO_CORE_0", True)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_PINNED_TO_CORE", 0)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE", 8192)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ROLE_CENTRAL", True)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ROLE_PERIPHERAL", False)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ROLE_BROADCASTER", True)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ROLE_OBSERVER", True)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_SM_LEGACY", True)
+
         add_idf_component(
             name="NukiBleEsp32",
             repo="https://github.com/AzonInc/NukiBleEsp32.git",
