@@ -1018,11 +1018,11 @@ void NukiLockComponent::setup() {
     this->publish_state(lock::LOCK_STATE_NONE);
 
     #ifdef USE_API
-    this->custom_api_device_.register_service(&NukiLockComponent::lock_n_go, "lock_n_go");
+    /*this->custom_api_device_.register_service(&NukiLockComponent::lock_n_go, "lock_n_go");
     this->custom_api_device_.register_service(&NukiLockComponent::print_keypad_entries, "print_keypad_entries");
     this->custom_api_device_.register_service(&NukiLockComponent::add_keypad_entry, "add_keypad_entry", {"name", "code"});
     this->custom_api_device_.register_service(&NukiLockComponent::update_keypad_entry, "update_keypad_entry", {"id", "name", "code", "enabled"});
-    this->custom_api_device_.register_service(&NukiLockComponent::delete_keypad_entry, "delete_keypad_entry", {"id"});
+    this->custom_api_device_.register_service(&NukiLockComponent::delete_keypad_entry, "delete_keypad_entry", {"id"});*/
     #endif
 }
 
