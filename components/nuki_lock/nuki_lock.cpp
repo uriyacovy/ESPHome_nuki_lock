@@ -964,7 +964,6 @@ void NukiLockComponent::setup() {
     } else {
         ESP_LOGD(TAG, "Using security pin from configuration file: %i", this->security_pin_);
     }
-    this->use_security_pin();
 
     this->traits.set_supported_states(
         std::set<lock::LockState> {
@@ -984,6 +983,8 @@ void NukiLockComponent::setup() {
     this->nuki_lock_.initialize();
     this->nuki_lock_.setConnectTimeout(BLE_CONNECT_TIMEOUT_SEC);
     this->nuki_lock_.setConnectRetries(BLE_CONNECT_TIMEOUT_RETRIES);
+
+    this->use_security_pin();
     
     if (this->nuki_lock_.isPairedWithLock()) {
         this->status_update_ = true;
