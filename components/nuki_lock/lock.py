@@ -644,24 +644,9 @@ async def to_code(config):
         add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ENABLED", True)
         add_idf_sdkconfig_option("CONFIG_BT_BLUEDROID_ENABLED", False)
 
-        #add_idf_sdkconfig_option("CONFIG_BTDM_CTRL_MODE_BLE_ONLY", True)
-        #add_idf_sdkconfig_option("CONFIG_BTDM_CTRL_MODE_BR_EDR_ONLY", False)
-        #add_idf_sdkconfig_option("CONFIG_BTDM_CTRL_MODE_BTDM", False)
-        #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL_NONE", True)
-        #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL", 0)
-        #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_MAX_CONNECTIONS", 4)
-        #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_MAX_BONDS", 8)
-        #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_NVS_PERSIST", True)
-        #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_GATT_MAX_PROCS", 8)
-
-        #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_PINNED_TO_CORE_0", True)
-        #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_PINNED_TO_CORE", 0)
-        #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE", 8192)
-        #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ROLE_CENTRAL", True)
-        #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ROLE_PERIPHERAL", False)
-        #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ROLE_BROADCASTER", True)
-        #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ROLE_OBSERVER", True)
-        #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_SM_LEGACY", True)
+        add_idf_sdkconfig_option("CONFIG_BTDM_BLE_SCAN_DUPL", True)
+        add_idf_sdkconfig_option("CONFIG_NIMBLE_CPP_LOG_LEVEL", 0)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL", 0)
 
         add_idf_component(
             name="NukiBleEsp32",
@@ -669,6 +654,10 @@ async def to_code(config):
             ref="idf",
         )
     else:
+        cg.add_build_flag("-DCONFIG_BTDM_BLE_SCAN_DUPL=y")
+        cg.add_build_flag("-DCONFIG_NIMBLE_CPP_LOG_LEVEL=0")
+        cg.add_build_flag("-DCONFIG_BT_NIMBLE_LOG_LEVEL=0")
+
         cg.add_library("Preferences", None)
         cg.add_library("h2zero/NimBLE-Arduino", "1.4.2")
         cg.add_library("Crc16", None)
@@ -678,9 +667,32 @@ async def to_code(config):
             "https://github.com/I-Connect/NukiBleEsp32#940d809",
         )
 
-    # Enable alternative connect mode
+
+    # Defines
+    cg.add_define("NUKI_MUTEX_RECURSIVE")
+    cg.add_define("NUKI_NO_WDT_RESET")
+
     if CONF_ALT_CONNECT_MODE in config and config[CONF_ALT_CONNECT_MODE]:
         cg.add_define("NUKI_ALT_CONNECT")
+
+
+    # Remove Build flags
+    cg.add_platformio_option(
+        "build_unflags",
+        [
+            f"-DCONFIG_BTDM_BLE_SCAN_DUPL",
+            f"-DCONFIG_BT_NIMBLE_LOG_LEVEL",
+            f"-Werror=all",
+            f"-Wall",
+        ],
+    )
+
+
+    # Build flags
+    cg.add_build_flag("-Wno-unused-result")
+    cg.add_build_flag("-Wno-ignored-qualifiers")
+    cg.add_build_flag("-Wno-missing-field-initializers")
+    cg.add_build_flag("-Wno-maybe-uninitialized")
 
 
 def _final_validate(config):
@@ -702,7 +714,11 @@ def _final_validate(config):
         
         # Check for PSRAM support
         if "psram" in full_config:
-            cg.add_build_flag(f"-DCONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL=1")
+            if CORE.using_esp_idf:
+                add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_MEM_ALLOC_MODE_DEFAULT", True)
+                add_idf_sdkconfig_option("CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL", 50768)
+            else:
+                cg.add_build_flag(f"-DCONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL=1")
         else:
             LOGGER.info("Consider enabling PSRAM support if it's available for the NimBLE Stack.")
 
