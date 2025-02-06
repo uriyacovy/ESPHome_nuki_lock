@@ -8,6 +8,8 @@ wifi:
 api:
 
 logger:
+  logs:
+    component: ERROR
 
 external_components:
   - source:
