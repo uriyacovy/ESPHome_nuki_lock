@@ -647,6 +647,7 @@ async def to_code(config):
         add_idf_sdkconfig_option("CONFIG_BTDM_BLE_SCAN_DUPL", True)
         add_idf_sdkconfig_option("CONFIG_NIMBLE_CPP_LOG_LEVEL", 0)
         add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL", 0)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL_NONE", True)
 
         add_idf_component(
             name="NukiBleEsp32",
@@ -657,6 +658,7 @@ async def to_code(config):
         cg.add_build_flag("-DCONFIG_BTDM_BLE_SCAN_DUPL=y")
         cg.add_build_flag("-DCONFIG_NIMBLE_CPP_LOG_LEVEL=0")
         cg.add_build_flag("-DCONFIG_BT_NIMBLE_LOG_LEVEL=0")
+        cg.add_build_flag("-DCONFIG_BT_NIMBLE_LOG_LEVEL_NONE=y")
 
         cg.add_library("Preferences", None)
         cg.add_library("h2zero/NimBLE-Arduino", "1.4.2")
@@ -682,11 +684,11 @@ async def to_code(config):
         [
             f"-DCONFIG_BTDM_BLE_SCAN_DUPL",
             f"-DCONFIG_BT_NIMBLE_LOG_LEVEL",
+            f"-DCONFIG_NIMBLE_CPP_LOG_LEVEL",
             f"-Werror=all",
             f"-Wall",
         ],
     )
-
 
     # Build flags
     cg.add_build_flag("-Wno-unused-result")
@@ -715,10 +717,15 @@ def _final_validate(config):
         # Check for PSRAM support
         if "psram" in full_config:
             if CORE.using_esp_idf:
-                add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_MEM_ALLOC_MODE_DEFAULT", True)
+                add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL", True)
                 add_idf_sdkconfig_option("CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL", 50768)
+                add_idf_sdkconfig_option("CONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST", True)
+                add_idf_sdkconfig_option("CONFIG_BT_BLE_DYNAMIC_ENV_MEMORY", True)
             else:
                 cg.add_build_flag(f"-DCONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL=1")
+                cg.add_build_flag(f"-DCONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL=50768")
+                cg.add_build_flag(f"-DCONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST=1")
+                cg.add_build_flag(f"-DCONFIG_BT_BLE_DYNAMIC_ENV_MEMORY=1")
         else:
             LOGGER.info("Consider enabling PSRAM support if it's available for the NimBLE Stack.")
 
