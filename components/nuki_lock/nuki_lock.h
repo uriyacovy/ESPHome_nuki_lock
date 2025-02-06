@@ -100,11 +100,13 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
     static const uint8_t MAX_ACTION_ATTEMPTS = 5;
     static const uint8_t MAX_TOLERATED_UPDATES_ERRORS = 5;
 
-    static const uint8_t MAX_AUTH_DATA_ENTRIES = 10;
-    static const uint8_t MAX_EVENT_LOG_ENTRIES = 3;
-
     static const uint32_t COOLDOWN_COMMANDS_MILLIS = 1000;
     static const uint32_t COOLDOWN_COMMANDS_EXTENDED_MILLIS = 3000;
+
+    static const uint8_t CONFIG_UPDATE_INTERVAL_SEC = 60;
+    static const uint8_t AUTH_DATA_UPDATE_INTERVAL_SEC = 120;
+    static const uint8_t MAX_AUTH_DATA_ENTRIES = 10;
+    static const uint8_t MAX_EVENT_LOG_ENTRIES = 3;
 
     public:
         const uint32_t deviceId_ = 2020002;
@@ -185,6 +187,8 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         void update_auth_data();
         void process_log_entries(const std::list<NukiLock::LogEntry>& log_entries);
 
+        void setup_intervals(bool setup = true);
+
         bool execute_lock_action(NukiLock::LockAction lock_action);
 
         BleScanner::Scanner scanner_;
@@ -209,7 +213,6 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         bool advanced_config_update_;
         bool auth_data_update_;
         bool event_log_update_;
-        bool auth_data_required_;
         bool open_latch_;
         bool lock_n_go_;
 

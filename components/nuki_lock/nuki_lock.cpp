@@ -989,13 +989,10 @@ void NukiLockComponent::setup() {
     if (this->nuki_lock_.isPairedWithLock()) {
         this->status_update_ = true;
 
+        // First boot: Request config and auth data
         this->config_update_ = true;
         this->advanced_config_update_ = true;
-
-        // First auth data request, then every 2nd time
-        // Requesting only when events are enabled
         if (this->send_events_) {
-            this->auth_data_required_ = true;
             this->auth_data_update_ = true;
         }
 
@@ -1006,6 +1003,9 @@ void NukiLockComponent::setup() {
             this->is_paired_binary_sensor_->publish_initial_state(true);
         }
         #endif
+
+        this->setup_intervals();
+
     } else {
         ESP_LOGW(TAG, "%s Nuki is not paired", this->deviceName_.c_str());
         #ifdef USE_BINARY_SENSOR
@@ -1027,6 +1027,22 @@ void NukiLockComponent::setup() {
     #endif
 }
 
+void NukiLockComponent::setup_intervals(bool setup) {
+    this->cancel_interval("update_config");
+    this->cancel_interval("update_auth_data");
+
+    if(setup) {
+        this->set_interval("update_config", CONFIG_UPDATE_INTERVAL_SEC * 1000, [this]() {
+            this->config_update_ = true;
+            this->advanced_config_update_ = true;
+        });
+    
+        this->set_interval("update_auth_data", AUTH_DATA_UPDATE_INTERVAL_SEC * 1000, [this]() {
+            this->auth_data_update_ = true;
+        });
+    }
+}
+
 void NukiLockComponent::update() {
     // Check for new advertisements
     this->scanner_.update();
@@ -1035,13 +1051,6 @@ void NukiLockComponent::update() {
 
     // Terminate stale Bluetooth connections
     this->nuki_lock_.updateConnectionState();
-
-    if (this->pairing_mode_ && this->pairing_mode_timer_ != 0) {
-        if (millis() > this->pairing_mode_timer_) {
-            ESP_LOGV(TAG, "Pairing timed out, turning off pairing mode");
-            this->set_pairing_mode(false);
-        }
-    }
 
     if (millis() - last_command_executed_time_ < command_cooldown_millis) {
         // Give the lock time to terminate the previous command
@@ -1080,13 +1089,14 @@ void NukiLockComponent::update() {
                 }
             } else if (this->action_attempts_ == 0) {
                 // Publish failed state only when no attempts are left
+                this->publish_state(lock::LOCK_STATE_NONE);
+
                 #ifdef USE_BINARY_SENSOR
                 if (this->is_connected_binary_sensor_ != nullptr)
                 {
                     this->is_connected_binary_sensor_->publish_state(false);
                 }  
                 #endif
-                this->publish_state(lock::LOCK_STATE_NONE);
             }
 
             // Schedule a status update without waiting for the next advertisement for a faster feedback
@@ -1094,40 +1104,31 @@ void NukiLockComponent::update() {
 
             // Give the lock extra time when successful in order to account for time to turn the key
             command_cooldown_millis = isExecutionSuccessful ? COOLDOWN_COMMANDS_EXTENDED_MILLIS : COOLDOWN_COMMANDS_MILLIS;
-            last_command_executed_time_ = millis();
 
         } else if (this->status_update_) {
             ESP_LOGD(TAG, "Update present, getting data...");
             this->update_status();
-
             command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
-            last_command_executed_time_ = millis();
-
-        } else if (this->config_update_) {
-            ESP_LOGD(TAG, "Update present, getting config...");
-            this->update_config();
-
-            command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
-            last_command_executed_time_ = millis();
-        } else if (this->advanced_config_update_) {
-            ESP_LOGD(TAG, "Update present, getting advanced config...");
-            this->update_advanced_config();
-
-            command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
-            last_command_executed_time_ = millis();
         } else if (this->auth_data_update_) {
             ESP_LOGD(TAG, "Update present, getting auth data...");
             this->update_auth_data();
-
             command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
-            last_command_executed_time_ = millis();
         } else if (this->event_log_update_) {
             ESP_LOGD(TAG, "Update present, getting event logs...");
             this->update_event_logs();
-
             command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
-            last_command_executed_time_ = millis();
+        } else if (this->config_update_) {
+            ESP_LOGD(TAG, "Update present, getting config...");
+            this->update_config();
+            command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
+        } else if (this->advanced_config_update_) {
+            ESP_LOGD(TAG, "Update present, getting advanced config...");
+            this->update_advanced_config();
+            command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
         }
+
+        last_command_executed_time_ = millis();
+
     } else {
         #ifdef USE_BINARY_SENSOR
         if (this->is_paired_binary_sensor_ != nullptr) {
@@ -1148,8 +1149,12 @@ void NukiLockComponent::update() {
                 ESP_LOGI(TAG, "Nuki paired successfuly as %s!", this->pairing_as_app_ ? "App" : "Bridge");
                 this->update_status();
                 this->paired_callback_.call();
+
                 this->set_pairing_mode(false);
+
+                this->setup_intervals();
             }
+
             #ifdef USE_BINARY_SENSOR
             if (this->is_paired_binary_sensor_ != nullptr) {
                 this->is_paired_binary_sensor_->publish_state(paired);
@@ -1382,18 +1387,10 @@ void NukiLockComponent::notify(Nuki::EventType event_type) {
     }
 
     this->status_update_ = true;
-    this->config_update_ = true;
-    this->advanced_config_update_ = true;
     
-    // Request Auth Data on every second notify, otherwise just event logs
-    // Event logs are always requested after Auth Data requests
+    // Request event logs after every notify
     if (this->send_events_) {
-        this->auth_data_required_ = !this->auth_data_required_;
-        if (this->auth_data_required_) {
-            this->auth_data_update_ = true;
-        } else {
-            this->event_log_update_ = true;
-        }
+        this->event_log_update_ = true;
     }
 
     ESP_LOGI(TAG, "event notified %d", event_type);
@@ -1403,6 +1400,8 @@ void NukiLockComponent::unpair() {
     if (this->nuki_lock_.isPairedWithLock()) {
         this->nuki_lock_.unPairNuki();
         ESP_LOGI(TAG, "Unpaired Nuki! Turn on Pairing Mode to pair a new Nuki.");
+
+        this->setup_intervals(false);
     } else {
         ESP_LOGE(TAG, "Unpair action called for unpaired Nuki");
     }
@@ -1417,18 +1416,21 @@ void NukiLockComponent::set_pairing_mode(bool enabled) {
     }
     #endif
 
+    cancel_timeout("pairing_mode_timeout");
+
     if (enabled) {
         ESP_LOGI(TAG, "Pairing Mode turned on for %d seconds", this->pairing_mode_timeout_);
         this->pairing_mode_on_callback_.call();
 
         ESP_LOGI(TAG, "Waiting for Nuki to enter pairing mode...");
 
-        // Turn on for ... seconds
-        uint32_t now_millis = millis();
-        this->pairing_mode_timer_ = now_millis + (this->pairing_mode_timeout_ * 1000);
+        this->set_timeout("pairing_mode_timeout", this->pairing_mode_timeout_ * 1000, [this]()
+        {
+            ESP_LOGV(TAG, "Pairing timed out, turning off pairing mode");
+            this->set_pairing_mode(false);
+        });
     } else {
         ESP_LOGI(TAG, "Pairing Mode turned off");
-        this->pairing_mode_timer_ = 0;
         this->pairing_mode_off_callback_.call();
     }
 }
