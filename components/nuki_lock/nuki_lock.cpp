@@ -1391,20 +1391,25 @@ void NukiLockComponent::dump_config() {
 }
 
 void NukiLockComponent::notify(Nuki::EventType event_type) {
-    
-    // Ignore bad pin error to prevent loop
-    if (event_type == Nuki::EventType::ERROR_BAD_PIN) {
-        return;
-    }
+    ESP_LOGI(TAG, "Event notified %d", event_type);
 
-    this->status_update_ = true;
+    if(event_type == Nuki::EventType::KeyTurnerStatusReset) {
+        // IDK
+    } else if (event_type == Nuki::EventType::ERROR_BAD_PIN) {
+        // Invalid Pin
+    } else if(event_type == Nuki::EventType::KeyTurnerStatusUpdated) {
+        // Request status update
+        this->status_update_ = true;
     
-    // Request event logs after every notify
-    if (this->send_events_) {
-        this->event_log_update_ = true;
+        // Request event logs
+        if (this->send_events_) {
+            this->event_log_update_ = true;
+        }
+    } else if(event_type == Nuki::EventType::BLE_ERROR_ON_DISCONNECT) {
+        ESP_LOGI(TAG, "Failed to disconnect from Nuki. Restarting ESP...");
+        delay(100);  // NOLINT
+        App.safe_reboot();
     }
-
-    ESP_LOGI(TAG, "event notified %d", event_type);
 }
 
 void NukiLockComponent::unpair() {
