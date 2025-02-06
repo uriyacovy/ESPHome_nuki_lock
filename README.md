@@ -8,7 +8,7 @@ The lock entity updates whenever the lock's state changes - whether through the 
 
 
 ## How to Use
-To integrate your Nuki Smartlock, add the following code snippet to your ESPHome YAML file.
+To integrate your Nuki Smartlock, add one of the following code snippets to your ESPHome YAML file.
 
 > [!WARNING]  
 > This component relies on NimBLE, which is incompatible with the ESPHome BLE stack.
@@ -16,6 +16,122 @@ To integrate your Nuki Smartlock, add the following code snippet to your ESPHome
 
 > [!TIP]  
 > If your ESP32 is equipped with PSRAM, you can add the `psram` component to enable the use of PSRAM for the NimBLE Stack, enhancing the reliability of this component.
+
+### Example configuration YAML
+<details>
+  <summary>ESP-IDF</summary>
+
+```yaml
+external_components:
+  - source: github://uriyacovy/ESPHome_nuki_lock
+
+esp32:
+  board: "esp32dev"  # Or whatever other board you're using
+  framework:
+    type: esp-idf
+
+lock:
+  # Required
+  - platform: nuki_lock
+    name: Nuki Lock
+  # Optional: Settings
+    pairing_mode_timeout: 300s
+    event: "nuki"
+    security_pin: 1234
+  # Optional: Advanced Settings
+    alternative_connect_mode: true
+    pairing_as_app: false
+    query_interval_config: 3600s
+    query_interval_auth_data: 7200s
+
+  # Optional: Binary Sensors
+    is_connected:
+      name: "Nuki Connected"
+    is_paired:
+      name: "Nuki Paired"
+    battery_critical:
+      name: "Nuki Battery Critical"
+    door_sensor:
+      name: "Nuki Door Sensor"
+  # Optional: Sensors
+    battery_level:
+      name: "Nuki Battery Level"
+    bt_signal_strength:
+      name: "Bluetooth Signal Strength"
+  # Optional: Text Sensors
+    door_sensor_state:
+      name: "Nuki Door Sensor: State"
+    last_unlock_user:
+      name: "Nuki Last Unlock User"
+    last_lock_action:
+      name: "Nuki Last Lock Action"
+    last_lock_action_trigger:
+      name: "Nuki Last Lock Action Trigger"
+  # Optional: Switches
+    pairing_mode:
+      name: "Nuki Pairing Mode"
+    auto_unlatch:
+      name: "Nuki Auto unlatch"
+    button_enabled:
+      name: "Nuki Button: Locking operations"
+    led_enabled:
+      name: "Nuki LED Signal"
+  # Optional: Number Inputs
+    led_brightness:
+      name: "Nuki LED Brightness"
+    timezone_offset:
+      name: "Nuki Timezone: Offset"
+  # Optional: Switches
+    night_mode_enabled:
+      name: "Nuki Night Mode"
+    night_mode_auto_lock_enabled:
+      name: "Nuki Night Mode: Auto Lock"
+    night_mode_auto_unlock_disabled:
+      name: "Nuki Night Mode: Reject Auto Unlock"
+    night_mode_immediate_lock_on_start_enabled:
+      name: "Nuki Night Mode: Lock at Start Time"
+    auto_lock_enabled:
+      name: "Nuki Auto Lock"
+    auto_unlock_disabled:
+      name: "Nuki Auto Unlock: Disable"
+    immediate_auto_lock_enabled:
+      name: "Nuki Auto Lock: Immediately"
+    auto_update_enabled:
+      name: "Nuki Automatic Updates"
+    single_lock_enabled:
+      name: "Nuki Single Lock"
+    dst_mode_enabled:
+      name: "Nuki Daylight Saving Time"
+  # Optional: Select Inputs
+    single_buton_press_action:
+      name: "Nuki Button: Single Press Action"
+    double_buton_press_action:
+      name: "Nuki Button: Double Press Action"
+    fob_action_1:
+      name: "Nuki Fob: Action 1"
+    fob_action_2:
+      name: "Nuki Fob: Action 2"
+    fob_action_3:
+      name: "Nuki Fob: Action 3"
+    timezone:
+      name: "Nuki Timezone"
+    advertising_mode:
+      name: "Nuki Advertising Mode"
+  # Optional: Buttons
+    unpair:
+      name: "Nuki Unpair Device"
+  # Optional: Callbacks
+    on_pairing_mode_on_action:
+      - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
+    on_pairing_mode_off_action:
+      - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned off");
+    on_paired_action:
+      - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
+```
+</details>
+
+<details>
+  <summary>Arduino Framework</summary>
 
 ```yaml
 external_components:
@@ -126,6 +242,7 @@ lock:
     on_paired_action:
       - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
 ```
+</details>
 
 After running ESPHome (`esphome run <yamlfile.yaml>`), follow these steps to pair your Nuki Smartlock:
 
@@ -136,22 +253,6 @@ After running ESPHome (`esphome run <yamlfile.yaml>`), follow these steps to pai
 3. **Complete Pairing**: Once paired, the ESPHome entities will automatically update with the current lock status, and pairing mode will turn off.
 
 Your Nuki Smartlock is now connected and ready to use!
-
-
-## Settings
-
-These settings allow you to customize the behavior of the Nuki Lock component to improve the performance and reliability.
-They can be configured in your ESPHome YAML file:
-
-- **pairing_mode_timeout**: The duration (in seconds) for which the pairing mode will be active. Default is `300s`.
-- **event**: The event name used for the Nuki Lock component. Default is `nuki`.
-- **security_pin**: The Nuki security PIN required for certain operations.
-- **alternative_connect_mode**: Enable the alternative connection mode. Disable it if you encounter any issues. Default is `true`.
-- **pairing_as_app**: Specify if the pairing should be done as an app (not recommended). Default is `false`.
-- **query_interval_config**: The interval (in seconds) at which the configuration will be queried. Default is `3600s`.
-- **query_interval_auth_data**: The interval (in seconds) at which the authentication data will be queried. Default is `7200s`.
-
-
 
 ## Settings
 
