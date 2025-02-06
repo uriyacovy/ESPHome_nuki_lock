@@ -697,9 +697,6 @@ void NukiLockComponent::update_auth_data() {
                     ESP_LOGD(TAG, "Authorization entry[%d] type: %d name: %s", entry.authId, entry.idType, entry.name);
                     this->auth_entries_[entry.authId] = std::string(reinterpret_cast<const char*>(entry.name));
                 }
-        
-                // Request Event logs when Auth Data is available
-                this->event_log_update_ = true;
             } else {
                 ESP_LOGW(TAG, "No auth entries! Did you set the security pin?");
             }
@@ -994,6 +991,7 @@ void NukiLockComponent::setup() {
         this->advanced_config_update_ = true;
         if (this->send_events_) {
             this->auth_data_update_ = true;
+            this->event_log_update_ = true;
         }
 
         ESP_LOGI(TAG, "%s Nuki paired", this->deviceName_.c_str());
@@ -1492,6 +1490,8 @@ void NukiLockComponent::set_config_select(const char* config, const char* value)
         
         this->config_update_ = !is_advanced;
         this->advanced_config_update_ = is_advanced;
+    } else {
+        ESP_LOGW(TAG, "Saving setting failed: %s", config);
     }
 }
 #endif
@@ -1571,6 +1571,8 @@ void NukiLockComponent::set_config_switch(const char* config, bool value) {
         
         this->config_update_ = !is_advanced;
         this->advanced_config_update_ = is_advanced;
+    } else {
+        ESP_LOGW(TAG, "Saving setting failed: %s", config);
     }
 }
 #endif
@@ -1598,6 +1600,8 @@ void NukiLockComponent::set_config_number(const char* config, float value) {
         
         this->config_update_ = !is_advanced;
         this->advanced_config_update_ = is_advanced;
+    } else {
+        ESP_LOGW(TAG, "Saving setting failed: %s", config);
     }
 }
 #endif
