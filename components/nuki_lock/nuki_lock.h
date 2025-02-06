@@ -103,8 +103,6 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
     static const uint32_t COOLDOWN_COMMANDS_MILLIS = 1000;
     static const uint32_t COOLDOWN_COMMANDS_EXTENDED_MILLIS = 3000;
 
-    static const uint8_t CONFIG_UPDATE_INTERVAL_SEC = 60;
-    static const uint8_t AUTH_DATA_UPDATE_INTERVAL_SEC = 120;
     static const uint8_t MAX_AUTH_DATA_ENTRIES = 10;
     static const uint8_t MAX_EVENT_LOG_ENTRIES = 3;
 
@@ -126,8 +124,11 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         void notify(Nuki::EventType event_type) override;
         float get_setup_priority() const override { return setup_priority::HARDWARE - 1.0f; }
 
+        void set_alt_connect_mode(bool alt_connect_mode) { this->alt_connect_mode_ = alt_connect_mode; }
         void set_pairing_as_app(bool pairing_as_app) { this->pairing_as_app_ = pairing_as_app; }
         void set_pairing_mode_timeout(uint16_t pairing_mode_timeout) { this->pairing_mode_timeout_ = pairing_mode_timeout; }
+        void set_query_interval_config(uint16_t query_interval_config) { this->query_interval_config_ = query_interval_config; }
+        void set_query_interval_auth_data(uint16_t query_interval_auth_data) { this->query_interval_auth_data_ = query_interval_auth_data; }
         void set_event(const char *event) {
             this->event_ = event;
             if(strcmp(event, "esphome.none") != 0) {
@@ -221,9 +222,13 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         const char* event_;
         bool send_events_ = false;
 
+        bool alt_connect_mode_ = false;
+
+        uint16_t query_interval_auth_data_ = 0;
+        uint16_t query_interval_config_ = 0;
+
         uint16_t pairing_mode_timeout_ = 0;
         bool pairing_mode_ = false;
-        uint32_t pairing_mode_timer_ = 0;
 
         uint32_t last_rolling_log_id = 0;
 

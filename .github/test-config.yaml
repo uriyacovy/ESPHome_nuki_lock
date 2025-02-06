@@ -103,6 +103,8 @@ lock:
     security_pin: 1234
     alternative_connect_mode: true
     pairing_as_app: false
+    query_interval_config: 3600s
+    query_interval_auth_data: 7200s
 
     on_pairing_mode_on_action:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");

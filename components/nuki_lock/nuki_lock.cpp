@@ -531,7 +531,7 @@ void NukiLockComponent::update_config() {
     if (conf_req_result == Nuki::CmdResult::Success) {
         ESP_LOGD(TAG, "requestConfig has resulted in %s (%d)", str, conf_req_result);
 
-        keypad_paired_ = config.hasKeypad;
+        keypad_paired_ = config.hasKeypad || config.hasKeypadV2;
 
         #ifdef USE_SWITCH
         if (this->auto_unlatch_enabled_switch_ != nullptr) {
@@ -973,11 +973,11 @@ void NukiLockComponent::setup() {
         }
     );
 
-    this->scanner_.initialize("ESPHomeNuki");
-    this->scanner_.setScanDuration(10);
+    this->scanner_.initialize("ESPHomeNuki", true, 40, 40);
+    this->scanner_.setScanDuration(0);
 
     this->nuki_lock_.registerBleScanner(&this->scanner_);
-    this->nuki_lock_.initialize();
+    this->nuki_lock_.initialize(this->alt_connect_mode_);
     this->nuki_lock_.setConnectTimeout(BLE_CONNECT_TIMEOUT_SEC);
     this->nuki_lock_.setConnectRetries(BLE_CONNECT_TIMEOUT_RETRIES);
 
@@ -1030,12 +1030,12 @@ void NukiLockComponent::setup_intervals(bool setup) {
     this->cancel_interval("update_auth_data");
 
     if(setup) {
-        this->set_interval("update_config", CONFIG_UPDATE_INTERVAL_SEC * 1000, [this]() {
+        this->set_interval("update_config", this->query_interval_config_ * 1000, [this]() {
             this->config_update_ = true;
             this->advanced_config_update_ = true;
         });
     
-        this->set_interval("update_auth_data", AUTH_DATA_UPDATE_INTERVAL_SEC * 1000, [this]() {
+        this->set_interval("update_auth_data", this->query_interval_auth_data_ * 1000, [this]() {
             this->auth_data_update_ = true;
         });
     }
@@ -1329,6 +1329,19 @@ void NukiLockComponent::print_keypad_entries() {
 void NukiLockComponent::dump_config() {
     ESP_LOGCONFIG(TAG, "NUKI LOCK:");
 
+    if (strcmp(this->event_, "esphome.none") != 0) {
+        ESP_LOGCONFIG(TAG, "  Event: %s", this->event_);
+    } else {
+        ESP_LOGCONFIG(TAG, "  Event: Disabled");
+    }
+
+    ESP_LOGCONFIG(TAG, "  Pairing Identity: %s",this->pairing_as_app_ ? "App" : "Bridge");
+    ESP_LOGCONFIG(TAG, "  Alternative Connect Mode: %s",YESNO(this->alt_connect_mode_));
+
+    ESP_LOGCONFIG(TAG, "  Pairing mode timeout: %us", this->pairing_mode_timeout_);
+    ESP_LOGCONFIG(TAG, "  Configuration query interval: %us", this->query_interval_config_);
+    ESP_LOGCONFIG(TAG, "  Auth Data query interval: %us", this->query_interval_auth_data_);
+
     LOG_LOCK(TAG, "Nuki Lock", this);
     #ifdef USE_BINARY_SENSOR
     LOG_BINARY_SENSOR(TAG, "Is Connected", this->is_connected_binary_sensor_);
@@ -1491,7 +1504,7 @@ void NukiLockComponent::set_config_select(const char* config, const char* value)
         this->config_update_ = !is_advanced;
         this->advanced_config_update_ = is_advanced;
     } else {
-        ESP_LOGW(TAG, "Saving setting failed: %s", config);
+        ESP_LOGE(TAG, "Saving setting %s failed (result %d)", config, cmd_result);
     }
 }
 #endif
@@ -1572,7 +1585,7 @@ void NukiLockComponent::set_config_switch(const char* config, bool value) {
         this->config_update_ = !is_advanced;
         this->advanced_config_update_ = is_advanced;
     } else {
-        ESP_LOGW(TAG, "Saving setting failed: %s", config);
+        ESP_LOGE(TAG, "Saving setting %s failed (result %d)", config, cmd_result);
     }
 }
 #endif
@@ -1601,7 +1614,7 @@ void NukiLockComponent::set_config_number(const char* config, float value) {
         this->config_update_ = !is_advanced;
         this->advanced_config_update_ = is_advanced;
     } else {
-        ESP_LOGW(TAG, "Saving setting failed: %s", config);
+        ESP_LOGE(TAG, "Saving setting %s failed (result %d)", config, cmd_result);
     }
 }
 #endif

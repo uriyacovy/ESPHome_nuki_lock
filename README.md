@@ -39,6 +39,9 @@ lock:
   # Optional: Advanced Settings
     alternative_connect_mode: true
     pairing_as_app: false
+    query_interval_config: 3600s
+    query_interval_auth_data: 7200s
+
   # Optional: Binary Sensors
     is_connected:
       name: "Nuki Connected"
@@ -133,6 +136,34 @@ After running ESPHome (`esphome run <yamlfile.yaml>`), follow these steps to pai
 3. **Complete Pairing**: Once paired, the ESPHome entities will automatically update with the current lock status, and pairing mode will turn off.
 
 Your Nuki Smartlock is now connected and ready to use!
+
+
+## Settings
+
+These settings allow you to customize the behavior of the Nuki Lock component to improve the performance and reliability.
+They can be configured in your ESPHome YAML file:
+
+- **pairing_mode_timeout**: The duration (in seconds) for which the pairing mode will be active. Default is `300s`.
+- **event**: The event name used for the Nuki Lock component. Default is `nuki`.
+- **security_pin**: The Nuki security PIN required for certain operations.
+- **alternative_connect_mode**: Enable the alternative connection mode. Disable it if you encounter any issues. Default is `true`.
+- **pairing_as_app**: Specify if the pairing should be done as an app (not recommended). Default is `false`.
+- **query_interval_config**: The interval (in seconds) at which the configuration will be queried. Default is `3600s`.
+- **query_interval_auth_data**: The interval (in seconds) at which the authentication data will be queried. Default is `7200s`.
+
+
+
+## Settings
+
+The following settings allow you to customize the behavior of the Nuki Lock component, optimizing its performance and reliability. You can configure these in your ESPHome YAML file:
+
+- **`security_pin`**: The Nuki security PIN required for performing specific operations.
+- **`pairing_mode_timeout`**: Specifies how long (in seconds) the pairing mode remains active. Default: `300s`.
+- **`event`**: Defines the event name used by the Nuki Lock component. Default: `nuki`.
+- **`alternative_connect_mode`**: Enables an alternative connection mode to improve compatibility. If you experience issues, consider disabling this. Default: `true`.
+- **`pairing_as_app`**: Determines if pairing should be done as an app. This is not recommended for most setups. Default: `false`.
+- **`query_interval_config`**: Sets the interval (in seconds) for querying the configuration. Default: `3600s`.
+- **`query_interval_auth_data`**: Sets the interval (in seconds) for querying authentication data. Default: `7200s`.
 
 
 ## Supported Services

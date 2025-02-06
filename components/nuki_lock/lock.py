@@ -144,6 +144,8 @@ CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_PAIRING_AS_APP = "pairing_as_app"
 CONF_SECURITY_PIN = "security_pin"
 CONF_ALT_CONNECT_MODE = "alternative_connect_mode"
+CONF_QUERY_INTERVAL_CONFIG = "query_interval_config"
+CONF_QUERY_INTERVAL_AUTH_DATA = "query_interval_auth_data"
 CONF_EVENT = "event"
 
 CONF_SET_PAIRING_MODE = "pairing_mode"
@@ -392,6 +394,8 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_EVENT, default="nuki"): cv.string,
             cv.Optional(CONF_SECURITY_PIN): cv.uint16_t,
+            cv.Optional(CONF_QUERY_INTERVAL_CONFIG, default="3600s"): cv.positive_time_period_seconds,
+            cv.Optional(CONF_QUERY_INTERVAL_AUTH_DATA, default="3600s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_ON_PAIRING_MODE_ON): automation.validate_automation(
                 {
                     cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairingModeOnTrigger),
@@ -431,6 +435,18 @@ async def to_code(config):
         
     if CONF_PAIRING_AS_APP in config:
         cg.add(var.set_pairing_as_app(config[CONF_PAIRING_AS_APP]))
+        
+        if config[CONF_ALT_CONNECT_MODE]:
+            cg.add_define("NUKI_ALT_CONNECT")
+
+    if CONF_ALT_CONNECT_MODE in config:
+        cg.add(var.set_alt_connect_mode(config[CONF_ALT_CONNECT_MODE]))
+
+    if CONF_QUERY_INTERVAL_CONFIG in config:
+        cg.add(var.set_query_interval_config(config[CONF_QUERY_INTERVAL_CONFIG]))
+
+    if CONF_QUERY_INTERVAL_AUTH_DATA in config:
+        cg.add(var.set_query_interval_auth_data(config[CONF_QUERY_INTERVAL_AUTH_DATA]))
 
     # Binary Sensor
     if is_connected := config.get(CONF_IS_CONNECTED_BINARY_SENSOR):
@@ -673,10 +689,6 @@ async def to_code(config):
     # Defines
     cg.add_define("NUKI_MUTEX_RECURSIVE")
     cg.add_define("NUKI_NO_WDT_RESET")
-
-    if CONF_ALT_CONNECT_MODE in config and config[CONF_ALT_CONNECT_MODE]:
-        cg.add_define("NUKI_ALT_CONNECT")
-
 
     # Remove Build flags
     cg.add_platformio_option(
