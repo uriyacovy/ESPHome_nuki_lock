@@ -1,18 +1,13 @@
----
 esphome:
   name: test-nuki
-
-esp32:
-  board: "esp32dev"
-  framework:
-    type: esp-idf
-    version: recommended
 
 wifi:
   ssid: "My Network"
   password: "My Password"
 
 api:
+
+logger:
 
 external_components:
   - source:
