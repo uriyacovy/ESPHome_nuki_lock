@@ -489,6 +489,11 @@ void NukiLockComponent::update_status() {
             NukiLock::triggerToString(this->retrieved_key_turner_state_.lastLockActionTrigger, str);
             this->last_lock_action_trigger_text_sensor_->publish_state(str);
         }
+
+        if (this->last_unlock_user_text_sensor_ != nullptr && this->retrieved_key_turner_state_.lastLockActionTrigger == NukiLock::Trigger::Manual)
+        {
+            this->last_unlock_user_text_sensor_->publish_state("Manual");
+        }
         #endif
 
         if (this->retrieved_key_turner_state_.lockState == NukiLock::LockState::Locking || 
