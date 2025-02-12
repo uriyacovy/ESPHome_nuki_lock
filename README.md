@@ -67,6 +67,8 @@ lock:
       name: "Nuki Last Lock Action"
     last_lock_action_trigger:
       name: "Nuki Last Lock Action Trigger"
+    pin_status:
+      name: "Nuki Security Pin Status"
   # Optional: Switches
     pairing_mode:
       name: "Nuki Pairing Mode"
@@ -181,6 +183,8 @@ lock:
       name: "Nuki Last Lock Action"
     last_lock_action_trigger:
       name: "Nuki Last Lock Action Trigger"
+    pin_status:
+      name: "Nuki Security Pin Status"
   # Optional: Switches
     pairing_mode:
       name: "Nuki Pairing Mode"
@@ -258,7 +262,7 @@ Your Nuki Smartlock is now connected and ready to use!
 
 The following settings allow you to customize the behavior of the Nuki Lock component, optimizing its performance and reliability. You can configure these in your ESPHome YAML file:
 
-- **`security_pin`**: The Nuki security PIN required for performing specific operations.
+- **`security_pin`**: The Nuki security PIN required for performing specific operations (Event Logs, Auth Data, Keypad, ...).
 - **`pairing_mode_timeout`**: Specifies how long (in seconds) the pairing mode remains active. Default: `300s`.
 - **`event`**: Defines the event name used by the Nuki Lock component. Default: `nuki`.
 - **`alternative_connect_mode`**: Enables an alternative connection mode to improve compatibility. If you experience issues, consider disabling this. Default: `true`.
@@ -428,6 +432,7 @@ context:
 - Last Unlock User
 - Last Lock Action
 - Last Lock Action Trigger
+- Pin Status
 
 **Switch:**  
 - Pairing Mode

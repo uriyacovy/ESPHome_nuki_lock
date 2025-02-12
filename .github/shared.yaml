@@ -42,6 +42,8 @@ lock:
       name: "Nuki Last Lock Action"
     last_lock_action_trigger:
       name: "Nuki Last Lock Action Trigger"
+    pin_status:
+      name: "Nuki Security Pin Status"
 
     unpair:
       name: "Nuki Unpair Device"
@@ -109,3 +111,21 @@ lock:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned off");
     on_paired_action:
       - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
+
+button:
+  - platform: template
+    name: Unpair
+    on_press:
+      - nuki_lock.unpair:
+
+  - platform: template
+    name: Enable pairing-mode
+    on_press:
+      - nuki_lock.set_pairing_mode:
+          pairing_mode: true
+
+  - platform: template
+    name: Override security pin
+    on_press:
+      - nuki_lock.set_security_pin:
+          security_pin: 1234

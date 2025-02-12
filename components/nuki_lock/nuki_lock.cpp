@@ -409,15 +409,43 @@ void NukiLockComponent::advertising_mode_to_string(const Nuki::AdvertisingMode m
     }
 }
 
+void NukiLockComponent::pin_state_to_string(const PinState value, char* str)
+{
+    switch(value)
+    {
+        case PinState::NotSet:
+            strcpy(str, "Not set");
+            break;
+        case PinState::Valid:
+            strcpy(str, "Valid");
+            break;
+        case PinState::Invalid:
+            strcpy(str, "Set but invalid");
+            break;
+        default:
+            strcpy(str, "Unknown");
+            break;
+    }
+}
+
 
 void NukiLockComponent::save_settings() {
     NukiLockSettings settings {
-        this->security_pin_
+        this->security_pin_,
+        this->pin_state_
     };
 
     if (!this->pref_.save(&settings)) {
         ESP_LOGW(TAG, "Failed to save settings");
     }
+
+    #ifdef USE_TEXT_SENSOR
+    if (this->pin_state_text_sensor_ != nullptr) {
+        char str[15] = {0};
+        this->pin_state_to_string(this->pin_state_, str);
+        this->pin_state_text_sensor_->publish_state(str);
+    }
+    #endif
 }
 
 void NukiLockComponent::update_status() {
@@ -526,6 +554,7 @@ void NukiLockComponent::update_status() {
 
 void NukiLockComponent::update_config() {
     this->config_update_ = false;
+    cancel_retry("validate_pin");
 
     char str[50] = {0};
 
@@ -599,6 +628,35 @@ void NukiLockComponent::update_config() {
             this->advertising_mode_select_->publish_state(str);
         }
         #endif
+
+        // Check if pin is valid and save state
+        this->set_retry(
+            "validate_pin", 100, 3,
+            [this](const uint8_t remaining_attempts) {
+
+                Nuki::CmdResult pin_result = this->nuki_lock_.verifySecurityPin();
+
+                if(pin_result == Nuki::CmdResult::Success) {
+                    ESP_LOGD(TAG, "Nuki Lock PIN is valid");
+
+                    if(this->pin_state_ != PinState::Valid) {
+                        this->pin_state_ = PinState::Valid;
+                        save_settings();
+                    }
+                    return RetryResult::DONE;
+
+                } else if (remaining_attempts == 0) {
+                    ESP_LOGD(TAG, "Nuki Lock PIN is invalid or not set");
+
+                    if(this->pin_state_ != PinState::Invalid) {
+                        this->pin_state_ = PinState::Invalid;
+                        save_settings();
+                    }
+                }
+                return RetryResult::RETRY;
+            },
+            1.0f
+        );
 
     } else {
         ESP_LOGE(TAG, "requestConfig has resulted in %s (%d)", str, conf_req_result);
@@ -675,6 +733,11 @@ void NukiLockComponent::update_auth_data() {
     this->auth_data_update_ = false;
     this->cancel_timeout("wait_for_auth_data");
 
+    if(!is_pin_valid()) {
+        ESP_LOGW(TAG, "It seems like you did not set a valid pin!");
+        return;
+    }
+
     Nuki::CmdResult auth_data_req_result = this->nuki_lock_.retrieveAuthorizationEntries(0, MAX_AUTH_DATA_ENTRIES);
     char auth_data_req_result_as_string[30] = {0};
     NukiLock::cmdResultToString(auth_data_req_result, auth_data_req_result_as_string);
@@ -703,7 +766,7 @@ void NukiLockComponent::update_auth_data() {
                     this->auth_entries_[entry.authId] = std::string(reinterpret_cast<const char*>(entry.name));
                 }
             } else {
-                ESP_LOGW(TAG, "No auth entries! Did you set the security pin?");
+                ESP_LOGW(TAG, "No auth entries!");
             }
         });
     } else {
@@ -715,6 +778,11 @@ void NukiLockComponent::update_auth_data() {
 void NukiLockComponent::update_event_logs() {
     this->event_log_update_ = false;
     this->cancel_timeout("wait_for_log_entries");
+
+    if(!is_pin_valid()) {
+        ESP_LOGW(TAG, "It seems like you did not set a valid pin!");
+        return;
+    }
 
     Nuki::CmdResult event_log_req_result = this->nuki_lock_.retrieveLogEntries(0, MAX_EVENT_LOG_ENTRIES, 1, false);
     char event_log_req_result_as_string[30] = {0};
@@ -740,7 +808,7 @@ void NukiLockComponent::update_event_logs() {
 
                 this->process_log_entries(log);
             } else {
-                ESP_LOGW(TAG, "No log entries! Did you set the security pin?");
+                ESP_LOGW(TAG, "No log entries!");
             }
         });
     } else {
@@ -881,8 +949,7 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
     }
 
     #ifdef USE_TEXT_SENSOR
-    if (this->last_unlock_user_text_sensor_ != nullptr)
-    {
+    if (this->last_unlock_user_text_sensor_ != nullptr) {
         this->last_unlock_user_text_sensor_->publish_state(this->auth_name_);
     }
     #endif
@@ -923,18 +990,48 @@ bool NukiLockComponent::execute_lock_action(NukiLock::LockAction lock_action) {
 }
 
 void NukiLockComponent::set_override_security_pin(uint16_t security_pin) {
-    this->security_pin_ = security_pin;
-    save_settings();
-    use_security_pin();
+
+    ESP_LOGD(TAG, "Set override security pin: %i", security_pin);
+    this->use_security_pin(security_pin);
 }
 
-void NukiLockComponent::use_security_pin() {
-    bool result = this->nuki_lock_.saveSecurityPincode(this->security_pin_);
-    if (result) {
-        ESP_LOGI(TAG, "Set pincode done");
-    } else {
-        ESP_LOGE(TAG, "Set pincode failed!");
+void NukiLockComponent::use_security_pin(uint16_t security_pin) {
+
+    // Use config pin if set to 0
+    if(security_pin == 0 && this->security_pin_config_ != 0) {
+        ESP_LOGD(TAG, "Set security pin to config value: %i", this->security_pin_config_);
+        security_pin = this->security_pin_config_;
     }
+
+    // Set state to NotSet if pin is still 0
+    if(security_pin == 0) {
+        ESP_LOGI(TAG, "Reset security pin, new state NotSet");
+        this->pin_state_ = PinState::NotSet;
+    }
+
+    // Set new pin and save to flash
+    this->security_pin_ = security_pin;
+    save_settings();
+
+    // Set new pin
+    if(this->get_pin() != this->security_pin_) {
+        bool result = this->nuki_lock_.saveSecurityPincode(this->security_pin_);
+        if (result) {
+            ESP_LOGI(TAG, "Succesfully set security pin!");
+        } else {
+            ESP_LOGE(TAG, "Failed to set security pin!");
+        }
+    } else {
+        ESP_LOGW(TAG, "Seems like the new security pin is already the current one!");
+    }
+}
+
+bool NukiLockComponent::is_pin_valid() {
+    return this->pin_state_ == PinState::Valid;
+}
+
+uint16_t NukiLockComponent::get_pin() {
+    return this->nuki_lock_.getSecurityPincode();
 }
 
 void NukiLockComponent::setup() {
@@ -960,12 +1057,7 @@ void NukiLockComponent::setup() {
         recovered = {0};
     }
 
-    if (recovered.security_pin != 0) {
-        this->security_pin_ = recovered.security_pin;
-        ESP_LOGD(TAG, "Using saved security pin: %i", this->security_pin_);
-    } else {
-        ESP_LOGD(TAG, "Using security pin from configuration file: %i", this->security_pin_);
-    }
+    this->pin_state_ = recovered.pin_state;
 
     this->traits.set_supported_states(
         std::set<lock::LockState> {
@@ -986,8 +1078,14 @@ void NukiLockComponent::setup() {
     this->nuki_lock_.setConnectTimeout(BLE_CONNECT_TIMEOUT_SEC);
     this->nuki_lock_.setConnectRetries(BLE_CONNECT_TIMEOUT_RETRIES);
 
-    this->use_security_pin();
-    
+    if (recovered.security_pin != 0) {
+        ESP_LOGD(TAG, "Using saved security pin: %i", recovered.security_pin);
+        this->use_security_pin(recovered.security_pin);
+    } else {
+        ESP_LOGD(TAG, "Using security pin from configuration file: %i", this->security_pin_config_);
+        this->use_security_pin(this->security_pin_config_);
+    }
+
     if (this->nuki_lock_.isPairedWithLock()) {
         this->status_update_ = true;
 
@@ -1018,6 +1116,14 @@ void NukiLockComponent::setup() {
         }     
         #endif
     }
+
+    #ifdef USE_TEXT_SENSOR
+    if (this->pin_state_text_sensor_ != nullptr) {
+        char pin_state_as_string[30] = {0};
+        this->pin_state_to_string(this->pin_state_, pin_state_as_string);
+        this->pin_state_text_sensor_->publish_state(pin_state_as_string);
+    }
+    #endif
 
     this->publish_state(lock::LOCK_STATE_NONE);
 
@@ -1216,7 +1322,7 @@ void NukiLockComponent::lock_n_go() {
 bool NukiLockComponent::valid_keypad_id(int32_t id) {
     bool is_valid = std::find(keypad_code_ids_.begin(), keypad_code_ids_.end(), id) != keypad_code_ids_.end();
     if (!is_valid) {
-        ESP_LOGE(TAG, "keypad id %d unknown.", id);
+        ESP_LOGE(TAG, "Keypad id %d unknown.", id);
     }
     return is_valid;
 }
@@ -1224,7 +1330,7 @@ bool NukiLockComponent::valid_keypad_id(int32_t id) {
 bool NukiLockComponent::valid_keypad_name(std::string name) {
     bool name_valid = !(name == "" || name == "--");
     if (!name_valid) {
-        ESP_LOGE(TAG, "keypad name '%s' is invalid.", name.c_str());
+        ESP_LOGE(TAG, "Keypad name '%s' is invalid.", name.c_str());
     }
     return name_valid;
 }
@@ -1232,14 +1338,19 @@ bool NukiLockComponent::valid_keypad_name(std::string name) {
 bool NukiLockComponent::valid_keypad_code(int32_t code) {
     bool code_valid = (code > 100000 && code < 1000000 && (std::to_string(code).find('0') == std::string::npos));
     if (!code_valid) {
-        ESP_LOGE(TAG, "keypad code %d is invalid. Code must be 6 digits, without 0.", code);
+        ESP_LOGE(TAG, "Keypad code %d is invalid. Code must be 6 digits, without 0.", code);
     }
     return code_valid;
 }
 
 void NukiLockComponent::add_keypad_entry(std::string name, int32_t code) {
     if (!keypad_paired_) {
-        ESP_LOGE(TAG, "keypad is not paired to Nuki");
+        ESP_LOGE(TAG, "Keypad is not paired to Nuki");
+        return;
+    }
+
+    if(!is_pin_valid()) {
+        ESP_LOGW(TAG, "It seems like you did not set a valid pin!");
         return;
     }
 
@@ -1264,6 +1375,11 @@ void NukiLockComponent::add_keypad_entry(std::string name, int32_t code) {
 void NukiLockComponent::update_keypad_entry(int32_t id, std::string name, int32_t code, bool enabled) {
     if (!keypad_paired_) {
         ESP_LOGE(TAG, "keypad is not paired to Nuki");
+        return;
+    }
+
+    if(!is_pin_valid()) {
+        ESP_LOGW(TAG, "It seems like you did not set a valid pin!");
         return;
     }
 
@@ -1293,6 +1409,11 @@ void NukiLockComponent::delete_keypad_entry(int32_t id) {
         return;
     }
 
+    if(!is_pin_valid()) {
+        ESP_LOGW(TAG, "It seems like you did not set a valid pin!");
+        return;
+    }
+
     if (!valid_keypad_id(id)) {
         ESP_LOGE(TAG, "delete_keypad_entry invalid parameters");
         return;
@@ -1308,7 +1429,12 @@ void NukiLockComponent::delete_keypad_entry(int32_t id) {
 
 void NukiLockComponent::print_keypad_entries() {
     if (!keypad_paired_) {
-        ESP_LOGE(TAG, "keypad is not paired to Nuki");
+        ESP_LOGE(TAG, "Keypad is not paired to Nuki");
+        return;
+    }
+
+    if(!is_pin_valid()) {
+        ESP_LOGW(TAG, "It seems like you did not set a valid pin!");
         return;
     }
 
@@ -1347,6 +1473,10 @@ void NukiLockComponent::dump_config() {
     ESP_LOGCONFIG(TAG, "  Configuration query interval: %us", this->query_interval_config_);
     ESP_LOGCONFIG(TAG, "  Auth Data query interval: %us", this->query_interval_auth_data_);
 
+    char pin_state_as_string[30] = {0};
+    this->pin_state_to_string(this->pin_state_, pin_state_as_string);
+    ESP_LOGCONFIG(TAG, "  Pin Status: %s", pin_state_as_string);
+
     LOG_LOCK(TAG, "Nuki Lock", this);
     #ifdef USE_BINARY_SENSOR
     LOG_BINARY_SENSOR(TAG, "Is Connected", this->is_connected_binary_sensor_);
@@ -1359,6 +1489,7 @@ void NukiLockComponent::dump_config() {
     LOG_TEXT_SENSOR(TAG, "Last Unlock User", this->last_unlock_user_text_sensor_);
     LOG_TEXT_SENSOR(TAG, "Last Lock Action", this->last_lock_action_text_sensor_);
     LOG_TEXT_SENSOR(TAG, "Last Lock Action Trigger", this->last_lock_action_trigger_text_sensor_);
+    LOG_TEXT_SENSOR(TAG, "Pin Status", this->pin_state_text_sensor_);
     #endif
     #ifdef USE_SENSOR
     LOG_SENSOR(TAG, "Battery Level", this->battery_level_sensor_);
@@ -1400,8 +1531,12 @@ void NukiLockComponent::notify(Nuki::EventType event_type) {
 
     if(event_type == Nuki::EventType::KeyTurnerStatusReset) {
         // IDK
+        ESP_LOGD(TAG, "KeyTurnerStatusReset");
     } else if (event_type == Nuki::EventType::ERROR_BAD_PIN) {
         // Invalid Pin
+        ESP_LOGW(TAG, "Invalid security pin - please check");
+        this->pin_state_ = PinState::Invalid;
+        save_settings();
     } else if(event_type == Nuki::EventType::KeyTurnerStatusUpdated) {
         // Request status update
         this->status_update_ = true;
@@ -1411,7 +1546,7 @@ void NukiLockComponent::notify(Nuki::EventType event_type) {
             this->event_log_update_ = true;
         }
     } else if(event_type == Nuki::EventType::BLE_ERROR_ON_DISCONNECT) {
-        ESP_LOGI(TAG, "Failed to disconnect from Nuki. Restarting ESP...");
+        ESP_LOGE(TAG, "Failed to disconnect from Nuki. Restarting ESP...");
         delay(100);  // NOLINT
         App.safe_reboot();
     }
@@ -1420,9 +1555,13 @@ void NukiLockComponent::notify(Nuki::EventType event_type) {
 void NukiLockComponent::unpair() {
     if (this->nuki_lock_.isPairedWithLock()) {
         this->nuki_lock_.unPairNuki();
-        ESP_LOGI(TAG, "Unpaired Nuki! Turn on Pairing Mode to pair a new Nuki.");
+
+        // Reset pin
+        this->use_security_pin(0);
 
         this->setup_intervals(false);
+
+        ESP_LOGI(TAG, "Unpaired Nuki! Turn on Pairing Mode to pair a new Nuki.");
     } else {
         ESP_LOGE(TAG, "Unpair action called for unpaired Nuki");
     }

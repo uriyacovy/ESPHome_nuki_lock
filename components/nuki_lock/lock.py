@@ -36,6 +36,7 @@ CONF_DOOR_SENSOR_STATE_TEXT_SENSOR = "door_sensor_state"
 CONF_LAST_UNLOCK_USER_TEXT_SENSOR = "last_unlock_user"
 CONF_LAST_LOCK_ACTION_TEXT_SENSOR = "last_lock_action"
 CONF_LAST_LOCK_ACTION_TRIGGER_TEXT_SENSOR = "last_lock_action_trigger"
+CONF_PIN_STATE_TEXT_SENSOR = "pin_status"
 
 CONF_UNPAIR_BUTTON = "unpair"
 
@@ -239,6 +240,10 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_LAST_LOCK_ACTION_TEXT_SENSOR):  text_sensor.text_sensor_schema(
                 entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
                 icon="mdi:account-clock"
+            ),
+            cv.Optional(CONF_PIN_STATE_TEXT_SENSOR):  text_sensor.text_sensor_schema(
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                icon="mdi:shield-key"
             ),
             cv.Optional(CONF_LAST_LOCK_ACTION_TRIGGER_TEXT_SENSOR):  text_sensor.text_sensor_schema(
                 entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
@@ -490,6 +495,10 @@ async def to_code(config):
     if last_lock_action := config.get(CONF_LAST_LOCK_ACTION_TEXT_SENSOR):
         sens = await text_sensor.new_text_sensor(last_lock_action)
         cg.add(var.set_last_lock_action_text_sensor(sens))
+
+    if pin_state := config.get(CONF_PIN_STATE_TEXT_SENSOR):
+        sens = await text_sensor.new_text_sensor(pin_state)
+        cg.add(var.set_pin_state_text_sensor(sens))
 
     # Button
     if unpair := config.get(CONF_UNPAIR_BUTTON):
@@ -744,7 +753,7 @@ def _final_validate(config):
         # Check for API encryption
         if "api" in full_config:
             if "encryption" in full_config["api"]:
-                LOGGER.warning("You may need to disable API encryption to successfully pair with the Nuki Lock, as it consumes quite a bit of memory.")
+                LOGGER.warning("You may need to disable API encryption to successfully pair with the Nuki Smart Lock, as it consumes quite a bit of memory.")
     
     return config
 

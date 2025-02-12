@@ -39,9 +39,17 @@ namespace nuki_lock {
 
 static const char *TAG = "nuki_lock.lock";
 
+enum PinState
+{
+    NotSet = 0,
+    Valid = 1,
+    Invalid = 2
+};
+
 struct NukiLockSettings
 {
     uint16_t security_pin;
+    PinState pin_state;
 };
 
 class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuki::SmartlockEventHandler {
@@ -60,6 +68,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
     SUB_TEXT_SENSOR(last_unlock_user)
     SUB_TEXT_SENSOR(last_lock_action)
     SUB_TEXT_SENSOR(last_lock_action_trigger)
+    SUB_TEXT_SENSOR(pin_state)
     #endif
     #ifdef USE_NUMBER
     SUB_NUMBER(led_brightness)
@@ -135,7 +144,10 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
                 this->send_events_ = true;
             }
         }
-        void set_security_pin(uint16_t security_pin) { this->security_pin_ = security_pin; }
+        void set_security_pin(uint16_t security_pin) {
+            this->security_pin_config_ = security_pin;
+            this->security_pin_ = security_pin;
+        }
 
         void add_pairing_mode_on_callback(std::function<void()> &&callback);
         void add_pairing_mode_off_callback(std::function<void()> &&callback);
@@ -160,9 +172,13 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         Nuki::AdvertisingMode advertising_mode_to_enum(const char *str);
         void advertising_mode_to_string(const Nuki::AdvertisingMode mode, char* str);
 
+        void pin_state_to_string(const PinState value, char* str);
+        bool is_pin_valid();
+        uint16_t get_pin();
+
         void unpair();
         void set_pairing_mode(bool enabled);
-        void use_security_pin();
+        void use_security_pin(uint16_t security_pin);
         void set_override_security_pin(uint16_t security_pin);
         void save_settings();
 
@@ -218,7 +234,11 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         bool lock_n_go_;
 
         bool pairing_as_app_ = false;
+
+        PinState pin_state_ = PinState::NotSet;
         uint16_t security_pin_ = 0;
+        uint16_t security_pin_config_ = 0;
+
         const char* event_;
         bool send_events_ = false;
 
