@@ -41,6 +41,7 @@ lock:
   # Optional: Advanced Settings
     alternative_connect_mode: true
     pairing_as_app: false
+    ultra_pairing_mode: false
     query_interval_config: 3600s
     query_interval_auth_data: 7200s
 
@@ -107,6 +108,8 @@ lock:
       name: "Nuki Daylight Saving Time"
     auto_battery_type_detection_enabled:
       name: "Nuki Automatic Battery Type Detection"
+    slow_speed_during_night_mode_enabled:
+      name: "Nuki Slow Speed During Night Mode"
   # Optional: Select Inputs
     single_buton_press_action:
       name: "Nuki Button: Single Press Action"
@@ -124,6 +127,8 @@ lock:
       name: "Nuki Advertising Mode"
     battery_type:
       name: "Nuki Battery Type"
+    motor_speed:
+      name: "Nuki Motor Speed"
   # Optional: Buttons
     unpair:
       name: "Nuki Unpair Device"
@@ -162,6 +167,7 @@ lock:
   # Optional: Advanced Settings
     alternative_connect_mode: true
     pairing_as_app: false
+    ultra_pairing_mode: false
     query_interval_config: 3600s
     query_interval_auth_data: 7200s
 
@@ -228,6 +234,8 @@ lock:
       name: "Nuki Daylight Saving Time"
     auto_battery_type_detection_enabled:
       name: "Nuki Automatic Battery Type Detection"
+    slow_speed_during_night_mode_enabled:
+      name: "Nuki Slow Speed During Night Mode"
   # Optional: Select Inputs
     single_buton_press_action:
       name: "Nuki Button: Single Press Action"
@@ -245,6 +253,8 @@ lock:
       name: "Nuki Advertising Mode"
     battery_type:
       name: "Nuki Battery Type"
+    motor_speed:
+      name: "Nuki Motor Speed"
   # Optional: Buttons
     unpair:
       name: "Nuki Unpair Device"
@@ -273,10 +283,11 @@ Your Nuki Smartlock is now connected and ready to use!
 The following settings allow you to customize the behavior of the Nuki Lock component, optimizing its performance and reliability. You can configure these in your ESPHome YAML file:
 
 - **`security_pin`**: The Nuki security PIN required for performing specific operations (Event Logs, Auth Data, Keypad, ...).
-- **`pairing_mode_timeout`**: Specifies how long (in seconds) the pairing mode remains active. Default: `300s`.
 - **`event`**: Defines the event name used by the Nuki Lock component. Default: `nuki`.
 - **`alternative_connect_mode`**: Enables an alternative connection mode to improve compatibility. If you experience issues, consider disabling this. Default: `true`.
 - **`pairing_as_app`**: Determines if pairing should be done as an app. This is not recommended for most setups. Default: `false`.
+- **`ultra_pairing_mode`**: Enables support for pairing the Smart Lock Ultra. Default: `false`.
+- **`pairing_mode_timeout`**: Specifies how long (in seconds) the pairing mode remains active. Default: `300s`.
 - **`query_interval_config`**: Sets the interval (in seconds) for querying the configuration. Default: `3600s`.
 - **`query_interval_auth_data`**: Sets the interval (in seconds) for querying authentication data. Default: `7200s`.
 
@@ -458,7 +469,8 @@ context:
 - Single Lock
 - Daylight Saving Time
 - Automatic Updates
-- Automatic Battery Type Detection
+- Automatic Battery Type Detection (Smart Lock Gen 1-4)
+- Slow Speed During Night Mode (Smart Lock Ultra)
 
 **Select Input:**  
 - Single Button Press Action
@@ -468,7 +480,8 @@ context:
 - Fob Action 3
 - Timezone
 - Advertising Mode
-- Battery Type
+- Battery Type (Smart Lock Gen 1-4)
+- Motor Speed (Smart Lock Ultra)
 
 **Number Input:**  
 - LED Brightness
