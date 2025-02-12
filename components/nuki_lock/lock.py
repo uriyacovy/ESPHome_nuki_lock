@@ -54,6 +54,8 @@ CONF_IMMEDIATE_AUTO_LOCK_ENABLED_SWITCH = "immediate_auto_lock_enabled"
 CONF_AUTO_UPDATE_ENABLED_SWITCH = "auto_update_enabled"
 CONF_SINGLE_LOCK_ENABLED_SWITCH = "single_lock_enabled"
 CONF_DST_MODE_ENABLED_SWITCH = "dst_mode_enabled"
+CONF_AUTO_BATTERY_TYPE_DETECTION_ENABLED_SWITCH = "auto_battery_type_detection_enabled"
+CONF_SLOW_SPEED_DURING_NIGHT_MODE_ENABLED_SWITCH = "slow_speed_during_night_mode"
 
 CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT = "single_buton_press_action"
 CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT = "double_buton_press_action"
@@ -62,9 +64,12 @@ CONF_FOB_ACTION_2_SELECT = "fob_action_2"
 CONF_FOB_ACTION_3_SELECT = "fob_action_3"
 CONF_TIMEZONE_SELECT = "timezone"
 CONF_ADVERTISING_MODE_SELECT = "advertising_mode"
+CONF_BATTERY_TYPE_SELECT = "battery_type"
+CONF_MOTOR_SPEED_SELECT = "motor_speed"
 
 CONF_LED_BRIGHTNESS_NUMBER = "led_brightness"
 CONF_TIMEZONE_OFFSET_NUMBER = "timezone_offset"
+CONF_LOCK_N_GO_TIMEOUT_NUMBER = "lock_n_go_timeout"
 
 CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS = [
     "No Action",
@@ -82,6 +87,12 @@ CONF_FOB_ACTION_SELECT_OPTIONS = [
     "Lock",
     "Lock n Go",
     "Intelligent"
+]
+
+CONF_MOTOR_SPEED_SELECT_OPTIONS = [
+    "Standard",
+    "Insane",
+    "Gentle"
 ]
 
 CONF_TIMEZONE_SELECT_OPTIONS = [
@@ -141,6 +152,12 @@ CONF_ADVERTISING_MODE_SELECT_OPTIONS = [
     "Slowest"
 ]
 
+CONF_BATTERY_TYPE_SELECT_OPTIONS = [
+    "Alkali",
+    "Accumulators",
+    "Lithium"
+]
+
 CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_PAIRING_AS_APP = "pairing_as_app"
 CONF_SECURITY_PIN = "security_pin"
@@ -175,9 +192,12 @@ NukiLockImmediateAutoLockEnabledSwitch = nuki_lock_ns.class_("NukiLockImmediateA
 NukiLockAutoUpdateEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoUpdateEnabledSwitch", switch.Switch, cg.Component)
 NukiLockSingleLockEnabledSwitch = nuki_lock_ns.class_("NukiLockSingleLockEnabledSwitch", switch.Switch, cg.Component)
 NukiLockDstModeEnabledSwitch = nuki_lock_ns.class_("NukiLockDstModeEnabledSwitch", switch.Switch, cg.Component)
+NukiLockAutoBatteryTypeDetectionEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoBatteryTypeDetectionEnabledSwitch", switch.Switch, cg.Component)
+#NukiLockSlowSpeedDuringNightModeEnabledSwitch = nuki_lock_ns.class_("NukiLockSlowSpeedDuringNightModeEnabledSwitch", switch.Switch, cg.Component)
 
 NukiLockLedBrightnessNumber = nuki_lock_ns.class_("NukiLockLedBrightnessNumber", number.Number, cg.Component)
 NukiLockTimeZoneOffsetNumber = nuki_lock_ns.class_("NukiLockTimeZoneOffsetNumber", number.Number, cg.Component)
+NukiLockLockNGoTimeoutNumber = nuki_lock_ns.class_("NukiLockLockNGoTimeoutNumber", number.Number, cg.Component)
 
 NukiLockSingleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockSingleButtonPressActionSelect", select.Select, cg.Component)
 NukiLockDoubleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockDoubleButtonPressActionSelect", select.Select, cg.Component)
@@ -186,6 +206,8 @@ NukiLockFobAction2Select = nuki_lock_ns.class_("NukiLockFobAction2Select", selec
 NukiLockFobAction3Select = nuki_lock_ns.class_("NukiLockFobAction3Select", select.Select, cg.Component)
 NukiLockTimeZoneSelect = nuki_lock_ns.class_("NukiLockTimeZoneSelect", select.Select, cg.Component)
 NukiLockAdvertisingModeSelect = nuki_lock_ns.class_("NukiLockAdvertisingModeSelect", select.Select, cg.Component)
+NukiLockBatteryTypeSelect = nuki_lock_ns.class_("NukiLockBatteryTypeSelect", select.Select, cg.Component)
+#NukiLockMotorSpeedSelect = nuki_lock_ns.class_("NukiLockMotorSpeedSelect", select.Select, cg.Component)
 
 NukiLockUnpairAction = nuki_lock_ns.class_(
     "NukiLockUnpairAction", automation.Action
@@ -349,6 +371,18 @@ CONFIG_SCHEMA = cv.All(
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:sun-clock",
             ),
+            cv.Optional(CONF_AUTO_BATTERY_TYPE_DETECTION_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockAutoBatteryTypeDetectionEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:battery-check",
+            ),
+            #cv.Optional(CONF_SLOW_SPEED_DURING_NIGHT_MODE_ENABLED_SWITCH): switch.switch_schema(
+            #    NukiLockSlowSpeedDuringNightModeEnabledSwitch,
+            #    device_class=DEVICE_CLASS_SWITCH,
+            #    entity_category=ENTITY_CATEGORY_CONFIG,
+            #    icon="mdi:speedometer-slow",
+            #),
             cv.Optional(CONF_LED_BRIGHTNESS_NUMBER): number.number_schema(
                 NukiLockLedBrightnessNumber,
                 entity_category=ENTITY_CATEGORY_CONFIG,
@@ -356,6 +390,11 @@ CONFIG_SCHEMA = cv.All(
             ),
             cv.Optional(CONF_TIMEZONE_OFFSET_NUMBER): number.number_schema(
                 NukiLockTimeZoneOffsetNumber,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:clock-end",
+            ),
+            cv.Optional(CONF_LOCK_N_GO_TIMEOUT_NUMBER): number.number_schema(
+                NukiLockLockNGoTimeoutNumber,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:clock-end",
             ),
@@ -394,6 +433,16 @@ CONFIG_SCHEMA = cv.All(
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:timer-cog",
             ),
+            cv.Optional(CONF_BATTERY_TYPE_SELECT): select.select_schema(
+                NukiLockBatteryTypeSelect,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:battery",
+            ),
+            #cv.Optional(CONF_MOTOR_SPEED_SELECT): select.select_schema(
+            #    NukiLockMotorSpeedSelect,
+            #    entity_category=ENTITY_CATEGORY_CONFIG,
+            #    icon="mdi:speedometer-medium",
+            #),
             cv.Optional(CONF_ALT_CONNECT_MODE, default="true"): cv.boolean,
             cv.Optional(CONF_PAIRING_AS_APP, default="false"): cv.boolean,
             cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
@@ -521,6 +570,13 @@ async def to_code(config):
         await cg.register_parented(n, config[CONF_ID])
         cg.add(var.set_timezone_offset_number(n))
 
+    if lock_n_go_timeout := config.get(CONF_LOCK_N_GO_TIMEOUT_NUMBER):
+        n = await number.new_number(
+            lock_n_go_timeout, min_value=5, max_value=60, step=1
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_lock_n_go_timeout_number(n))
+
     # Switch
     if pairing_mode := config.get(CONF_PAIRING_MODE_SWITCH):
         s = await switch.new_switch(pairing_mode)
@@ -592,6 +648,16 @@ async def to_code(config):
         await cg.register_parented(s, config[CONF_ID])
         cg.add(var.set_dst_mode_enabled_switch(s))
 
+    if auto_battery_type_detection := config.get(CONF_AUTO_BATTERY_TYPE_DETECTION_ENABLED_SWITCH):
+        s = await switch.new_switch(auto_battery_type_detection)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_auto_battery_type_detection_enabled_switch(s))
+
+    #if slow_speed_during_night_mode := config.get(CONF_SLOW_SPEED_DURING_NIGHT_MODE_ENABLED_SWITCH):
+    #    s = await switch.new_switch(slow_speed_during_night_mode)
+    #    await cg.register_parented(s, config[CONF_ID])
+    #    cg.add(var.set_slow_speed_during_night_mode_enabled_switch(s))
+
     # Select
     if single_button_press_action := config.get(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT):
         sel = await select.new_select(
@@ -648,6 +714,22 @@ async def to_code(config):
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_advertising_mode_select(sel))
+
+    if battery_type := config.get(CONF_BATTERY_TYPE_SELECT):
+        sel = await select.new_select(
+            battery_type,
+            options=[CONF_BATTERY_TYPE_SELECT_OPTIONS],
+        )
+        await cg.register_parented(sel, config[CONF_ID])
+        cg.add(var.set_battery_type_select(sel))
+
+    #if motor_speed := config.get(CONF_MOTOR_SPEED_SELECT):
+    #    sel = await select.new_select(
+    #        motor_speed,
+    #        options=[CONF_MOTOR_SPEED_SELECT_OPTIONS],
+    #    )
+    #    await cg.register_parented(sel, config[CONF_ID])
+    #    cg.add(var.set_motor_speed_select(sel))
 
 
     # Callback
