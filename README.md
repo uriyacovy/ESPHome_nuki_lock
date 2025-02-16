@@ -69,6 +69,13 @@ lock:
       name: "Nuki Last Lock Action Trigger"
     pin_status:
       name: "Nuki Security Pin Status"
+  # Optional: Number Inputs
+    led_brightness:
+      name: "Nuki LED Brightness"
+    timezone_offset:
+      name: "Nuki Timezone: Offset"
+    lock_n_go_timeout:
+      name: "Nuki LockNGo Timeout"
   # Optional: Switches
     pairing_mode:
       name: "Nuki Pairing Mode"
@@ -78,12 +85,6 @@ lock:
       name: "Nuki Button: Locking operations"
     led_enabled:
       name: "Nuki LED Signal"
-  # Optional: Number Inputs
-    led_brightness:
-      name: "Nuki LED Brightness"
-    timezone_offset:
-      name: "Nuki Timezone: Offset"
-  # Optional: Switches
     night_mode_enabled:
       name: "Nuki Night Mode"
     night_mode_auto_lock_enabled:
@@ -104,6 +105,8 @@ lock:
       name: "Nuki Single Lock"
     dst_mode_enabled:
       name: "Nuki Daylight Saving Time"
+    auto_battery_type_detection_enabled:
+      name: "Nuki Automatic Battery Type Detection"
   # Optional: Select Inputs
     single_buton_press_action:
       name: "Nuki Button: Single Press Action"
@@ -119,6 +122,8 @@ lock:
       name: "Nuki Timezone"
     advertising_mode:
       name: "Nuki Advertising Mode"
+    battery_type:
+      name: "Nuki Battery Type"
   # Optional: Buttons
     unpair:
       name: "Nuki Unpair Device"
@@ -185,6 +190,13 @@ lock:
       name: "Nuki Last Lock Action Trigger"
     pin_status:
       name: "Nuki Security Pin Status"
+  # Optional: Number Inputs
+    led_brightness:
+      name: "Nuki LED Brightness"
+    timezone_offset:
+      name: "Nuki Timezone: Offset"
+    lock_n_go_timeout:
+      name: "Nuki LockNGo Timeout"
   # Optional: Switches
     pairing_mode:
       name: "Nuki Pairing Mode"
@@ -194,12 +206,6 @@ lock:
       name: "Nuki Button: Locking operations"
     led_enabled:
       name: "Nuki LED Signal"
-  # Optional: Number Inputs
-    led_brightness:
-      name: "Nuki LED Brightness"
-    timezone_offset:
-      name: "Nuki Timezone: Offset"
-  # Optional: Switches
     night_mode_enabled:
       name: "Nuki Night Mode"
     night_mode_auto_lock_enabled:
@@ -220,6 +226,8 @@ lock:
       name: "Nuki Single Lock"
     dst_mode_enabled:
       name: "Nuki Daylight Saving Time"
+    auto_battery_type_detection_enabled:
+      name: "Nuki Automatic Battery Type Detection"
   # Optional: Select Inputs
     single_buton_press_action:
       name: "Nuki Button: Single Press Action"
@@ -235,6 +243,8 @@ lock:
       name: "Nuki Timezone"
     advertising_mode:
       name: "Nuki Advertising Mode"
+    battery_type:
+      name: "Nuki Battery Type"
   # Optional: Buttons
     unpair:
       name: "Nuki Unpair Device"
@@ -448,6 +458,7 @@ context:
 - Single Lock
 - Daylight Saving Time
 - Automatic Updates
+- Automatic Battery Type Detection
 
 **Select Input:**  
 - Single Button Press Action
@@ -457,6 +468,7 @@ context:
 - Fob Action 3
 - Timezone
 - Advertising Mode
+- Battery Type
 
 **Number Input:**  
 - LED Brightness

@@ -73,6 +73,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
     #ifdef USE_NUMBER
     SUB_NUMBER(led_brightness)
     SUB_NUMBER(timezone_offset)
+    SUB_NUMBER(lock_n_go_timeout)
     #endif
     #ifdef USE_SELECT
     SUB_SELECT(single_button_press_action)
@@ -82,6 +83,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
     SUB_SELECT(fob_action_3)
     SUB_SELECT(timezone)
     SUB_SELECT(advertising_mode)
+    SUB_SELECT(battery_type)
     #endif
     #ifdef USE_BUTTON
     SUB_BUTTON(unpair)
@@ -101,6 +103,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
     SUB_SWITCH(auto_update_enabled)
     SUB_SWITCH(single_lock_enabled)
     SUB_SWITCH(dst_mode_enabled)
+    SUB_SWITCH(auto_battery_type_detection_enabled)
     #endif
 
     static const uint8_t BLE_CONNECT_TIMEOUT_SEC = 3;
@@ -163,6 +166,9 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         uint8_t fob_action_to_int(const char *str);
         void fob_action_to_string(const int action, char* str);
 
+        Nuki::BatteryType battery_type_to_enum(const char* str);
+        void battery_type_to_string(const Nuki::BatteryType battery_type, char* str);
+
         NukiLock::ButtonPressAction button_press_action_to_enum(const char* str);
         void button_press_action_to_string(NukiLock::ButtonPressAction action, char* str);
 
@@ -172,14 +178,14 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         Nuki::AdvertisingMode advertising_mode_to_enum(const char *str);
         void advertising_mode_to_string(const Nuki::AdvertisingMode mode, char* str);
 
+        void homekit_status_to_string(const int status, char* str);
+
         void pin_state_to_string(const PinState value, char* str);
-        bool is_pin_valid();
-        uint16_t get_pin();
+
+        void use_security_pin(uint16_t security_pin);
 
         void unpair();
         void set_pairing_mode(bool enabled);
-        void use_security_pin(uint16_t security_pin);
-        void set_override_security_pin(uint16_t security_pin);
         void save_settings();
 
         #ifdef USE_NUMBER
@@ -205,6 +211,10 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         void process_log_entries(const std::list<NukiLock::LogEntry>& log_entries);
 
         void setup_intervals(bool setup = true);
+        void publish_pin_state();
+
+        bool is_pin_valid();
+        uint16_t get_pin();
 
         bool execute_lock_action(NukiLock::LockAction lock_action);
 
@@ -297,7 +307,7 @@ template<typename... Ts> class NukiLockSecurityPinAction : public Action<Ts...> 
         NukiLockSecurityPinAction(NukiLockComponent *parent) : parent_(parent) {}
         TEMPLATABLE_VALUE(uint16_t, security_pin)
 
-        void play(Ts... x) { this->parent_->set_override_security_pin(this->security_pin_.value(x...)); }
+        void play(Ts... x) { this->parent_->use_security_pin(this->security_pin_.value(x...)); }
 
     protected:
         NukiLockComponent *parent_;
@@ -381,6 +391,13 @@ class NukiLockTimeZoneSelect : public select::Select, public Parented<NukiLockCo
 class NukiLockAdvertisingModeSelect : public select::Select, public Parented<NukiLockComponent> {
     public:
         NukiLockAdvertisingModeSelect() = default;
+    protected:
+        void control(const std::string &value) override;
+};
+
+class NukiLockBatteryTypeSelect : public select::Select, public Parented<NukiLockComponent> {
+    public:
+        NukiLockBatteryTypeSelect() = default;
     protected:
         void control(const std::string &value) override;
 };
@@ -497,6 +514,14 @@ class NukiLockDstModeEnabledSwitch : public switch_::Switch, public Parented<Nuk
     protected:
         void write_state(bool state) override;
 };
+
+class NukiLockAutoBatteryTypeDetectionEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockAutoBatteryTypeDetectionEnabledSwitch() = default;
+
+    protected:
+        void write_state(bool state) override;
+};
 #endif
 
 #ifdef USE_NUMBER
@@ -510,6 +535,13 @@ class NukiLockLedBrightnessNumber : public number::Number, public Parented<NukiL
 class NukiLockTimeZoneOffsetNumber : public number::Number, public Parented<NukiLockComponent> {
     public:
         NukiLockTimeZoneOffsetNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+class NukiLockLockNGoTimeoutNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockLockNGoTimeoutNumber() = default;
 
     protected:
         void control(float value) override;

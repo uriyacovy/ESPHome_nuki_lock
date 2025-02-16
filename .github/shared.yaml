@@ -76,11 +76,15 @@ lock:
       name: "Nuki Single Lock"
     dst_mode_enabled:
       name: "Nuki Daylight Saving Time"
+    auto_battery_type_detection_enabled:
+      name: "Nuki Automatic Battery Type Detection"
 
     led_brightness:
       name: "Nuki LED Brightness"
     timezone_offset:
       name: "Nuki Timezone: Offset"
+    lock_n_go_timeout:
+      name: "Nuki LockNGo Timeout"
 
     single_buton_press_action:
       name: "Nuki Single Button Press Action"
@@ -96,6 +100,8 @@ lock:
       name: "Nuki Timezone"
     advertising_mode:
       name: "Nuki Advertising Mode"
+    battery_type:
+      name: "Nuki Battery Type"
 
     pairing_mode_timeout: 300s
     event: "nuki"
