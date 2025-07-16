@@ -6,15 +6,15 @@ from esphome import automation
 from esphome.components.esp32 import add_idf_component, add_idf_sdkconfig_option
 from esphome.components import lock, binary_sensor, text_sensor, sensor, switch, button, number, select
 from esphome.const import (
-    CONF_ID, 
-    DEVICE_CLASS_CONNECTIVITY, 
-    DEVICE_CLASS_BATTERY, 
-    DEVICE_CLASS_DOOR, 
+    CONF_ID,
+    DEVICE_CLASS_CONNECTIVITY,
+    DEVICE_CLASS_BATTERY,
+    DEVICE_CLASS_DOOR,
     DEVICE_CLASS_SWITCH,
     DEVICE_CLASS_SIGNAL_STRENGTH,
     UNIT_PERCENT,
     UNIT_DECIBEL_MILLIWATT,
-    ENTITY_CATEGORY_CONFIG, 
+    ENTITY_CATEGORY_CONFIG,
     ENTITY_CATEGORY_DIAGNOSTIC,
     CONF_TRIGGER_ID,
 )
@@ -219,9 +219,8 @@ def _validate(config):
     return config
 
 CONFIG_SCHEMA = cv.All(
-    lock.LOCK_SCHEMA.extend(
+    lock.lock_schema(NukiLock).extend(
         {
-            cv.GenerateID(): cv.declare_id(NukiLock),
             cv.Optional(CONF_IS_CONNECTED_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
                 device_class=DEVICE_CLASS_CONNECTIVITY,
                 entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
@@ -452,9 +451,8 @@ CONFIG_SCHEMA = cv.All(
 
 
 async def to_code(config):
-    var = cg.new_Pvariable(config[CONF_ID])
+    var = await lock.new_lock(config)
     await cg.register_component(var, config)
-    await lock.register_lock(var, config)
 
     # Component Settings
     if CONF_PAIRING_MODE_TIMEOUT in config:
@@ -745,6 +743,7 @@ async def to_code(config):
     # Defines
     cg.add_define("NUKI_MUTEX_RECURSIVE")
     cg.add_define("NUKI_NO_WDT_RESET")
+    cg.add_define("USE_API_SERVICES")
 
     # Remove Build flags
     cg.add_platformio_option(

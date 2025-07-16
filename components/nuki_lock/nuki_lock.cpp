@@ -1109,15 +1109,11 @@ void NukiLockComponent::setup() {
 
     // Increase Watchdog Timeout
     // Fixes Pairing Crash
-    #ifdef USE_ESP_IDF
     esp_task_wdt_config_t wdt_config = {
         .timeout_ms = 15000,
         .trigger_panic = false
     }; 
     esp_task_wdt_reconfigure(&wdt_config);
-    #else
-    esp_task_wdt_init(15, false);
-    #endif
 
     // Restore settings from flash
     this->pref_ = global_preferences->make_preference<NukiLockSettings>(global_nuki_lock_id);
