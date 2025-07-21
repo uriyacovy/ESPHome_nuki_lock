@@ -1191,11 +1191,16 @@ void NukiLockComponent::setup() {
     this->publish_state(lock::LOCK_STATE_NONE);
 
     #ifdef USE_API_SERVICES
+    ESP_LOGI(TAG, "API SERVICES ARE ENABLED");
     this->custom_api_device_.register_service(&NukiLockComponent::lock_n_go, "lock_n_go");
     this->custom_api_device_.register_service(&NukiLockComponent::print_keypad_entries, "print_keypad_entries");
     this->custom_api_device_.register_service(&NukiLockComponent::add_keypad_entry, "add_keypad_entry", {"name", "code"});
     this->custom_api_device_.register_service(&NukiLockComponent::update_keypad_entry, "update_keypad_entry", {"id", "name", "code", "enabled"});
     this->custom_api_device_.register_service(&NukiLockComponent::delete_keypad_entry, "delete_keypad_entry", {"id"});
+    #else
+    ESP_LOGW(TAG, "API SERVICES ARE DISABLED");
+    ESP_LOGW(TAG, "Please set 'api:' -> 'custom_services: true' to use API services.");
+    ESP_LOGW(TAG, "More information here: https://esphome.io/components/api.html");
     #endif
 }
 
