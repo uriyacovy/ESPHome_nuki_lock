@@ -6,6 +6,7 @@ wifi:
   password: "My Password"
 
 api:
+  custom_services: true
 
 logger:
   logs:

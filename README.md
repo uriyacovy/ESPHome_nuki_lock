@@ -30,6 +30,15 @@ esp32:
   framework:
     type: esp-idf
 
+wifi:
+  ssid: "SSID"
+  password: "PASSWORD"
+  
+# In case you want to use the HA API
+# If custom_services is not true, it will fail to compile.
+api:
+  custom_services: true
+
 lock:
   # Required
   - platform: nuki_lock
@@ -150,6 +159,15 @@ esp32:
     type: arduino
     version: 2.0.16
     platform_version: 6.7.0
+
+wifi:
+  ssid: "SSID"
+  password: "PASSWORD"
+
+# In case you want to use the HA API
+# If custom_services is not true, it will fail to compile.
+api:
+  custom_services: true
 
 lock:
   # Required

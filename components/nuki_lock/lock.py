@@ -743,7 +743,6 @@ async def to_code(config):
     # Defines
     cg.add_define("NUKI_MUTEX_RECURSIVE")
     cg.add_define("NUKI_NO_WDT_RESET")
-    cg.add_define("USE_API_SERVICES")
 
     # Remove Build flags
     cg.add_platformio_option(
