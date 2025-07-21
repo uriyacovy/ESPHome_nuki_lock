@@ -22,22 +22,26 @@ To integrate your Nuki Smartlock, add one of the following code snippets to your
   <summary>ESP-IDF</summary>
 
 ```yaml
-external_components:
-  - source: github://uriyacovy/ESPHome_nuki_lock
+esphome:
+  name: esphome-nuki-lock
+  friendly_name: ESPHome Nuki Lock
 
 esp32:
   board: "esp32dev"  # Or whatever other board you're using
   framework:
-    type: esp-idf
+    type: arduino
 
 wifi:
   ssid: "SSID"
   password: "PASSWORD"
-  
-# In case you want to use the HA API
-# If custom_services is not true, it will fail to compile.
+
+# In case you want to use the Home Assistant services
+# you need to enable custom_services
 api:
   custom_services: true
+
+external_components:
+  - source: github://uriyacovy/ESPHome_nuki_lock
 
 lock:
   # Required
@@ -150,8 +154,9 @@ lock:
   <summary>Arduino Framework</summary>
 
 ```yaml
-external_components:
-  - source: github://uriyacovy/ESPHome_nuki_lock
+esphome:
+  name: esphome-nuki-lock
+  friendly_name: ESPHome Nuki Lock
 
 esp32:
   board: "esp32dev"  # Or whatever other board you're using
@@ -162,10 +167,13 @@ wifi:
   ssid: "SSID"
   password: "PASSWORD"
 
-# In case you want to use the HA API
-# If custom_services is not true, it will fail to compile.
+# In case you want to use the Home Assistant services
+# you need to enable custom_services
 api:
   custom_services: true
+
+external_components:
+  - source: github://uriyacovy/ESPHome_nuki_lock
 
 lock:
   # Required
