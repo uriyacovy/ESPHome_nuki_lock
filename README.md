@@ -300,6 +300,15 @@ The following settings allow you to customize the behavior of the Nuki Lock comp
 
 
 ## Supported Services
+
+> [!IMPORTANT]  
+> In order to use the services, you have to enable them in your `api` configuration.
+> Set `custom_services` to `true` as in the example below:
+> ```
+> api:
+>   custom_services: true
+> ```
+
 ### Unlatch
 To unlatch doors without a handle, call the `open` service in Home Assistant:
 ```yaml
