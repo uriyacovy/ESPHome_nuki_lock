@@ -795,11 +795,14 @@ def _final_validate(config):
         else:
             LOGGER.info("Consider enabling PSRAM support if it's available for the NimBLE Stack.")
 
-        # Check for API encryption
-        if "api" in full_config:
-            if "encryption" in full_config["api"]:
-                LOGGER.warning("You may need to disable API encryption to successfully pair with the Nuki Smart Lock, as it consumes quite a bit of memory.")
-    
+        # Check API configuration
+        api_conf = full_config.get("api", {})
+        if api_conf.get("encryption"):
+            LOGGER.warning("You may need to disable API encryption to successfully pair with the Nuki Smart Lock, as it consumes quite a bit of memory.")
+        
+        if not api_conf.get("custom_services", False):
+            LOGGER.warning("Enable custom_services to use API services like 'lock_n_go', 'add_keypad_entry', etc.")
+
     return config
 
 FINAL_VALIDATE_SCHEMA = _final_validate
