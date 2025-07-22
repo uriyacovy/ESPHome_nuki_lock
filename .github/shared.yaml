@@ -1,19 +1,16 @@
----
 esphome:
   name: test-nuki
-
-esp32:
-  board: "esp32dev"
-  framework:
-    type: arduino
-    version: 2.0.16
-    platform_version: 6.7.0
 
 wifi:
   ssid: "My Network"
   password: "My Password"
 
 api:
+  custom_services: true
+
+logger:
+  logs:
+    component: ERROR
 
 external_components:
   - source:
@@ -46,6 +43,8 @@ lock:
       name: "Nuki Last Lock Action"
     last_lock_action_trigger:
       name: "Nuki Last Lock Action Trigger"
+    pin_status:
+      name: "Nuki Security Pin Status"
 
     unpair:
       name: "Nuki Unpair Device"
@@ -78,11 +77,15 @@ lock:
       name: "Nuki Single Lock"
     dst_mode_enabled:
       name: "Nuki Daylight Saving Time"
+    auto_battery_type_detection_enabled:
+      name: "Nuki Automatic Battery Type Detection"
 
     led_brightness:
       name: "Nuki LED Brightness"
     timezone_offset:
       name: "Nuki Timezone: Offset"
+    lock_n_go_timeout:
+      name: "Nuki LockNGo Timeout"
 
     single_buton_press_action:
       name: "Nuki Single Button Press Action"
@@ -98,12 +101,16 @@ lock:
       name: "Nuki Timezone"
     advertising_mode:
       name: "Nuki Advertising Mode"
+    battery_type:
+      name: "Nuki Battery Type"
 
     pairing_mode_timeout: 300s
     event: "nuki"
     security_pin: 1234
     alternative_connect_mode: true
     pairing_as_app: false
+    query_interval_config: 3600s
+    query_interval_auth_data: 7200s
 
     on_pairing_mode_on_action:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
@@ -111,3 +118,21 @@ lock:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned off");
     on_paired_action:
       - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
+
+button:
+  - platform: template
+    name: Unpair
+    on_press:
+      - nuki_lock.unpair:
+
+  - platform: template
+    name: Enable pairing-mode
+    on_press:
+      - nuki_lock.set_pairing_mode:
+          pairing_mode: true
+
+  - platform: template
+    name: Override security pin
+    on_press:
+      - nuki_lock.set_security_pin:
+          security_pin: 1234

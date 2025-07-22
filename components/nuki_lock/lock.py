@@ -3,17 +3,18 @@ from esphome.core import CORE
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import automation
+from esphome.components.esp32 import add_idf_component, add_idf_sdkconfig_option
 from esphome.components import lock, binary_sensor, text_sensor, sensor, switch, button, number, select
 from esphome.const import (
-    CONF_ID, 
-    DEVICE_CLASS_CONNECTIVITY, 
-    DEVICE_CLASS_BATTERY, 
-    DEVICE_CLASS_DOOR, 
+    CONF_ID,
+    DEVICE_CLASS_CONNECTIVITY,
+    DEVICE_CLASS_BATTERY,
+    DEVICE_CLASS_DOOR,
     DEVICE_CLASS_SWITCH,
     DEVICE_CLASS_SIGNAL_STRENGTH,
     UNIT_PERCENT,
     UNIT_DECIBEL_MILLIWATT,
-    ENTITY_CATEGORY_CONFIG, 
+    ENTITY_CATEGORY_CONFIG,
     ENTITY_CATEGORY_DIAGNOSTIC,
     CONF_TRIGGER_ID,
 )
@@ -35,6 +36,7 @@ CONF_DOOR_SENSOR_STATE_TEXT_SENSOR = "door_sensor_state"
 CONF_LAST_UNLOCK_USER_TEXT_SENSOR = "last_unlock_user"
 CONF_LAST_LOCK_ACTION_TEXT_SENSOR = "last_lock_action"
 CONF_LAST_LOCK_ACTION_TRIGGER_TEXT_SENSOR = "last_lock_action_trigger"
+CONF_PIN_STATE_TEXT_SENSOR = "pin_status"
 
 CONF_UNPAIR_BUTTON = "unpair"
 
@@ -52,6 +54,7 @@ CONF_IMMEDIATE_AUTO_LOCK_ENABLED_SWITCH = "immediate_auto_lock_enabled"
 CONF_AUTO_UPDATE_ENABLED_SWITCH = "auto_update_enabled"
 CONF_SINGLE_LOCK_ENABLED_SWITCH = "single_lock_enabled"
 CONF_DST_MODE_ENABLED_SWITCH = "dst_mode_enabled"
+CONF_AUTO_BATTERY_TYPE_DETECTION_ENABLED_SWITCH = "auto_battery_type_detection_enabled"
 
 CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT = "single_buton_press_action"
 CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT = "double_buton_press_action"
@@ -60,9 +63,11 @@ CONF_FOB_ACTION_2_SELECT = "fob_action_2"
 CONF_FOB_ACTION_3_SELECT = "fob_action_3"
 CONF_TIMEZONE_SELECT = "timezone"
 CONF_ADVERTISING_MODE_SELECT = "advertising_mode"
+CONF_BATTERY_TYPE_SELECT = "battery_type"
 
 CONF_LED_BRIGHTNESS_NUMBER = "led_brightness"
 CONF_TIMEZONE_OFFSET_NUMBER = "timezone_offset"
+CONF_LOCK_N_GO_TIMEOUT_NUMBER = "lock_n_go_timeout"
 
 CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS = [
     "No Action",
@@ -139,10 +144,18 @@ CONF_ADVERTISING_MODE_SELECT_OPTIONS = [
     "Slowest"
 ]
 
+CONF_BATTERY_TYPE_SELECT_OPTIONS = [
+    "Alkali",
+    "Accumulators",
+    "Lithium"
+]
+
 CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_PAIRING_AS_APP = "pairing_as_app"
 CONF_SECURITY_PIN = "security_pin"
 CONF_ALT_CONNECT_MODE = "alternative_connect_mode"
+CONF_QUERY_INTERVAL_CONFIG = "query_interval_config"
+CONF_QUERY_INTERVAL_AUTH_DATA = "query_interval_auth_data"
 CONF_EVENT = "event"
 
 CONF_SET_PAIRING_MODE = "pairing_mode"
@@ -171,9 +184,11 @@ NukiLockImmediateAutoLockEnabledSwitch = nuki_lock_ns.class_("NukiLockImmediateA
 NukiLockAutoUpdateEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoUpdateEnabledSwitch", switch.Switch, cg.Component)
 NukiLockSingleLockEnabledSwitch = nuki_lock_ns.class_("NukiLockSingleLockEnabledSwitch", switch.Switch, cg.Component)
 NukiLockDstModeEnabledSwitch = nuki_lock_ns.class_("NukiLockDstModeEnabledSwitch", switch.Switch, cg.Component)
+NukiLockAutoBatteryTypeDetectionEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoBatteryTypeDetectionEnabledSwitch", switch.Switch, cg.Component)
 
 NukiLockLedBrightnessNumber = nuki_lock_ns.class_("NukiLockLedBrightnessNumber", number.Number, cg.Component)
 NukiLockTimeZoneOffsetNumber = nuki_lock_ns.class_("NukiLockTimeZoneOffsetNumber", number.Number, cg.Component)
+NukiLockLockNGoTimeoutNumber = nuki_lock_ns.class_("NukiLockLockNGoTimeoutNumber", number.Number, cg.Component)
 
 NukiLockSingleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockSingleButtonPressActionSelect", select.Select, cg.Component)
 NukiLockDoubleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockDoubleButtonPressActionSelect", select.Select, cg.Component)
@@ -182,6 +197,7 @@ NukiLockFobAction2Select = nuki_lock_ns.class_("NukiLockFobAction2Select", selec
 NukiLockFobAction3Select = nuki_lock_ns.class_("NukiLockFobAction3Select", select.Select, cg.Component)
 NukiLockTimeZoneSelect = nuki_lock_ns.class_("NukiLockTimeZoneSelect", select.Select, cg.Component)
 NukiLockAdvertisingModeSelect = nuki_lock_ns.class_("NukiLockAdvertisingModeSelect", select.Select, cg.Component)
+NukiLockBatteryTypeSelect = nuki_lock_ns.class_("NukiLockBatteryTypeSelect", select.Select, cg.Component)
 
 NukiLockUnpairAction = nuki_lock_ns.class_(
     "NukiLockUnpairAction", automation.Action
@@ -203,9 +219,8 @@ def _validate(config):
     return config
 
 CONFIG_SCHEMA = cv.All(
-    lock.LOCK_SCHEMA.extend(
+    lock.lock_schema(NukiLock).extend(
         {
-            cv.GenerateID(): cv.declare_id(NukiLock),
             cv.Optional(CONF_IS_CONNECTED_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
                 device_class=DEVICE_CLASS_CONNECTIVITY,
                 entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
@@ -236,6 +251,10 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_LAST_LOCK_ACTION_TEXT_SENSOR):  text_sensor.text_sensor_schema(
                 entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
                 icon="mdi:account-clock"
+            ),
+            cv.Optional(CONF_PIN_STATE_TEXT_SENSOR):  text_sensor.text_sensor_schema(
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                icon="mdi:shield-key"
             ),
             cv.Optional(CONF_LAST_LOCK_ACTION_TRIGGER_TEXT_SENSOR):  text_sensor.text_sensor_schema(
                 entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
@@ -341,6 +360,12 @@ CONFIG_SCHEMA = cv.All(
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:sun-clock",
             ),
+            cv.Optional(CONF_AUTO_BATTERY_TYPE_DETECTION_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockAutoBatteryTypeDetectionEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:battery-check",
+            ),
             cv.Optional(CONF_LED_BRIGHTNESS_NUMBER): number.number_schema(
                 NukiLockLedBrightnessNumber,
                 entity_category=ENTITY_CATEGORY_CONFIG,
@@ -348,6 +373,11 @@ CONFIG_SCHEMA = cv.All(
             ),
             cv.Optional(CONF_TIMEZONE_OFFSET_NUMBER): number.number_schema(
                 NukiLockTimeZoneOffsetNumber,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:clock-end",
+            ),
+            cv.Optional(CONF_LOCK_N_GO_TIMEOUT_NUMBER): number.number_schema(
+                NukiLockLockNGoTimeoutNumber,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:clock-end",
             ),
@@ -386,11 +416,18 @@ CONFIG_SCHEMA = cv.All(
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:timer-cog",
             ),
+            cv.Optional(CONF_BATTERY_TYPE_SELECT): select.select_schema(
+                NukiLockBatteryTypeSelect,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:battery",
+            ),
             cv.Optional(CONF_ALT_CONNECT_MODE, default="true"): cv.boolean,
             cv.Optional(CONF_PAIRING_AS_APP, default="false"): cv.boolean,
             cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_EVENT, default="nuki"): cv.string,
             cv.Optional(CONF_SECURITY_PIN): cv.uint16_t,
+            cv.Optional(CONF_QUERY_INTERVAL_CONFIG, default="3600s"): cv.positive_time_period_seconds,
+            cv.Optional(CONF_QUERY_INTERVAL_AUTH_DATA, default="3600s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_ON_PAIRING_MODE_ON): automation.validate_automation(
                 {
                     cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairingModeOnTrigger),
@@ -414,9 +451,8 @@ CONFIG_SCHEMA = cv.All(
 
 
 async def to_code(config):
-    var = cg.new_Pvariable(config[CONF_ID])
+    var = await lock.new_lock(config)
     await cg.register_component(var, config)
-    await lock.register_lock(var, config)
 
     # Component Settings
     if CONF_PAIRING_MODE_TIMEOUT in config:
@@ -430,6 +466,18 @@ async def to_code(config):
         
     if CONF_PAIRING_AS_APP in config:
         cg.add(var.set_pairing_as_app(config[CONF_PAIRING_AS_APP]))
+        
+        if config[CONF_ALT_CONNECT_MODE]:
+            cg.add_define("NUKI_ALT_CONNECT")
+
+    if CONF_ALT_CONNECT_MODE in config:
+        cg.add(var.set_alt_connect_mode(config[CONF_ALT_CONNECT_MODE]))
+
+    if CONF_QUERY_INTERVAL_CONFIG in config:
+        cg.add(var.set_query_interval_config(config[CONF_QUERY_INTERVAL_CONFIG]))
+
+    if CONF_QUERY_INTERVAL_AUTH_DATA in config:
+        cg.add(var.set_query_interval_auth_data(config[CONF_QUERY_INTERVAL_AUTH_DATA]))
 
     # Binary Sensor
     if is_connected := config.get(CONF_IS_CONNECTED_BINARY_SENSOR):
@@ -474,6 +522,10 @@ async def to_code(config):
         sens = await text_sensor.new_text_sensor(last_lock_action)
         cg.add(var.set_last_lock_action_text_sensor(sens))
 
+    if pin_state := config.get(CONF_PIN_STATE_TEXT_SENSOR):
+        sens = await text_sensor.new_text_sensor(pin_state)
+        cg.add(var.set_pin_state_text_sensor(sens))
+
     # Button
     if unpair := config.get(CONF_UNPAIR_BUTTON):
         b = await button.new_button(unpair)
@@ -494,6 +546,13 @@ async def to_code(config):
         )
         await cg.register_parented(n, config[CONF_ID])
         cg.add(var.set_timezone_offset_number(n))
+
+    if lock_n_go_timeout := config.get(CONF_LOCK_N_GO_TIMEOUT_NUMBER):
+        n = await number.new_number(
+            lock_n_go_timeout, min_value=5, max_value=60, step=1
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_lock_n_go_timeout_number(n))
 
     # Switch
     if pairing_mode := config.get(CONF_PAIRING_MODE_SWITCH):
@@ -566,6 +625,11 @@ async def to_code(config):
         await cg.register_parented(s, config[CONF_ID])
         cg.add(var.set_dst_mode_enabled_switch(s))
 
+    if auto_battery_type_detection := config.get(CONF_AUTO_BATTERY_TYPE_DETECTION_ENABLED_SWITCH):
+        s = await switch.new_switch(auto_battery_type_detection)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_auto_battery_type_detection_enabled_switch(s))
+
     # Select
     if single_button_press_action := config.get(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT):
         sel = await select.new_select(
@@ -623,6 +687,13 @@ async def to_code(config):
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_advertising_mode_select(sel))
 
+    if battery_type := config.get(CONF_BATTERY_TYPE_SELECT):
+        sel = await select.new_select(
+            battery_type,
+            options=[CONF_BATTERY_TYPE_SELECT_OPTIONS],
+        )
+        await cg.register_parented(sel, config[CONF_ID])
+        cg.add(var.set_battery_type_select(sel))
 
     # Callback
     for conf in config.get(CONF_ON_PAIRING_MODE_ON, []):
@@ -638,18 +709,58 @@ async def to_code(config):
         await automation.build_automation(trigger, [], conf)
 
     # Libraries
-    cg.add_library("Preferences", None)
-    cg.add_library("h2zero/NimBLE-Arduino", "1.4.2")
-    cg.add_library("Crc16", None)
-    cg.add_library(
-        None,
-        None,
-        "https://github.com/I-Connect/NukiBleEsp32#940d809",
+    if CORE.using_esp_idf:
+        add_idf_sdkconfig_option("CONFIG_BT_ENABLED", True)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ENABLED", True)
+        add_idf_sdkconfig_option("CONFIG_BT_BLUEDROID_ENABLED", False)
+
+        add_idf_sdkconfig_option("CONFIG_BTDM_BLE_SCAN_DUPL", True)
+        add_idf_sdkconfig_option("CONFIG_NIMBLE_CPP_LOG_LEVEL", 0)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL", 0)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL_NONE", True)
+
+        add_idf_component(
+            name="NukiBleEsp32",
+            repo="https://github.com/AzonInc/NukiBleEsp32.git",
+            ref="idf",
+        )
+    else:
+        cg.add_build_flag("-DCONFIG_BTDM_BLE_SCAN_DUPL=y")
+        cg.add_build_flag("-DCONFIG_NIMBLE_CPP_LOG_LEVEL=0")
+        cg.add_build_flag("-DCONFIG_BT_NIMBLE_LOG_LEVEL=0")
+        cg.add_build_flag("-DCONFIG_BT_NIMBLE_LOG_LEVEL_NONE=y")
+
+        cg.add_library("Preferences", None)
+        cg.add_library("h2zero/NimBLE-Arduino", "1.4.2")
+        cg.add_library("Crc16", None)
+        cg.add_library(
+            None,
+            None,
+            "https://github.com/I-Connect/NukiBleEsp32#940d809",
+        )
+
+
+    # Defines
+    cg.add_define("NUKI_MUTEX_RECURSIVE")
+    cg.add_define("NUKI_NO_WDT_RESET")
+
+    # Remove Build flags
+    cg.add_platformio_option(
+        "build_unflags",
+        [
+            f"-DCONFIG_BTDM_BLE_SCAN_DUPL",
+            f"-DCONFIG_BT_NIMBLE_LOG_LEVEL",
+            f"-DCONFIG_NIMBLE_CPP_LOG_LEVEL",
+            f"-Werror=all",
+            f"-Wall",
+        ],
     )
 
-    # Enable alternative connect mode
-    if CONF_ALT_CONNECT_MODE in config and config[CONF_ALT_CONNECT_MODE]:
-        cg.add_define("NUKI_ALT_CONNECT")
+    # Build flags
+    cg.add_build_flag("-Wno-unused-result")
+    cg.add_build_flag("-Wno-ignored-qualifiers")
+    cg.add_build_flag("-Wno-missing-field-initializers")
+    cg.add_build_flag("-Wno-maybe-uninitialized")
 
 
 def _final_validate(config):
@@ -671,15 +782,27 @@ def _final_validate(config):
         
         # Check for PSRAM support
         if "psram" in full_config:
-            cg.add_build_flag(f"-DCONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL=1")
+            if CORE.using_esp_idf:
+                add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL", True)
+                add_idf_sdkconfig_option("CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL", 50768)
+                add_idf_sdkconfig_option("CONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST", True)
+                add_idf_sdkconfig_option("CONFIG_BT_BLE_DYNAMIC_ENV_MEMORY", True)
+            else:
+                cg.add_build_flag(f"-DCONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL=1")
+                cg.add_build_flag(f"-DCONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL=50768")
+                cg.add_build_flag(f"-DCONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST=1")
+                cg.add_build_flag(f"-DCONFIG_BT_BLE_DYNAMIC_ENV_MEMORY=1")
         else:
             LOGGER.info("Consider enabling PSRAM support if it's available for the NimBLE Stack.")
 
-        # Check for API encryption
-        if "api" in full_config:
-            if "encryption" in full_config["api"]:
-                LOGGER.warning("You may need to disable API encryption to successfully pair with the Nuki Lock, as it consumes quite a bit of memory.")
-    
+        # Check API configuration
+        api_conf = full_config.get("api", {})
+        if api_conf.get("encryption"):
+            LOGGER.warning("You may need to disable API encryption to successfully pair with the Nuki Smart Lock, as it consumes quite a bit of memory.")
+        
+        if not api_conf.get("custom_services", False):
+            LOGGER.warning("Enable custom_services to use API services like 'lock_n_go', 'add_keypad_entry', etc.")
+
     return config
 
 FINAL_VALIDATE_SCHEMA = _final_validate

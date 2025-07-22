@@ -8,7 +8,7 @@ The lock entity updates whenever the lock's state changes - whether through the 
 
 
 ## How to Use
-To integrate your Nuki Smartlock, add the following code snippet to your ESPHome YAML file.
+To integrate your Nuki Smartlock, add one of the following code snippets to your ESPHome YAML file.
 
 > [!WARNING]  
 > This component relies on NimBLE, which is incompatible with the ESPHome BLE stack.
@@ -17,16 +17,31 @@ To integrate your Nuki Smartlock, add the following code snippet to your ESPHome
 > [!TIP]  
 > If your ESP32 is equipped with PSRAM, you can add the `psram` component to enable the use of PSRAM for the NimBLE Stack, enhancing the reliability of this component.
 
+### Example configuration YAML
+<details>
+  <summary>ESP-IDF</summary>
+
 ```yaml
-external_components:
-  - source: github://uriyacovy/ESPHome_nuki_lock
+esphome:
+  name: esphome-nuki-lock
+  friendly_name: ESPHome Nuki Lock
 
 esp32:
   board: "esp32dev"  # Or whatever other board you're using
   framework:
     type: arduino
-    version: 2.0.16
-    platform_version: 6.7.0
+
+wifi:
+  ssid: "SSID"
+  password: "PASSWORD"
+
+# In case you want to use the Home Assistant services
+# you need to enable custom_services
+api:
+  custom_services: true
+
+external_components:
+  - source: github://uriyacovy/ESPHome_nuki_lock
 
 lock:
   # Required
@@ -39,6 +54,9 @@ lock:
   # Optional: Advanced Settings
     alternative_connect_mode: true
     pairing_as_app: false
+    query_interval_config: 3600s
+    query_interval_auth_data: 7200s
+
   # Optional: Binary Sensors
     is_connected:
       name: "Nuki Connected"
@@ -62,6 +80,15 @@ lock:
       name: "Nuki Last Lock Action"
     last_lock_action_trigger:
       name: "Nuki Last Lock Action Trigger"
+    pin_status:
+      name: "Nuki Security Pin Status"
+  # Optional: Number Inputs
+    led_brightness:
+      name: "Nuki LED Brightness"
+    timezone_offset:
+      name: "Nuki Timezone: Offset"
+    lock_n_go_timeout:
+      name: "Nuki LockNGo Timeout"
   # Optional: Switches
     pairing_mode:
       name: "Nuki Pairing Mode"
@@ -71,12 +98,6 @@ lock:
       name: "Nuki Button: Locking operations"
     led_enabled:
       name: "Nuki LED Signal"
-  # Optional: Number Inputs
-    led_brightness:
-      name: "Nuki LED Brightness"
-    timezone_offset:
-      name: "Nuki Timezone: Offset"
-  # Optional: Switches
     night_mode_enabled:
       name: "Nuki Night Mode"
     night_mode_auto_lock_enabled:
@@ -97,6 +118,8 @@ lock:
       name: "Nuki Single Lock"
     dst_mode_enabled:
       name: "Nuki Daylight Saving Time"
+    auto_battery_type_detection_enabled:
+      name: "Nuki Automatic Battery Type Detection"
   # Optional: Select Inputs
     single_buton_press_action:
       name: "Nuki Button: Single Press Action"
@@ -112,6 +135,8 @@ lock:
       name: "Nuki Timezone"
     advertising_mode:
       name: "Nuki Advertising Mode"
+    battery_type:
+      name: "Nuki Battery Type"
   # Optional: Buttons
     unpair:
       name: "Nuki Unpair Device"
@@ -123,6 +148,139 @@ lock:
     on_paired_action:
       - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
 ```
+</details>
+
+<details>
+  <summary>Arduino Framework</summary>
+
+```yaml
+esphome:
+  name: esphome-nuki-lock
+  friendly_name: ESPHome Nuki Lock
+
+esp32:
+  board: "esp32dev"  # Or whatever other board you're using
+  framework:
+    type: arduino
+
+wifi:
+  ssid: "SSID"
+  password: "PASSWORD"
+
+# In case you want to use the Home Assistant services
+# you need to enable custom_services
+api:
+  custom_services: true
+
+external_components:
+  - source: github://uriyacovy/ESPHome_nuki_lock
+
+lock:
+  # Required
+  - platform: nuki_lock
+    name: Nuki Lock
+  # Optional: Settings
+    pairing_mode_timeout: 300s
+    event: "nuki"
+    security_pin: 1234
+  # Optional: Advanced Settings
+    alternative_connect_mode: true
+    pairing_as_app: false
+    query_interval_config: 3600s
+    query_interval_auth_data: 7200s
+
+  # Optional: Binary Sensors
+    is_connected:
+      name: "Nuki Connected"
+    is_paired:
+      name: "Nuki Paired"
+    battery_critical:
+      name: "Nuki Battery Critical"
+    door_sensor:
+      name: "Nuki Door Sensor"
+  # Optional: Sensors
+    battery_level:
+      name: "Nuki Battery Level"
+    bt_signal_strength:
+      name: "Bluetooth Signal Strength"
+  # Optional: Text Sensors
+    door_sensor_state:
+      name: "Nuki Door Sensor: State"
+    last_unlock_user:
+      name: "Nuki Last Unlock User"
+    last_lock_action:
+      name: "Nuki Last Lock Action"
+    last_lock_action_trigger:
+      name: "Nuki Last Lock Action Trigger"
+    pin_status:
+      name: "Nuki Security Pin Status"
+  # Optional: Number Inputs
+    led_brightness:
+      name: "Nuki LED Brightness"
+    timezone_offset:
+      name: "Nuki Timezone: Offset"
+    lock_n_go_timeout:
+      name: "Nuki LockNGo Timeout"
+  # Optional: Switches
+    pairing_mode:
+      name: "Nuki Pairing Mode"
+    auto_unlatch:
+      name: "Nuki Auto unlatch"
+    button_enabled:
+      name: "Nuki Button: Locking operations"
+    led_enabled:
+      name: "Nuki LED Signal"
+    night_mode_enabled:
+      name: "Nuki Night Mode"
+    night_mode_auto_lock_enabled:
+      name: "Nuki Night Mode: Auto Lock"
+    night_mode_auto_unlock_disabled:
+      name: "Nuki Night Mode: Reject Auto Unlock"
+    night_mode_immediate_lock_on_start_enabled:
+      name: "Nuki Night Mode: Lock at Start Time"
+    auto_lock_enabled:
+      name: "Nuki Auto Lock"
+    auto_unlock_disabled:
+      name: "Nuki Auto Unlock: Disable"
+    immediate_auto_lock_enabled:
+      name: "Nuki Auto Lock: Immediately"
+    auto_update_enabled:
+      name: "Nuki Automatic Updates"
+    single_lock_enabled:
+      name: "Nuki Single Lock"
+    dst_mode_enabled:
+      name: "Nuki Daylight Saving Time"
+    auto_battery_type_detection_enabled:
+      name: "Nuki Automatic Battery Type Detection"
+  # Optional: Select Inputs
+    single_buton_press_action:
+      name: "Nuki Button: Single Press Action"
+    double_buton_press_action:
+      name: "Nuki Button: Double Press Action"
+    fob_action_1:
+      name: "Nuki Fob: Action 1"
+    fob_action_2:
+      name: "Nuki Fob: Action 2"
+    fob_action_3:
+      name: "Nuki Fob: Action 3"
+    timezone:
+      name: "Nuki Timezone"
+    advertising_mode:
+      name: "Nuki Advertising Mode"
+    battery_type:
+      name: "Nuki Battery Type"
+  # Optional: Buttons
+    unpair:
+      name: "Nuki Unpair Device"
+  # Optional: Callbacks
+    on_pairing_mode_on_action:
+      - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
+    on_pairing_mode_off_action:
+      - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned off");
+    on_paired_action:
+      - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
+```
+</details>
 
 After running ESPHome (`esphome run <yamlfile.yaml>`), follow these steps to pair your Nuki Smartlock:
 
@@ -134,8 +292,29 @@ After running ESPHome (`esphome run <yamlfile.yaml>`), follow these steps to pai
 
 Your Nuki Smartlock is now connected and ready to use!
 
+## Settings
+
+The following settings allow you to customize the behavior of the Nuki Lock component, optimizing its performance and reliability. You can configure these in your ESPHome YAML file:
+
+- **`security_pin`**: The Nuki security PIN required for performing specific operations (Event Logs, Auth Data, Keypad, ...).
+- **`pairing_mode_timeout`**: Specifies how long (in seconds) the pairing mode remains active. Default: `300s`.
+- **`event`**: Defines the event name used by the Nuki Lock component. Default: `nuki`.
+- **`alternative_connect_mode`**: Enables an alternative connection mode to improve compatibility. If you experience issues, consider disabling this. Default: `true`.
+- **`pairing_as_app`**: Determines if pairing should be done as an app. This is not recommended for most setups. Default: `false`.
+- **`query_interval_config`**: Sets the interval (in seconds) for querying the configuration. Default: `3600s`.
+- **`query_interval_auth_data`**: Sets the interval (in seconds) for querying authentication data. Default: `7200s`.
+
 
 ## Supported Services
+
+> [!IMPORTANT]  
+> In order to use the services, you have to enable them in your `api` configuration.
+> Set `custom_services` to `true` as in the example below:
+> ```
+> api:
+>   custom_services: true
+> ```
+
 ### Unlatch
 To unlatch doors without a handle, call the `open` service in Home Assistant:
 ```yaml
@@ -296,6 +475,7 @@ context:
 - Last Unlock User
 - Last Lock Action
 - Last Lock Action Trigger
+- Pin Status
 
 **Switch:**  
 - Pairing Mode
@@ -311,6 +491,7 @@ context:
 - Single Lock
 - Daylight Saving Time
 - Automatic Updates
+- Automatic Battery Type Detection
 
 **Select Input:**  
 - Single Button Press Action
@@ -320,6 +501,7 @@ context:
 - Fob Action 3
 - Timezone
 - Advertising Mode
+- Battery Type
 
 **Number Input:**  
 - LED Brightness

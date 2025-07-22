@@ -1,19 +1,24 @@
----
-  name: Build Component
+name: Build Component
 
-  on:
-    push:
-    pull_request:
+on:
+  push:
+  pull_request:
 
-  jobs:
-    build:
-      name: Build
-      runs-on: ubuntu-latest
-      steps:
-        - name: Checkout
-          uses: actions/checkout@v4
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        config:
+          - file: .github/arduino-component.yaml
+          - file: .github/idf-component.yaml
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
 
-        - name: Compile Firmware
-          uses: esphome/build-action@v5.0.0
-          with:
-            yaml-file: .github/test-config.yaml
+      - name: Compile Firmware
+        uses: esphome/build-action@v7.0.0
+        with:
+          yaml-file: ${{ matrix.config.file }}
+          version: latest
