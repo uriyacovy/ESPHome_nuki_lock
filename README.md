@@ -29,7 +29,7 @@ esphome:
 esp32:
   board: "esp32dev"  # Or whatever other board you're using
   framework:
-    type: arduino
+    type: esp-idf
 
 wifi:
   ssid: "SSID"
