@@ -37,8 +37,11 @@ wifi:
 
 # In case you want to use the Home Assistant services
 # you need to enable custom_services
+# In case you want to send nuki event logs to Home Assistant
+# you need to enable homeassistant_services
 api:
   custom_services: true
+  homeassistant_services: true
 
 external_components:
   - source: github://uriyacovy/ESPHome_nuki_lock
@@ -169,8 +172,11 @@ wifi:
 
 # In case you want to use the Home Assistant services
 # you need to enable custom_services
+# In case you want to send nuki event logs to Home Assistant
+# you need to enable homeassistant_services
 api:
   custom_services: true
+  homeassistant_services: true
 
 external_components:
   - source: github://uriyacovy/ESPHome_nuki_lock
@@ -413,6 +419,14 @@ on_paired_action:
 
 ### Events
 By default, this component sends Nuki logs as events to Home Assistant, enabling you to use them in automations.
+
+> [!IMPORTANT]  
+> In order to use the event logs, you have to enable them in your `api` configuration.
+> Set `homeassistant_services` to `true` as in the example below:
+> ```
+> api:
+>   homeassistant_services: true
+> ```
 
 > [!NOTE]
 > To receive events, **you must set your security PIN**.

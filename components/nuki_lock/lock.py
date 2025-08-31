@@ -734,7 +734,7 @@ async def to_code(config):
         cg.add_library("h2zero/NimBLE-Arduino", "1.4.2")
         cg.add_library("Crc16", None)
         cg.add_library(
-            None,
+            "NukiBleEsp32",
             None,
             "https://github.com/I-Connect/NukiBleEsp32#940d809",
         )
@@ -802,6 +802,9 @@ def _final_validate(config):
         
         if not api_conf.get("custom_services", False):
             LOGGER.warning("Enable custom_services to use API services like 'lock_n_go', 'add_keypad_entry', etc.")
+
+        if not api_conf.get("homeassistant_services", False):
+            LOGGER.warning("Enable homeassistant_services to use nuki event logs.")
 
     return config
 
