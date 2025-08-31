@@ -55,7 +55,6 @@ lock:
     event: "nuki"
     security_pin: 1234
   # Optional: Advanced Settings
-    alternative_connect_mode: true
     pairing_as_app: false
     query_interval_config: 3600s
     query_interval_auth_data: 7200s
@@ -190,7 +189,6 @@ lock:
     event: "nuki"
     security_pin: 1234
   # Optional: Advanced Settings
-    alternative_connect_mode: true
     pairing_as_app: false
     query_interval_config: 3600s
     query_interval_auth_data: 7200s
@@ -305,7 +303,6 @@ The following settings allow you to customize the behavior of the Nuki Lock comp
 - **`security_pin`**: The Nuki security PIN required for performing specific operations (Event Logs, Auth Data, Keypad, ...).
 - **`pairing_mode_timeout`**: Specifies how long (in seconds) the pairing mode remains active. Default: `300s`.
 - **`event`**: Defines the event name used by the Nuki Lock component. Default: `nuki`.
-- **`alternative_connect_mode`**: Enables an alternative connection mode to improve compatibility. If you experience issues, consider disabling this. Default: `true`.
 - **`pairing_as_app`**: Determines if pairing should be done as an app. This is not recommended for most setups. Default: `false`.
 - **`query_interval_config`**: Sets the interval (in seconds) for querying the configuration. Default: `3600s`.
 - **`query_interval_auth_data`**: Sets the interval (in seconds) for querying authentication data. Default: `7200s`.

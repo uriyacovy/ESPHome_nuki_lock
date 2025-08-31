@@ -1140,9 +1140,12 @@ void NukiLockComponent::setup() {
     this->scanner_.setScanDuration(0);
 
     this->nuki_lock_.registerBleScanner(&this->scanner_);
-    this->nuki_lock_.initialize(this->alt_connect_mode_);
+    this->nuki_lock_.initialize();
     this->nuki_lock_.setConnectTimeout(BLE_CONNECT_TIMEOUT_SEC);
     this->nuki_lock_.setConnectRetries(BLE_CONNECT_TIMEOUT_RETRIES);
+    
+    this->nuki_lock_.setDisconnectTimeout(BLE_DISCONNECT_TIMEOUT);
+    
 
     if (recovered.security_pin != 0) {
         ESP_LOGD(TAG, "Using saved security pin: %i", recovered.security_pin);
@@ -1551,7 +1554,6 @@ void NukiLockComponent::dump_config() {
     }
 
     ESP_LOGCONFIG(TAG, "  Pairing Identity: %s",this->pairing_as_app_ ? "App" : "Bridge");
-    ESP_LOGCONFIG(TAG, "  Alternative Connect Mode: %s",YESNO(this->alt_connect_mode_));
 
     ESP_LOGCONFIG(TAG, "  Pairing mode timeout: %us", this->pairing_mode_timeout_);
     ESP_LOGCONFIG(TAG, "  Configuration query interval: %us", this->query_interval_config_);
