@@ -106,8 +106,10 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
     SUB_SWITCH(auto_battery_type_detection_enabled)
     #endif
 
-    static const uint8_t BLE_CONNECT_TIMEOUT_SEC = 3;
+    static const uint8_t BLE_CONNECT_TIMEOUT_SEC = 2;
     static const uint8_t BLE_CONNECT_TIMEOUT_RETRIES = 1;
+
+    static const uint16_t BLE_DISCONNECT_TIMEOUT = 2000;
 
     static const uint8_t MAX_ACTION_ATTEMPTS = 5;
     static const uint8_t MAX_TOLERATED_UPDATES_ERRORS = 5;
@@ -136,7 +138,6 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         void notify(Nuki::EventType event_type) override;
         float get_setup_priority() const override { return setup_priority::HARDWARE - 1.0f; }
 
-        void set_alt_connect_mode(bool alt_connect_mode) { this->alt_connect_mode_ = alt_connect_mode; }
         void set_pairing_as_app(bool pairing_as_app) { this->pairing_as_app_ = pairing_as_app; }
         void set_pairing_mode_timeout(uint16_t pairing_mode_timeout) { this->pairing_mode_timeout_ = pairing_mode_timeout; }
         void set_query_interval_config(uint16_t query_interval_config) { this->query_interval_config_ = query_interval_config; }
@@ -251,8 +252,6 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
 
         const char* event_;
         bool send_events_ = false;
-
-        bool alt_connect_mode_ = false;
 
         uint16_t query_interval_auth_data_ = 0;
         uint16_t query_interval_config_ = 0;
