@@ -55,6 +55,7 @@ CONF_AUTO_UPDATE_ENABLED_SWITCH = "auto_update_enabled"
 CONF_SINGLE_LOCK_ENABLED_SWITCH = "single_lock_enabled"
 CONF_DST_MODE_ENABLED_SWITCH = "dst_mode_enabled"
 CONF_AUTO_BATTERY_TYPE_DETECTION_ENABLED_SWITCH = "auto_battery_type_detection_enabled"
+CONF_SLOW_SPEED_DURING_NIGHT_MODE_ENABLED_SWITCH = "slow_speed_during_night_mode"
 
 CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT = "single_buton_press_action"
 CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT = "double_buton_press_action"
@@ -64,6 +65,7 @@ CONF_FOB_ACTION_3_SELECT = "fob_action_3"
 CONF_TIMEZONE_SELECT = "timezone"
 CONF_ADVERTISING_MODE_SELECT = "advertising_mode"
 CONF_BATTERY_TYPE_SELECT = "battery_type"
+CONF_MOTOR_SPEED_SELECT = "motor_speed"
 
 CONF_LED_BRIGHTNESS_NUMBER = "led_brightness"
 CONF_TIMEZONE_OFFSET_NUMBER = "timezone_offset"
@@ -85,6 +87,12 @@ CONF_FOB_ACTION_SELECT_OPTIONS = [
     "Lock",
     "Lock n Go",
     "Intelligent"
+]
+
+CONF_MOTOR_SPEED_SELECT_OPTIONS = [
+    "Standard",
+    "Insane",
+    "Gentle"
 ]
 
 CONF_TIMEZONE_SELECT_OPTIONS = [
@@ -153,6 +161,7 @@ CONF_BATTERY_TYPE_SELECT_OPTIONS = [
 CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_PAIRING_AS_APP = "pairing_as_app"
 CONF_SECURITY_PIN = "security_pin"
+CONF_ULTRA_PAIRING_MODE = "ultra_pairing_mode"
 CONF_QUERY_INTERVAL_CONFIG = "query_interval_config"
 CONF_QUERY_INTERVAL_AUTH_DATA = "query_interval_auth_data"
 CONF_EVENT = "event"
@@ -184,6 +193,7 @@ NukiLockAutoUpdateEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoUpdateEnabled
 NukiLockSingleLockEnabledSwitch = nuki_lock_ns.class_("NukiLockSingleLockEnabledSwitch", switch.Switch, cg.Component)
 NukiLockDstModeEnabledSwitch = nuki_lock_ns.class_("NukiLockDstModeEnabledSwitch", switch.Switch, cg.Component)
 NukiLockAutoBatteryTypeDetectionEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoBatteryTypeDetectionEnabledSwitch", switch.Switch, cg.Component)
+NukiLockSlowSpeedDuringNightModeEnabledSwitch = nuki_lock_ns.class_("NukiLockSlowSpeedDuringNightModeEnabledSwitch", switch.Switch, cg.Component)
 
 NukiLockLedBrightnessNumber = nuki_lock_ns.class_("NukiLockLedBrightnessNumber", number.Number, cg.Component)
 NukiLockTimeZoneOffsetNumber = nuki_lock_ns.class_("NukiLockTimeZoneOffsetNumber", number.Number, cg.Component)
@@ -197,6 +207,7 @@ NukiLockFobAction3Select = nuki_lock_ns.class_("NukiLockFobAction3Select", selec
 NukiLockTimeZoneSelect = nuki_lock_ns.class_("NukiLockTimeZoneSelect", select.Select, cg.Component)
 NukiLockAdvertisingModeSelect = nuki_lock_ns.class_("NukiLockAdvertisingModeSelect", select.Select, cg.Component)
 NukiLockBatteryTypeSelect = nuki_lock_ns.class_("NukiLockBatteryTypeSelect", select.Select, cg.Component)
+NukiLockMotorSpeedSelect = nuki_lock_ns.class_("NukiLockMotorSpeedSelect", select.Select, cg.Component)
 
 NukiLockUnpairAction = nuki_lock_ns.class_(
     "NukiLockUnpairAction", automation.Action
@@ -365,6 +376,12 @@ CONFIG_SCHEMA = cv.All(
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:battery-check",
             ),
+            cv.Optional(CONF_SLOW_SPEED_DURING_NIGHT_MODE_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockSlowSpeedDuringNightModeEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:speedometer-slow",
+            ),
             cv.Optional(CONF_LED_BRIGHTNESS_NUMBER): number.number_schema(
                 NukiLockLedBrightnessNumber,
                 entity_category=ENTITY_CATEGORY_CONFIG,
@@ -420,10 +437,16 @@ CONFIG_SCHEMA = cv.All(
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:battery",
             ),
+            cv.Optional(CONF_MOTOR_SPEED_SELECT): select.select_schema(
+                NukiLockMotorSpeedSelect,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:speedometer-medium",
+            ),
+            cv.Optional(CONF_ULTRA_PAIRING_MODE, default="false"): cv.boolean,
             cv.Optional(CONF_PAIRING_AS_APP, default="false"): cv.boolean,
             cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_EVENT, default="nuki"): cv.string,
-            cv.Optional(CONF_SECURITY_PIN): cv.uint16_t,
+            cv.Optional(CONF_SECURITY_PIN): cv.uint32_t,
             cv.Optional(CONF_QUERY_INTERVAL_CONFIG, default="3600s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_QUERY_INTERVAL_AUTH_DATA, default="3600s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_ON_PAIRING_MODE_ON): automation.validate_automation(
@@ -464,6 +487,9 @@ async def to_code(config):
         
     if CONF_PAIRING_AS_APP in config:
         cg.add(var.set_pairing_as_app(config[CONF_PAIRING_AS_APP]))
+
+    if CONF_ULTRA_PAIRING_MODE in config:
+        cg.add(var.set_ultra_pairing_mode(config[CONF_ULTRA_PAIRING_MODE]))
 
     if CONF_QUERY_INTERVAL_CONFIG in config:
         cg.add(var.set_query_interval_config(config[CONF_QUERY_INTERVAL_CONFIG]))
@@ -622,6 +648,11 @@ async def to_code(config):
         await cg.register_parented(s, config[CONF_ID])
         cg.add(var.set_auto_battery_type_detection_enabled_switch(s))
 
+    if slow_speed_during_night_mode := config.get(CONF_SLOW_SPEED_DURING_NIGHT_MODE_ENABLED_SWITCH):
+        s = await switch.new_switch(slow_speed_during_night_mode)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_slow_speed_during_night_mode_enabled_switch(s))
+
     # Select
     if single_button_press_action := config.get(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT):
         sel = await select.new_select(
@@ -686,6 +717,15 @@ async def to_code(config):
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_battery_type_select(sel))
+
+    if motor_speed := config.get(CONF_MOTOR_SPEED_SELECT):
+        sel = await select.new_select(
+            motor_speed,
+            options=[CONF_MOTOR_SPEED_SELECT_OPTIONS],
+        )
+        await cg.register_parented(sel, config[CONF_ID])
+        cg.add(var.set_motor_speed_select(sel))
+
 
     # Callback
     for conf in config.get(CONF_ON_PAIRING_MODE_ON, []):
@@ -781,11 +821,17 @@ def _final_validate(config):
         "esp32_ble_server"
     ]
 
+    
+
     if CORE.is_esp32:
         # Check if any of the incompatible components are in the configuration
-        if any(component in full_config for component in incompatible_components):
-            raise cv.Invalid(f"The `nuki_lock` component relies on NimBLE, which is incompatible with the ESPHome BLE stack.\nTo use `nuki_lock`, please remove all Bluetooth components (esp32_ble, esp32_improv, ...) from your configuration.")
-        
+        used_incompatible_components = [component for component in incompatible_components if component in full_config]
+        if used_incompatible_components:
+            raise cv.Invalid(
+                f"The `nuki_lock` component relies on NimBLE, which is incompatible with the ESPHome BLE stack.\n"
+                f"To use `nuki_lock`, please remove the following Bluetooth components from your configuration: {', '.join(used_incompatible_components)}."
+            )
+
         # Check for PSRAM support
         if "psram" in full_config:
             if CORE.using_esp_idf:
@@ -862,7 +908,7 @@ async def nuki_lock_set_pairing_mode_to_code(config, action_id, template_arg, ar
 NUKI_LOCK_SET_SECURITY_PIN_SCHEMA = automation.maybe_simple_id(
     {
         cv.GenerateID(): cv.use_id(NukiLock),
-        cv.Required(CONF_SET_SECURITY_PIN): cv.templatable(cv.uint16_t)
+        cv.Required(CONF_SET_SECURITY_PIN): cv.templatable(cv.uint32_t)
     }
 )
 
@@ -873,6 +919,6 @@ NUKI_LOCK_SET_SECURITY_PIN_SCHEMA = automation.maybe_simple_id(
 async def nuki_lock_set_security_pin_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])
     var = cg.new_Pvariable(action_id, template_arg, paren)
-    security_pin_template_ = await cg.templatable(config[CONF_SET_SECURITY_PIN], args, cg.uint16)
+    security_pin_template_ = await cg.templatable(config[CONF_SET_SECURITY_PIN], args, cg.uint32)
     cg.add(var.set_security_pin(security_pin_template_))
     return var
