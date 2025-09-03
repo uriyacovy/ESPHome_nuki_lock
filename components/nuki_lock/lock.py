@@ -6,15 +6,15 @@ from esphome import automation
 from esphome.components.esp32 import add_idf_component, add_idf_sdkconfig_option
 from esphome.components import lock, binary_sensor, text_sensor, sensor, switch, button, number, select
 from esphome.const import (
-    CONF_ID, 
-    DEVICE_CLASS_CONNECTIVITY, 
-    DEVICE_CLASS_BATTERY, 
-    DEVICE_CLASS_DOOR, 
+    CONF_ID,
+    DEVICE_CLASS_CONNECTIVITY,
+    DEVICE_CLASS_BATTERY,
+    DEVICE_CLASS_DOOR,
     DEVICE_CLASS_SWITCH,
     DEVICE_CLASS_SIGNAL_STRENGTH,
     UNIT_PERCENT,
     UNIT_DECIBEL_MILLIWATT,
-    ENTITY_CATEGORY_CONFIG, 
+    ENTITY_CATEGORY_CONFIG,
     ENTITY_CATEGORY_DIAGNOSTIC,
     CONF_TRIGGER_ID,
 )
@@ -162,7 +162,6 @@ CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_PAIRING_AS_APP = "pairing_as_app"
 CONF_SECURITY_PIN = "security_pin"
 CONF_ULTRA_PAIRING_MODE = "ultra_pairing_mode"
-CONF_ALT_CONNECT_MODE = "alternative_connect_mode"
 CONF_QUERY_INTERVAL_CONFIG = "query_interval_config"
 CONF_QUERY_INTERVAL_AUTH_DATA = "query_interval_auth_data"
 CONF_EVENT = "event"
@@ -230,9 +229,8 @@ def _validate(config):
     return config
 
 CONFIG_SCHEMA = cv.All(
-    lock.LOCK_SCHEMA.extend(
+    lock.lock_schema(NukiLock).extend(
         {
-            cv.GenerateID(): cv.declare_id(NukiLock),
             cv.Optional(CONF_IS_CONNECTED_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
                 device_class=DEVICE_CLASS_CONNECTIVITY,
                 entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
@@ -445,7 +443,6 @@ CONFIG_SCHEMA = cv.All(
                 icon="mdi:speedometer-medium",
             ),
             cv.Optional(CONF_ULTRA_PAIRING_MODE, default="false"): cv.boolean,
-            cv.Optional(CONF_ALT_CONNECT_MODE, default="true"): cv.boolean,
             cv.Optional(CONF_PAIRING_AS_APP, default="false"): cv.boolean,
             cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_EVENT, default="nuki"): cv.string,
@@ -475,9 +472,8 @@ CONFIG_SCHEMA = cv.All(
 
 
 async def to_code(config):
-    var = cg.new_Pvariable(config[CONF_ID])
+    var = await lock.new_lock(config)
     await cg.register_component(var, config)
-    await lock.register_lock(var, config)
 
     # Component Settings
     if CONF_PAIRING_MODE_TIMEOUT in config:
@@ -491,15 +487,9 @@ async def to_code(config):
         
     if CONF_PAIRING_AS_APP in config:
         cg.add(var.set_pairing_as_app(config[CONF_PAIRING_AS_APP]))
-        
-    if config[CONF_ALT_CONNECT_MODE]:
-        cg.add_define("NUKI_ALT_CONNECT")
 
     if CONF_ULTRA_PAIRING_MODE in config:
         cg.add(var.set_ultra_pairing_mode(config[CONF_ULTRA_PAIRING_MODE]))
-
-    if CONF_ALT_CONNECT_MODE in config:
-        cg.add(var.set_alt_connect_mode(config[CONF_ALT_CONNECT_MODE]))
 
     if CONF_QUERY_INTERVAL_CONFIG in config:
         cg.add(var.set_query_interval_config(config[CONF_QUERY_INTERVAL_CONFIG]))
@@ -754,6 +744,7 @@ async def to_code(config):
     if CORE.using_esp_idf:
         add_idf_sdkconfig_option("CONFIG_BT_ENABLED", True)
         add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ENABLED", True)
+        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ROLE_PERIPHERAL", True)
         add_idf_sdkconfig_option("CONFIG_BT_BLUEDROID_ENABLED", False)
 
         add_idf_sdkconfig_option("CONFIG_BTDM_BLE_SCAN_DUPL", True)
@@ -766,23 +757,36 @@ async def to_code(config):
             repo="https://github.com/AzonInc/NukiBleEsp32.git",
             ref="idf",
         )
+
+        cg.add_build_flag("-DNUKI_USE_LATEST_NIMBLE=y")
     else:
         cg.add_build_flag("-DCONFIG_BTDM_BLE_SCAN_DUPL=y")
         cg.add_build_flag("-DCONFIG_NIMBLE_CPP_LOG_LEVEL=0")
         cg.add_build_flag("-DCONFIG_BT_NIMBLE_LOG_LEVEL=0")
+        cg.add_build_flag("-DCONFIG_BT_NIMBLE_ROLE_PERIPHERAL=y")
         cg.add_build_flag("-DCONFIG_BT_NIMBLE_LOG_LEVEL_NONE=y")
 
+        cg.add_build_flag("-DNUKI_USE_LATEST_NIMBLE=y")
+
         cg.add_library("Preferences", None)
-        cg.add_library("h2zero/NimBLE-Arduino", "1.4.2")
+        cg.add_library("h2zero/NimBLE-Arduino", "2.1.0")
         cg.add_library("Crc16", None)
+
         cg.add_library(
+            "BleScanner",
             None,
-            None,
-            "https://github.com/I-Connect/NukiBleEsp32#e3badba",
+            "https://github.com/AzonInc/ble-scanner#d6dcae0e6e177564cda40cc8d2591018f0576ad0",
         )
 
+        cg.add_library(
+            "NukiBleEsp32",
+            None,
+            "https://github.com/iranl/NukiBleEsp32#98872d9004118f1ba2cb3685a30863eb19930cda",
+        )
 
     # Defines
+    cg.add_define("NUKI_64BIT_TIME")
+    cg.add_define("NUKI_ALT_CONNECT")
     cg.add_define("NUKI_MUTEX_RECURSIVE")
     cg.add_define("NUKI_NO_WDT_RESET")
 
@@ -841,13 +845,19 @@ def _final_validate(config):
                 cg.add_build_flag(f"-DCONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST=1")
                 cg.add_build_flag(f"-DCONFIG_BT_BLE_DYNAMIC_ENV_MEMORY=1")
         else:
-            LOGGER.info("Consider enabling PSRAM support if it's available for the NimBLE Stack.")
+            LOGGER.warning("Consider enabling PSRAM support if it's available for the NimBLE Stack.")
 
-        # Check for API encryption
-        if "api" in full_config:
-            if "encryption" in full_config["api"]:
-                LOGGER.warning("You may need to disable API encryption to successfully pair with the Nuki Smart Lock, as it consumes quite a bit of memory.")
-    
+        # Check API configuration
+        api_conf = full_config.get("api", {})
+        if api_conf.get("encryption"):
+            LOGGER.warning("You may need to disable API encryption to successfully pair with the Nuki Smart Lock, as it consumes quite a bit of memory.")
+        
+        if not api_conf.get("custom_services", False):
+            LOGGER.warning("Enable custom_services to use API services like 'lock_n_go', 'add_keypad_entry', etc.")
+
+        if not api_conf.get("homeassistant_services", False):
+            LOGGER.warning("Enable homeassistant_services to use nuki event logs.")
+
     return config
 
 FINAL_VALIDATE_SCHEMA = _final_validate
