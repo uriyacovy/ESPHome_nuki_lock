@@ -1049,7 +1049,7 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
             }
             
             // Send as Home Assistant Event
-            #ifdef USE_API
+            #ifdef USE_API_HOMEASSISTANT_SERVICES
             if (log.index > this->last_rolling_log_id) {
                 this->last_rolling_log_id = log.index;
                 
@@ -1153,15 +1153,11 @@ void NukiLockComponent::setup() {
 
     // Increase Watchdog Timeout
     // Fixes Pairing Crash
-    #ifdef USE_ESP_IDF
     esp_task_wdt_config_t wdt_config = {
         .timeout_ms = 15000,
         .trigger_panic = false
     }; 
     esp_task_wdt_reconfigure(&wdt_config);
-    #else
-    esp_task_wdt_init(15, false);
-    #endif
 
     // Restore settings from flash
     this->pref_ = global_preferences->make_preference<NukiLockSettings>(global_nuki_lock_id);
@@ -1188,9 +1184,12 @@ void NukiLockComponent::setup() {
     this->scanner_.setScanDuration(0);
 
     this->nuki_lock_.registerBleScanner(&this->scanner_);
-    this->nuki_lock_.initialize(this->alt_connect_mode_);
+    this->nuki_lock_.initialize();
     this->nuki_lock_.setConnectTimeout(BLE_CONNECT_TIMEOUT_SEC);
     this->nuki_lock_.setConnectRetries(BLE_CONNECT_TIMEOUT_RETRIES);
+    
+    this->nuki_lock_.setDisconnectTimeout(BLE_DISCONNECT_TIMEOUT);
+    
 
     if (recovered.security_pin != 0) {
         ESP_LOGD(TAG, "Using saved security pin: %i", recovered.security_pin);
@@ -1238,12 +1237,22 @@ void NukiLockComponent::setup() {
 
     this->publish_state(lock::LOCK_STATE_NONE);
 
-    #ifdef USE_API
+    #ifdef USE_API_SERVICES
     this->custom_api_device_.register_service(&NukiLockComponent::lock_n_go, "lock_n_go");
     this->custom_api_device_.register_service(&NukiLockComponent::print_keypad_entries, "print_keypad_entries");
     this->custom_api_device_.register_service(&NukiLockComponent::add_keypad_entry, "add_keypad_entry", {"name", "code"});
     this->custom_api_device_.register_service(&NukiLockComponent::update_keypad_entry, "update_keypad_entry", {"id", "name", "code", "enabled"});
     this->custom_api_device_.register_service(&NukiLockComponent::delete_keypad_entry, "delete_keypad_entry", {"id"});
+    #else
+    ESP_LOGW(TAG, "CUSTOM API SERVICES ARE DISABLED");
+    ESP_LOGW(TAG, "Please set 'api:' -> 'custom_services: true' to use API services.");
+    ESP_LOGW(TAG, "More information here: https://esphome.io/components/api.html");
+    #endif
+
+    #ifndef USE_API_HOMEASSISTANT_SERVICES
+    ESP_LOGW(TAG, "NUKI EVENT LOGS ARE DISABLED");
+    ESP_LOGW(TAG, "Please set 'api:' -> 'homeassistant_services: true' to fire Home Assistant events.");
+    ESP_LOGW(TAG, "More information here: https://esphome.io/components/api.html");
     #endif
 }
 
@@ -1787,7 +1796,7 @@ void NukiLockComponent::set_config_select(const char* config, const char* value)
             this->advertising_mode_select_->publish_state(value);
         } else if (strcmp(config, "battery_type") == 0 && this->battery_type_select_ != nullptr) {
             this->battery_type_select_->publish_state(value);
-        }else if (strcmp(config, "motor_speed") == 0 && this->motor_speed_select_ != nullptr) {
+        } else if (strcmp(config, "motor_speed") == 0 && this->motor_speed_select_ != nullptr) {
             this->motor_speed_select_->publish_state(value);
         }
         
