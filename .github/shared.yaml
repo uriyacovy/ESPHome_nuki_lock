@@ -7,10 +7,9 @@ wifi:
 
 api:
   custom_services: true
+  homeassistant_services: true
 
 logger:
-  logs:
-    component: ERROR
 
 external_components:
   - source:
