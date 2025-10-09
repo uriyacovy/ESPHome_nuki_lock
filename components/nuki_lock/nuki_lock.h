@@ -107,7 +107,7 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
     #endif
 
     static const uint8_t BLE_CONNECT_TIMEOUT_SEC = 2;
-    static const uint8_t BLE_CONNECT_TIMEOUT_RETRIES = 1;
+    static const uint8_t BLE_CONNECT_RETRIES = 5;
 
     static const uint16_t BLE_DISCONNECT_TIMEOUT = 2000;
 

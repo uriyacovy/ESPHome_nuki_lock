@@ -741,20 +741,17 @@ async def to_code(config):
         cg.add_library(
             "NukiBleEsp32",
             None,
-            "https://github.com/iranl/NukiBleEsp32#98872d9004118f1ba2cb3685a30863eb19930cda",
+            "https://github.com/iranl/NukiBleEsp32#e2edfa2cb4a36f7b3bf2f160f1b20fb075996ab7",
         )
 
     # Defines
     cg.add_define("NUKI_64BIT_TIME")
-    cg.add_define("NUKI_ALT_CONNECT")
-    cg.add_define("NUKI_MUTEX_RECURSIVE")
     cg.add_define("NUKI_NO_WDT_RESET")
 
     # Remove Build flags
     cg.add_platformio_option(
         "build_unflags",
         [
-            f"-DCONFIG_BTDM_BLE_SCAN_DUPL",
             f"-DCONFIG_BT_NIMBLE_LOG_LEVEL",
             f"-DCONFIG_NIMBLE_CPP_LOG_LEVEL",
             f"-Werror=all",
@@ -802,15 +799,16 @@ def _final_validate(config):
             LOGGER.warning("Consider enabling PSRAM support if it's available for the NimBLE Stack.")
 
         # Check API configuration
-        api_conf = full_config.get("api", {})
-        if api_conf.get("encryption"):
-            LOGGER.warning("You may need to disable API encryption to successfully pair with the Nuki Smart Lock, as it consumes quite a bit of memory.")
-        
-        if not api_conf.get("custom_services", False):
-            LOGGER.warning("Enable custom_services to use API services like 'lock_n_go', 'add_keypad_entry', etc.")
+        if "api" in full_config:
+            api_conf = full_config.get("api", {})
+            if api_conf.get("encryption"):
+                LOGGER.warning("You may need to disable API encryption to successfully pair with the Nuki Smart Lock, as it consumes quite a bit of memory.")
+            
+            if not api_conf.get("custom_services", False):
+                LOGGER.warning("Enable custom_services to use API services like 'lock_n_go', 'add_keypad_entry', etc.")
 
-        if not api_conf.get("homeassistant_services", False):
-            LOGGER.warning("Enable homeassistant_services to use nuki event logs.")
+            if not api_conf.get("homeassistant_services", False):
+                LOGGER.warning("Enable homeassistant_services to use nuki event logs.")
 
     return config
 

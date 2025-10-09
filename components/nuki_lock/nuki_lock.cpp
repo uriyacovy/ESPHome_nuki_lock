@@ -1139,11 +1139,17 @@ void NukiLockComponent::setup() {
     this->scanner_.initialize("ESPHomeNuki", true, 40, 40);
     this->scanner_.setScanDuration(0);
 
-    this->nuki_lock_.registerBleScanner(&this->scanner_);
+    this->nuki_lock_.setDebugConnect(false);
+    this->nuki_lock_.setDebugCommunication(false);
+    this->nuki_lock_.setDebugReadableData(false);
+    this->nuki_lock_.setDebugHexData(false);
+    this->nuki_lock_.setDebugCommand(false);
+
     this->nuki_lock_.initialize();
+    this->nuki_lock_.registerBleScanner(&this->scanner_);
+    this->nuki_lock_.setEventHandler(this);
     this->nuki_lock_.setConnectTimeout(BLE_CONNECT_TIMEOUT_SEC);
-    this->nuki_lock_.setConnectRetries(BLE_CONNECT_TIMEOUT_RETRIES);
-    
+    this->nuki_lock_.setConnectRetries(BLE_CONNECT_RETRIES);
     this->nuki_lock_.setDisconnectTimeout(BLE_DISCONNECT_TIMEOUT);
     
 
@@ -1193,22 +1199,24 @@ void NukiLockComponent::setup() {
 
     this->publish_state(lock::LOCK_STATE_NONE);
 
-    #ifdef USE_API_SERVICES
-    this->custom_api_device_.register_service(&NukiLockComponent::lock_n_go, "lock_n_go");
-    this->custom_api_device_.register_service(&NukiLockComponent::print_keypad_entries, "print_keypad_entries");
-    this->custom_api_device_.register_service(&NukiLockComponent::add_keypad_entry, "add_keypad_entry", {"name", "code"});
-    this->custom_api_device_.register_service(&NukiLockComponent::update_keypad_entry, "update_keypad_entry", {"id", "name", "code", "enabled"});
-    this->custom_api_device_.register_service(&NukiLockComponent::delete_keypad_entry, "delete_keypad_entry", {"id"});
-    #else
-    ESP_LOGW(TAG, "CUSTOM API SERVICES ARE DISABLED");
-    ESP_LOGW(TAG, "Please set 'api:' -> 'custom_services: true' to use API services.");
-    ESP_LOGW(TAG, "More information here: https://esphome.io/components/api.html");
-    #endif
+    #ifdef USE_API
+        #ifdef USE_API_SERVICES
+        this->custom_api_device_.register_service(&NukiLockComponent::lock_n_go, "lock_n_go");
+        this->custom_api_device_.register_service(&NukiLockComponent::print_keypad_entries, "print_keypad_entries");
+        this->custom_api_device_.register_service(&NukiLockComponent::add_keypad_entry, "add_keypad_entry", {"name", "code"});
+        this->custom_api_device_.register_service(&NukiLockComponent::update_keypad_entry, "update_keypad_entry", {"id", "name", "code", "enabled"});
+        this->custom_api_device_.register_service(&NukiLockComponent::delete_keypad_entry, "delete_keypad_entry", {"id"});
+        #else
+        ESP_LOGW(TAG, "CUSTOM API SERVICES ARE DISABLED");
+        ESP_LOGW(TAG, "Please set 'api:' -> 'custom_services: true' to use API services.");
+        ESP_LOGW(TAG, "More information here: https://esphome.io/components/api.html");
+        #endif
 
-    #ifndef USE_API_HOMEASSISTANT_SERVICES
-    ESP_LOGW(TAG, "NUKI EVENT LOGS ARE DISABLED");
-    ESP_LOGW(TAG, "Please set 'api:' -> 'homeassistant_services: true' to fire Home Assistant events.");
-    ESP_LOGW(TAG, "More information here: https://esphome.io/components/api.html");
+        #ifndef USE_API_HOMEASSISTANT_SERVICES
+        ESP_LOGW(TAG, "NUKI EVENT LOGS ARE DISABLED");
+        ESP_LOGW(TAG, "Please set 'api:' -> 'homeassistant_services: true' to fire Home Assistant events.");
+        ESP_LOGW(TAG, "More information here: https://esphome.io/components/api.html");
+        #endif
     #endif
 }
 
