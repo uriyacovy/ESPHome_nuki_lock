@@ -1125,16 +1125,14 @@ void NukiLockComponent::setup() {
 
     this->pin_state_ = recovered.pin_state;
 
-    this->traits.set_supported_states(
-        std::set<lock::LockState> {
-            lock::LOCK_STATE_NONE,
-            lock::LOCK_STATE_LOCKED,
-            lock::LOCK_STATE_UNLOCKED,
-            lock::LOCK_STATE_JAMMED,
-            lock::LOCK_STATE_LOCKING,
-            lock::LOCK_STATE_UNLOCKING
-        }
-    );
+    this->traits.set_supported_states({
+        lock::LOCK_STATE_NONE,
+        lock::LOCK_STATE_LOCKED,
+        lock::LOCK_STATE_UNLOCKED,
+        lock::LOCK_STATE_JAMMED,
+        lock::LOCK_STATE_LOCKING,
+        lock::LOCK_STATE_UNLOCKING
+    });
 
     this->scanner_.initialize("ESPHomeNuki", true, 40, 40);
     this->scanner_.setScanDuration(0);
