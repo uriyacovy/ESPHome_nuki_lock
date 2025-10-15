@@ -701,28 +701,11 @@ async def to_code(config):
         await automation.build_automation(trigger, [], conf)
 
     # Libraries
-    if CORE.using_esp_idf:
-        add_idf_component(
-            name="NukiBleEsp32",
-            repo="https://github.com/AzonInc/NukiBleEsp32.git",
-            ref="idf",
-        )
-    else:
-        cg.add_library("Preferences", None)
-        cg.add_library("h2zero/NimBLE-Arduino", "2.1.0")
-        cg.add_library("Crc16", None)
-
-        cg.add_library(
-            "BleScanner",
-            None,
-            "https://github.com/AzonInc/ble-scanner#d6dcae0e6e177564cda40cc8d2591018f0576ad0",
-        )
-
-        cg.add_library(
-            "NukiBleEsp32",
-            None,
-            "https://github.com/iranl/NukiBleEsp32#e2edfa2cb4a36f7b3bf2f160f1b20fb075996ab7",
-        )
+    add_idf_component(
+        name="NukiBleEsp32",
+        repo="https://github.com/AzonInc/NukiBleEsp32.git",
+        ref="idf",
+    )
 
     # General settings
     add_idf_sdkconfig_option("CONFIG_BT_ENABLED", True)
@@ -734,7 +717,7 @@ async def to_code(config):
     add_idf_sdkconfig_option("CONFIG_NIMBLE_CPP_LOG_LEVEL", 0)
     add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL", 0)
     add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL_NONE", True)
-    
+
     cg.add_build_flag("-DNUKI_USE_LATEST_NIMBLE=y")
 
     # Defines
