@@ -35,7 +35,7 @@ lock::LockState NukiLockComponent::nuki_to_lock_state(NukiLock::LockState nukiLo
 }
 
 bool NukiLockComponent::nuki_doorsensor_to_binary(Nuki::DoorSensorState nuki_door_sensor_state) {
-    if (nuki_door_sensor_state == Nuki::DoorSensorState::DoorClosed) {
+    if (nuki_door_sensor_state == Nuki::DoorSensorState::DoorClosed || nuki_door_sensor_state == Nuki::DoorSensorState::Unavailable) {
         return false;
     }
     return true;
