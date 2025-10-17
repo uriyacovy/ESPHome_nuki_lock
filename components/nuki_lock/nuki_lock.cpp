@@ -35,7 +35,7 @@ lock::LockState NukiLockComponent::nuki_to_lock_state(NukiLock::LockState nukiLo
 }
 
 bool NukiLockComponent::nuki_doorsensor_to_binary(Nuki::DoorSensorState nuki_door_sensor_state) {
-    if (nuki_door_sensor_state == Nuki::DoorSensorState::DoorClosed || nuki_door_sensor_state == Nuki::DoorSensorState::Unavailable) {
+    if (nuki_door_sensor_state == Nuki::DoorSensorState::DoorClosed) {
         return false;
     }
     return true;
@@ -528,7 +528,12 @@ void NukiLockComponent::update_status() {
         }
         
         if (this->door_sensor_binary_sensor_ != nullptr) {
-            this->door_sensor_binary_sensor_->publish_state(this->nuki_doorsensor_to_binary(this->retrieved_key_turner_state_.doorSensorState));
+            Nuki::DoorSensorState door_sensor_state = this->retrieved_key_turner_state_.doorSensorState;
+            if(door_sensor_state != Nuki::DoorSensorState::Unavailable) {
+                this->door_sensor_binary_sensor_->publish_state(this->nuki_doorsensor_to_binary(door_sensor_state));
+            } else {
+                this->door_sensor_binary_sensor_->invalidate_state();
+            }
         }
         #endif
         #ifdef USE_SENSOR
