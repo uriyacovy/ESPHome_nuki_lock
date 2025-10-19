@@ -14,6 +14,9 @@ To integrate your Nuki Smartlock, add one of the following code snippets to your
 > This component relies on NimBLE, which is incompatible with the ESPHome BLE stack.
 > Please remove all Bluetooth components (esp32_ble, esp32_improv, ...) from your configuration to use this component.
 
+> [!WARNING]  
+> You need at least **ESPHome 2025.10.0** to use this component with the arduino framework as there was an architecture change in ESPHome which uses arduino as an IDF component now.
+
 > [!TIP]  
 > If your ESP32 is equipped with PSRAM, you can add the `psram` component to enable the use of PSRAM for the NimBLE Stack, enhancing the reliability of this component.
 
@@ -153,7 +156,7 @@ lock:
 </details>
 
 <details>
-  <summary>Arduino Framework</summary>
+  <summary>Arduino Framework (IDF component)</summary>
 
 ```yaml
 esphome:

@@ -701,48 +701,24 @@ async def to_code(config):
         await automation.build_automation(trigger, [], conf)
 
     # Libraries
-    if CORE.using_esp_idf:
-        add_idf_sdkconfig_option("CONFIG_BT_ENABLED", True)
-        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ENABLED", True)
-        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ROLE_PERIPHERAL", True)
-        add_idf_sdkconfig_option("CONFIG_BT_BLUEDROID_ENABLED", False)
+    add_idf_component(
+        name="NukiBleEsp32",
+        repo="https://github.com/AzonInc/NukiBleEsp32.git",
+        ref="idf",
+    )
 
-        add_idf_sdkconfig_option("CONFIG_BTDM_BLE_SCAN_DUPL", True)
-        add_idf_sdkconfig_option("CONFIG_NIMBLE_CPP_LOG_LEVEL", 0)
-        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL", 0)
-        add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL_NONE", True)
+    # General settings
+    add_idf_sdkconfig_option("CONFIG_BT_ENABLED", True)
+    add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ENABLED", True)
+    add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ROLE_PERIPHERAL", True)
+    add_idf_sdkconfig_option("CONFIG_BT_BLUEDROID_ENABLED", False)
 
-        add_idf_component(
-            name="NukiBleEsp32",
-            repo="https://github.com/AzonInc/NukiBleEsp32.git",
-            ref="idf",
-        )
+    add_idf_sdkconfig_option("CONFIG_BTDM_BLE_SCAN_DUPL", True)
+    add_idf_sdkconfig_option("CONFIG_NIMBLE_CPP_LOG_LEVEL", 0)
+    add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL", 0)
+    add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL_NONE", True)
 
-        cg.add_build_flag("-DNUKI_USE_LATEST_NIMBLE=y")
-    else:
-        cg.add_build_flag("-DCONFIG_BTDM_BLE_SCAN_DUPL=y")
-        cg.add_build_flag("-DCONFIG_NIMBLE_CPP_LOG_LEVEL=0")
-        cg.add_build_flag("-DCONFIG_BT_NIMBLE_LOG_LEVEL=0")
-        cg.add_build_flag("-DCONFIG_BT_NIMBLE_ROLE_PERIPHERAL=y")
-        cg.add_build_flag("-DCONFIG_BT_NIMBLE_LOG_LEVEL_NONE=y")
-
-        cg.add_build_flag("-DNUKI_USE_LATEST_NIMBLE=y")
-
-        cg.add_library("Preferences", None)
-        cg.add_library("h2zero/NimBLE-Arduino", "2.1.0")
-        cg.add_library("Crc16", None)
-
-        cg.add_library(
-            "BleScanner",
-            None,
-            "https://github.com/AzonInc/ble-scanner#d6dcae0e6e177564cda40cc8d2591018f0576ad0",
-        )
-
-        cg.add_library(
-            "NukiBleEsp32",
-            None,
-            "https://github.com/iranl/NukiBleEsp32#e2edfa2cb4a36f7b3bf2f160f1b20fb075996ab7",
-        )
+    cg.add_build_flag("-DNUKI_USE_LATEST_NIMBLE=y")
 
     # Defines
     cg.add_define("NUKI_64BIT_TIME")
