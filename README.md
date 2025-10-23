@@ -1,6 +1,6 @@
 # ESPHome Nuki Lock Component (ESP32) [![Build Component](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml/badge.svg)](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml)
 
-This module brings seamless integration of Nuki Smartlocks into ESPHome, creating a rich Home Assistant lock platform with [a bunch of entities](#entities).
+This component brings seamless integration of Nuki Smartlocks into ESPHome, creating a rich Home Assistant lock platform with [a bunch of entities](#entities).
 
 The lock entity updates whenever the lock's state changes - whether through the Nuki app, Home Assistant, or manually. This is achieved via the efficient Nuki BLE advertisement mechanism, ensuring your lock status is always up-to-date.
 
@@ -483,6 +483,7 @@ context:
 
 **Sensor:**
 - Battery Level
+- Bluetooth Signal Strength
 
 **Text Sensor:**  
 - Door Sensor State
@@ -525,7 +526,8 @@ context:
 - Unpair Device
 
 ## Dependencies
-The module depends on the work done by [I-Connect](https://github.com/I-Connect) with [NukiBleEsp32](https://github.com/I-Connect/NukiBleEsp32).
+The component depends on the work done by [I-Connect](https://github.com/I-Connect) with [NukiBleEsp32](https://github.com/I-Connect/NukiBleEsp32).
+We use [this fork](https://github.com/AzonInc/NukiBleEsp32/tree/idf) to maintain ESP-IDF compatibility.
 
 ## Tested Hardware
 - ESP32-WROOM
