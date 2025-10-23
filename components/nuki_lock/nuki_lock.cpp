@@ -6,7 +6,7 @@
 #include "esphome/components/api/custom_api_device.h"
 #endif
 
-#include <unordered_map>
+#include <map>
 
 #include "nuki_lock.h"
 

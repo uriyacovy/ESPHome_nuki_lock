@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+
 #include "esphome/core/component.h"
 #include "esphome/components/lock/lock.h"
 #include "esphome/core/preferences.h"
