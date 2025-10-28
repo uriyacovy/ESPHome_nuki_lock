@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <unordered_map>
 
 #include "esphome/core/component.h"
 #include "esphome/components/lock/lock.h"
@@ -41,11 +42,32 @@ namespace nuki_lock {
 
 static const char *TAG = "nuki_lock.lock";
 
+static const uint8_t BLE_CONNECT_TIMEOUT_SEC = 2;
+static const uint8_t BLE_CONNECT_RETRIES = 5;
+
+static const uint16_t BLE_DISCONNECT_TIMEOUT = 2000;
+
+static const uint8_t MAX_ACTION_ATTEMPTS = 5;
+static const uint8_t MAX_TOLERATED_UPDATES_ERRORS = 5;
+
+static const uint32_t COOLDOWN_COMMANDS_MILLIS = 1000;
+static const uint32_t COOLDOWN_COMMANDS_EXTENDED_MILLIS = 3000;
+
+static const uint8_t MAX_AUTH_DATA_ENTRIES = 10;
+static const uint8_t MAX_EVENT_LOG_ENTRIES = 3;
+
+static const uint8_t MAX_NAME_LEN = 32;
+
 enum PinState
 {
     NotSet = 0,
     Valid = 1,
     Invalid = 2
+};
+
+struct AuthEntry {
+    uint32_t authId;
+    char name[MAX_NAME_LEN];
 };
 
 struct NukiLockSettings
@@ -114,20 +136,6 @@ class NukiLockComponent :
     SUB_SWITCH(dst_mode_enabled)
     SUB_SWITCH(auto_battery_type_detection_enabled)
     #endif
-
-    static const uint8_t BLE_CONNECT_TIMEOUT_SEC = 2;
-    static const uint8_t BLE_CONNECT_RETRIES = 5;
-
-    static const uint16_t BLE_DISCONNECT_TIMEOUT = 2000;
-
-    static const uint8_t MAX_ACTION_ATTEMPTS = 5;
-    static const uint8_t MAX_TOLERATED_UPDATES_ERRORS = 5;
-
-    static const uint32_t COOLDOWN_COMMANDS_MILLIS = 1000;
-    static const uint32_t COOLDOWN_COMMANDS_EXTENDED_MILLIS = 3000;
-
-    static const uint8_t MAX_AUTH_DATA_ENTRIES = 10;
-    static const uint8_t MAX_EVENT_LOG_ENTRIES = 3;
 
     public:
         const uint32_t deviceId_ = 2020002;
@@ -222,6 +230,8 @@ class NukiLockComponent :
         void update_auth_data();
         void process_log_entries(const std::list<NukiLock::LogEntry>& log_entries);
 
+        const char* get_auth_name(uint32_t authId) const;
+
         void setup_intervals(bool setup = true);
         void publish_pin_state();
 
@@ -234,11 +244,9 @@ class NukiLockComponent :
         NukiLock::KeyTurnerState retrieved_key_turner_state_;
         NukiLock::LockAction lock_action_;
 
-        #ifdef USE_API
-        api::CustomAPIDevice custom_api_device_;
-        #endif
+        AuthEntry auth_entries_[MAX_AUTH_DATA_ENTRIES];
+        size_t auth_entries_count_ = 0;
 
-        std::map<uint32_t, std::string> auth_entries_;
         uint32_t auth_id_ = 0;
         char auth_name_[33] = {0};
 

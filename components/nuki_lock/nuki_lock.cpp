@@ -838,10 +838,21 @@ void NukiLockComponent::update_auth_data() {
                 if (authEntries.size() > MAX_AUTH_DATA_ENTRIES) {
                     authEntries.resize(MAX_AUTH_DATA_ENTRIES);
                 }
+
+                this->auth_entries_count_ = 0;
         
                 for(const auto& entry : authEntries) {
+                    if (this->auth_entries_count_ >= MAX_AUTH_DATA_ENTRIES) break;
+
+                    AuthEntry& auth_entry = this->auth_entries_[this->auth_entries_count_];
+                    auth_entry.authId = entry.authId;
+
+                    strncpy(auth_entry.name, reinterpret_cast<const char*>(entry.name), MAX_NAME_LEN - 1);
+                    auth_entry.name[MAX_NAME_LEN - 1] = '\0';
+
                     ESP_LOGD(TAG, "Authorization entry[%d] type: %d name: %s", entry.authId, entry.idType, entry.name);
-                    this->auth_entries_[entry.authId] = std::string(reinterpret_cast<const char*>(entry.name));
+
+                    this->auth_entries_count_++;
                 }
             } else {
                 ESP_LOGW(TAG, "No auth entries!");
@@ -899,147 +910,114 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
     ESP_LOGD(TAG, "Process Event Log Entries");
 
     char buffer[50] = {0};
+    char num_buffer[16];
     uint32_t auth_index = 0;
 
     std::map<std::string, std::string> event_data;
-    char num_buffer[16];
 
-    for(const auto& log : log_entries) {
+    for (const auto& log : log_entries) {
         event_data.clear();
 
-        memset(buffer, 0, sizeof(buffer));
-
-        if ((log.loggingType == NukiLock::LoggingType::LockAction || log.loggingType == NukiLock::LoggingType::KeypadAction)) {
+        if (log.loggingType == NukiLock::LoggingType::LockAction ||
+            log.loggingType == NukiLock::LoggingType::KeypadAction) {
+            
             int sizeName = sizeof(log.name);
-            memcpy(buffer, log.name, sizeName);
-            if(buffer[sizeName - 1] != '\0') {
-                buffer[sizeName] = '\0';
-            }
+            strncpy(buffer, log.name, sizeof(buffer) - 1);
+            buffer[sizeof(buffer) - 1] = '\0';
 
             if (strcmp(buffer, "") == 0) {
-                memset(buffer, 0, sizeof(buffer));
-                memcpy(buffer, "Manual", strlen("Manual"));
+                strcpy(buffer, "Manual");
             }
 
             if (log.index > auth_index) {
                 auth_index = log.index;
                 this->auth_id_ = log.authId;
 
-                memset(this->auth_name_, 0, sizeof(this->auth_name_));
-                memcpy(this->auth_name_, buffer, sizeof(buffer));
+                strncpy(this->auth_name_, buffer, sizeof(this->auth_name_) - 1);
+                this->auth_name_[sizeof(this->auth_name_) - 1] = '\0';
 
-                if(buffer[sizeName - 1] != '\0' && this->auth_entries_.count(this->auth_id_) > 0) {
-                    memset(this->auth_name_, 0, sizeof(this->auth_name_));
-                    memcpy(this->auth_name_, this->auth_entries_[this->auth_id_].c_str(), sizeof(this->auth_entries_[this->auth_id_].c_str()));
+                const char* authNameFromEntries = get_auth_name(this->auth_id_);
+                if (authNameFromEntries) {
+                    strncpy(this->auth_name_, authNameFromEntries, sizeof(this->auth_name_) - 1);
+                    this->auth_name_[sizeof(this->auth_name_) - 1] = '\0';
                 }
             }
         }
 
         if (this->send_events_) {
-            snprintf(buffer, sizeof(buffer), "%u", log.index);
-            event_data["index"] = buffer;
+            snprintf(num_buffer, sizeof(num_buffer), "%u", log.index);
+            event_data["index"] = num_buffer;
 
-            snprintf(buffer, sizeof(buffer), "%u", log.authId);
-            event_data["authorizationId"] = buffer;
+            snprintf(num_buffer, sizeof(num_buffer), "%u", log.authId);
+            event_data["authorizationId"] = num_buffer;
 
-            const char* authName = this->auth_entries_.count(log.authId) ? this->auth_entries_[log.authId].c_str() : this->auth_name_;
+            const char* authName = get_auth_name(log.authId);
+            if (!authName) authName = this->auth_name_;
             event_data["authorizationName"] = authName;
 
-            snprintf(buffer, sizeof(buffer), "%u", log.timeStampYear);
-            event_data["timeYear"] = buffer;
+            snprintf(num_buffer, sizeof(num_buffer), "%u", log.timeStampYear);
+            event_data["timeYear"] = num_buffer;
+            snprintf(num_buffer, sizeof(num_buffer), "%u", log.timeStampMonth);
+            event_data["timeMonth"] = num_buffer;
+            snprintf(num_buffer, sizeof(num_buffer), "%u", log.timeStampDay);
+            event_data["timeDay"] = num_buffer;
+            snprintf(num_buffer, sizeof(num_buffer), "%u", log.timeStampHour);
+            event_data["timeHour"] = num_buffer;
+            snprintf(num_buffer, sizeof(num_buffer), "%u", log.timeStampMinute);
+            event_data["timeMinute"] = num_buffer;
+            snprintf(num_buffer, sizeof(num_buffer), "%u", log.timeStampSecond);
+            event_data["timeSecond"] = num_buffer;
 
-            snprintf(buffer, sizeof(buffer), "%u", log.timeStampMonth);
-            event_data["timeMonth"] = buffer;
-
-            snprintf(buffer, sizeof(buffer), "%u", log.timeStampDay);
-            event_data["timeDay"] = buffer;
-
-            snprintf(buffer, sizeof(buffer), "%u", log.timeStampHour);
-            event_data["timeHour"] = buffer;
-
-            snprintf(buffer, sizeof(buffer), "%u", log.timeStampMinute);
-            event_data["timeMinute"] = buffer;
-
-            snprintf(buffer, sizeof(buffer), "%u", log.timeStampSecond);
-            event_data["timeSecond"] = buffer;
-
-            memset(buffer, 0, sizeof(buffer));
             NukiLock::loggingTypeToString(log.loggingType, buffer);
             event_data["type"] = buffer;
 
-            switch(log.loggingType) {
+            switch (log.loggingType) {
                 case NukiLock::LoggingType::LockAction:
-                    memset(buffer, 0, sizeof(buffer));
                     NukiLock::lockactionToString((NukiLock::LockAction)log.data[0], buffer);
                     event_data["action"] = buffer;
-
-                    memset(buffer, 0, sizeof(buffer));
                     NukiLock::triggerToString((NukiLock::Trigger)log.data[1], buffer);
                     event_data["trigger"] = buffer;
-
-                    memset(buffer, 0, sizeof(buffer));
                     NukiLock::completionStatusToString((NukiLock::CompletionStatus)log.data[3], buffer);
                     event_data["completionStatus"] = buffer;
                     break;
 
-                case NukiLock::LoggingType::KeypadAction: {
-                    memset(buffer, 0, sizeof(buffer));
+                case NukiLock::LoggingType::KeypadAction:
                     NukiLock::lockactionToString((NukiLock::LockAction)log.data[0], buffer);
                     event_data["action"] = buffer;
 
-                    switch(log.data[1]) {
-                        case 0:
-                            event_data["trigger"] = "arrowkey";
-                            break;
-                        case 1:
-                            event_data["trigger"] = "code";
-                            break;
-                        case 2:
-                            event_data["trigger"] = "fingerprint";
-                            break;
-                        default:
-                            event_data["trigger"] = "unknown";
-                            break;
+                    switch (log.data[1]) {
+                        case 0: event_data["trigger"] = "arrowkey"; break;
+                        case 1: event_data["trigger"] = "code"; break;
+                        case 2: event_data["trigger"] = "fingerprint"; break;
+                        default: event_data["trigger"] = "unknown"; break;
                     }
 
-                    if (log.data[2] == 9) {
+                    if (log.data[2] == 9)
                         event_data["trigger"] = "notAuthorized";
-                    } else if (log.data[2] == 224) {
+                    else if (log.data[2] == 224)
                         event_data["trigger"] = "invalidCode";
-                    } else {
-                        memset(buffer, 0, sizeof(buffer));
+                    else {
                         NukiLock::completionStatusToString((NukiLock::CompletionStatus)log.data[2], buffer);
                         event_data["completionStatus"] = buffer;
                     }
 
                     unsigned int codeId = 256U * log.data[4] + log.data[3];
-                    snprintf(buffer, sizeof(buffer), "%u", codeId);
-                    event_data["codeId"] = buffer;
+                    snprintf(num_buffer, sizeof(num_buffer), "%u", codeId);
+                    event_data["codeId"] = num_buffer;
                     break;
-                }
 
                 case NukiLock::LoggingType::DoorSensor:
-                    switch(log.data[0]) {
-                        case 0:
-                            event_data["action"] = "DoorOpened";
-                            break;
-                        case 1:
-                            event_data["action"] = "DoorClosed";
-                            break;
-                        case 2:
-                            event_data["action"] = "SensorJammed";
-                            break;
-                        default:
-                            event_data["action"] = "Unknown";
-                            break;
+                    switch (log.data[0]) {
+                        case 0: event_data["action"] = "DoorOpened"; break;
+                        case 1: event_data["action"] = "DoorClosed"; break;
+                        case 2: event_data["action"] = "SensorJammed"; break;
+                        default: event_data["action"] = "Unknown"; break;
                     }
                     break;
             }
 
-            // Send as Home Assistant Event
             if (log.index > this->last_rolling_log_id) {
                 this->last_rolling_log_id = log.index;
-                
                 this->event_log_received_callback_.call(log);
 
                 #ifdef USE_API_HOMEASSISTANT_SERVICES
@@ -1055,6 +1033,15 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
         this->last_unlock_user_text_sensor_->publish_state(this->auth_name_);
     }
     #endif
+}
+
+const char* NukiLockComponent::get_auth_name(uint32_t authId) const {
+    for (size_t i = 0; i < auth_entries_count_; i++) {
+        if (auth_entries_[i].authId == authId) {
+            return auth_entries_[i].name;
+        }
+    }
+    return nullptr;
 }
 
 bool NukiLockComponent::execute_lock_action(NukiLock::LockAction lock_action) {
@@ -1197,6 +1184,7 @@ void NukiLockComponent::setup() {
         // First boot: Request config and auth data
         this->config_update_ = true;
         this->advanced_config_update_ = true;
+        
         if (this->send_events_) {
             this->auth_data_update_ = true;
             this->event_log_update_ = true;
@@ -1228,11 +1216,11 @@ void NukiLockComponent::setup() {
 
     #ifdef USE_API
         #ifdef USE_API_SERVICES
-        this->custom_api_device_.register_service(&NukiLockComponent::lock_n_go, "lock_n_go");
-        this->custom_api_device_.register_service(&NukiLockComponent::print_keypad_entries, "print_keypad_entries");
-        this->custom_api_device_.register_service(&NukiLockComponent::add_keypad_entry, "add_keypad_entry", {"name", "code"});
-        this->custom_api_device_.register_service(&NukiLockComponent::update_keypad_entry, "update_keypad_entry", {"id", "name", "code", "enabled"});
-        this->custom_api_device_.register_service(&NukiLockComponent::delete_keypad_entry, "delete_keypad_entry", {"id"});
+        this->register_service(&NukiLockComponent::lock_n_go, "lock_n_go");
+        this->register_service(&NukiLockComponent::print_keypad_entries, "print_keypad_entries");
+        this->register_service(&NukiLockComponent::add_keypad_entry, "add_keypad_entry", {"name", "code"});
+        this->register_service(&NukiLockComponent::update_keypad_entry, "update_keypad_entry", {"id", "name", "code", "enabled"});
+        this->register_service(&NukiLockComponent::delete_keypad_entry, "delete_keypad_entry", {"id"});
         #else
         ESP_LOGW(TAG, "CUSTOM API SERVICES ARE DISABLED");
         ESP_LOGW(TAG, "Please set 'api:' -> 'custom_services: true' to use API services.");
