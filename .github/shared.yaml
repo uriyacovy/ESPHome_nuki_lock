@@ -116,6 +116,9 @@ lock:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned off");
     on_paired_action:
       - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
+    on_event_log_action:
+      - lambda: |-
+          ESP_LOGI("nuki_lock", "Event Log (NukiLock::LogEntry) received index: %i, authId: %i", x.index, x.authId);
 
 button:
   - platform: template

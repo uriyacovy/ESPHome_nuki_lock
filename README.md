@@ -152,6 +152,9 @@ lock:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned off");
     on_paired_action:
       - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
+    on_event_log_action:
+      - lambda: |-
+          ESP_LOGI("nuki_lock", "Event Log (NukiLock::LogEntry) received index: %i, authId: %i", x.index, x.authId);
 ```
 </details>
 
@@ -286,6 +289,9 @@ lock:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned off");
     on_paired_action:
       - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
+    on_event_log_action:
+      - lambda: |-
+          ESP_LOGI("nuki_lock", "Event Log (NukiLock::LogEntry) received index: %i, authId: %i", x.index, x.authId);
 ```
 </details>
 
@@ -415,6 +421,9 @@ on_pairing_mode_off_action:
   - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned off");
 on_paired_action:
   - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
+on_event_log_action:
+  - lambda: |-
+      ESP_LOGI("nuki_lock", "Event Log (NukiLock::LogEntry) received index: %i, authId: %i", x.index, x.authId);
 ```
 
 ### Events

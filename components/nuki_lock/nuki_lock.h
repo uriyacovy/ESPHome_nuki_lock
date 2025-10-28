@@ -158,10 +158,12 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
         void add_pairing_mode_on_callback(std::function<void()> &&callback);
         void add_pairing_mode_off_callback(std::function<void()> &&callback);
         void add_paired_callback(std::function<void()> &&callback);
+        void add_event_log_received_callback(std::function<void(NukiLock::LogEntry)> &&callback);
 
         CallbackManager<void()> pairing_mode_on_callback_{};
         CallbackManager<void()> pairing_mode_off_callback_{};
         CallbackManager<void()> paired_callback_{};
+        CallbackManager<void(NukiLock::LogEntry)> event_log_received_callback_{};
 
         lock::LockState nuki_to_lock_state(NukiLock::LockState);
         bool nuki_doorsensor_to_binary(Nuki::DoorSensorState);
@@ -333,6 +335,13 @@ class PairedTrigger : public Trigger<> {
     public:
         explicit PairedTrigger(NukiLockComponent *parent) {
             parent->add_paired_callback([this]() { this->trigger(); });
+        }
+};
+
+class EventLogReceivedTrigger : public Trigger<NukiLock::LogEntry> {
+    public:
+        explicit EventLogReceivedTrigger(NukiLockComponent *parent) {
+            parent->add_event_log_received_callback([this](const NukiLock::LogEntry &value) { this->trigger(value); });
         }
 };
 

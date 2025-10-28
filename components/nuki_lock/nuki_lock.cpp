@@ -2009,5 +2009,10 @@ void NukiLockComponent::add_paired_callback(std::function<void()> &&callback) {
     this->paired_callback_.add(std::move(callback));
 }
 
+void NukiLockComponent::add_event_log_received_callback(std::function<void(NukiLock::LogEntry)> &&callback)
+{
+    this->event_log_received_callback_.add(std::move(callback));
+}
+
 } //namespace nuki_lock
 } //namespace esphome

@@ -163,6 +163,7 @@ CONF_SET_SECURITY_PIN = "security_pin"
 CONF_ON_PAIRING_MODE_ON = "on_pairing_mode_on_action"
 CONF_ON_PAIRING_MODE_OFF = "on_pairing_mode_off_action"
 CONF_ON_PAIRED = "on_paired_action"
+CONF_ON_EVENT_LOG = "on_event_log_action"
 
 nuki_lock_ns = cg.esphome_ns.namespace('nuki_lock')
 NukiLock = nuki_lock_ns.class_('NukiLockComponent', lock.Lock, switch.Switch, cg.Component)
@@ -210,9 +211,13 @@ NukiLockSecurityPinAction = nuki_lock_ns.class_(
     "NukiLockSecurityPinAction", automation.Action
 )
 
+nuki_lock_lib_ns = cg.esphome_ns.namespace('NukiLock')
+LogEntry = nuki_lock_lib_ns.struct('LogEntry')
+
 PairingModeOnTrigger = nuki_lock_ns.class_("PairingModeOnTrigger", automation.Trigger.template())
 PairingModeOffTrigger = nuki_lock_ns.class_("PairingModeOffTrigger", automation.Trigger.template())
 PairedTrigger = nuki_lock_ns.class_("PairedTrigger", automation.Trigger.template())
+EventLogReceivedTrigger = nuki_lock_ns.class_("EventLogReceivedTrigger", automation.Trigger.template())
 
 def _validate(config):
     return config
@@ -439,6 +444,11 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_ON_PAIRED): automation.validate_automation(
                 {
                     cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairedTrigger),
+                }
+            ),
+            cv.Optional(CONF_ON_EVENT_LOG): automation.validate_automation(
+                {
+                    cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(EventLogReceivedTrigger),
                 }
             ),
         }
@@ -699,6 +709,10 @@ async def to_code(config):
     for conf in config.get(CONF_ON_PAIRED, []):
         trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
         await automation.build_automation(trigger, [], conf)
+
+    for conf in config.get(CONF_ON_EVENT_LOG, []):
+        trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
+        await automation.build_automation(trigger, [(LogEntry, "x")], conf)
 
     # Libraries
     add_idf_component(
