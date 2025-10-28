@@ -901,7 +901,12 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
     char buffer[50] = {0};
     uint32_t auth_index = 0;
 
+    std::map<std::string, std::string> event_data;
+    char num_buffer[16];
+
     for(const auto& log : log_entries) {
+        event_data.clear();
+
         memset(buffer, 0, sizeof(buffer));
 
         if ((log.loggingType == NukiLock::LoggingType::LockAction || log.loggingType == NukiLock::LoggingType::KeypadAction)) {
@@ -931,17 +936,32 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
         }
 
         if (this->send_events_) {
-            std::map<std::string, std::string> event_data;
-            event_data["index"] = std::to_string(log.index);
-            event_data["authorizationId"] = std::to_string(log.authId);
-            event_data["authorizationName"] = this->auth_entries_.count(log.authId) > 0 ? this->auth_entries_[log.authId] : this->auth_name_;
+            snprintf(buffer, sizeof(buffer), "%u", log.index);
+            event_data["index"] = buffer;
 
-            event_data["timeYear"] = std::to_string(log.timeStampYear);
-            event_data["timeMonth"] = std::to_string(log.timeStampMonth);
-            event_data["timeDay"] = std::to_string(log.timeStampDay);
-            event_data["timeHour"] = std::to_string(log.timeStampHour);
-            event_data["timeMinute"] = std::to_string(log.timeStampMinute);
-            event_data["timeSecond"] = std::to_string(log.timeStampSecond);
+            snprintf(buffer, sizeof(buffer), "%u", log.authId);
+            event_data["authorizationId"] = buffer;
+
+            const char* authName = this->auth_entries_.count(log.authId) ? this->auth_entries_[log.authId].c_str() : this->auth_name_;
+            event_data["authorizationName"] = authName;
+
+            snprintf(buffer, sizeof(buffer), "%u", log.timeStampYear);
+            event_data["timeYear"] = buffer;
+
+            snprintf(buffer, sizeof(buffer), "%u", log.timeStampMonth);
+            event_data["timeMonth"] = buffer;
+
+            snprintf(buffer, sizeof(buffer), "%u", log.timeStampDay);
+            event_data["timeDay"] = buffer;
+
+            snprintf(buffer, sizeof(buffer), "%u", log.timeStampHour);
+            event_data["timeHour"] = buffer;
+
+            snprintf(buffer, sizeof(buffer), "%u", log.timeStampMinute);
+            event_data["timeMinute"] = buffer;
+
+            snprintf(buffer, sizeof(buffer), "%u", log.timeStampSecond);
+            event_data["timeSecond"] = buffer;
 
             memset(buffer, 0, sizeof(buffer));
             NukiLock::loggingTypeToString(log.loggingType, buffer);
@@ -962,7 +982,7 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
                     event_data["completionStatus"] = buffer;
                     break;
 
-                case NukiLock::LoggingType::KeypadAction:
+                case NukiLock::LoggingType::KeypadAction: {
                     memset(buffer, 0, sizeof(buffer));
                     NukiLock::lockactionToString((NukiLock::LockAction)log.data[0], buffer);
                     event_data["action"] = buffer;
@@ -992,8 +1012,11 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
                         event_data["completionStatus"] = buffer;
                     }
 
-                    event_data["codeId"] = std::to_string(256U * log.data[4] + log.data[3]);
+                    unsigned int codeId = 256U * log.data[4] + log.data[3];
+                    snprintf(buffer, sizeof(buffer), "%u", codeId);
+                    event_data["codeId"] = buffer;
                     break;
+                }
 
                 case NukiLock::LoggingType::DoorSensor:
                     switch(log.data[0]) {
@@ -1012,17 +1035,18 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
                     }
                     break;
             }
-            
+
             // Send as Home Assistant Event
-            #ifdef USE_API_HOMEASSISTANT_SERVICES
             if (log.index > this->last_rolling_log_id) {
                 this->last_rolling_log_id = log.index;
                 
-                auto capi = new esphome::api::CustomAPIDevice();
+                this->event_log_received_callback_.call(log);
+
+                #ifdef USE_API_HOMEASSISTANT_SERVICES
                 ESP_LOGD(TAG, "Send event to Home Assistant on %s", this->event_);
-                capi->fire_homeassistant_event(this->event_, event_data);
+                this->fire_homeassistant_event(this->event_, event_data);
+                #endif
             }
-            #endif
         }
     }
 

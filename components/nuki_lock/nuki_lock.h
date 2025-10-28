@@ -54,7 +54,14 @@ struct NukiLockSettings
     PinState pin_state;
 };
 
-class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuki::SmartlockEventHandler {
+class NukiLockComponent : 
+    public lock::Lock, 
+    public PollingComponent, 
+    public Nuki::SmartlockEventHandler 
+    #ifdef USE_API
+    , public api::CustomAPIDevice
+    #endif
+{
     #ifdef USE_BINARY_SENSOR
     SUB_BINARY_SENSOR(is_connected)
     SUB_BINARY_SENSOR(is_paired)
