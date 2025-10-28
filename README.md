@@ -55,7 +55,7 @@ lock:
     name: Nuki Lock
   # Optional: Settings
     pairing_mode_timeout: 300s
-    event: "nuki"
+    event: "none" # Change if you want to use event logs
     security_pin: 1234
   # Optional: Advanced Settings
     pairing_as_app: false
@@ -192,7 +192,7 @@ lock:
     name: Nuki Lock
   # Optional: Settings
     pairing_mode_timeout: 300s
-    event: "nuki"
+    event: "none"  # Change if you want to use event logs
     security_pin: 1234
   # Optional: Advanced Settings
     pairing_as_app: false
@@ -311,7 +311,7 @@ The following settings allow you to customize the behavior of the Nuki Lock comp
 
 - **`security_pin`**: The Nuki security PIN required for performing specific operations (Event Logs, Auth Data, Keypad, ...).
 - **`pairing_mode_timeout`**: Specifies how long (in seconds) the pairing mode remains active. Default: `300s`.
-- **`event`**: Defines the event name used by the Nuki Lock component. Default: `nuki`.
+- **`event`**: Defines the event name used by the Nuki Lock component. Default: `none`.
 - **`pairing_as_app`**: Determines if pairing should be done as an app. This is not recommended for most setups. Default: `false`.
 - **`query_interval_config`**: Sets the interval (in seconds) for querying the configuration. Default: `3600s`.
 - **`query_interval_auth_data`**: Sets the interval (in seconds) for querying authentication data. Default: `7200s`.
@@ -427,7 +427,8 @@ on_event_log_action:
 ```
 
 ### Events
-By default, this component sends Nuki logs as events to Home Assistant, enabling you to use them in automations.
+This component can send Nuki logs as events to Home Assistant, enabling you to use them in automations.
+<b>This is disabled by default.</b>
 
 > [!IMPORTANT]  
 > In order to use the event logs, you have to enable them in your `api` configuration.
@@ -441,9 +442,9 @@ By default, this component sends Nuki logs as events to Home Assistant, enabling
 > To receive events, **you must set your security PIN**.
 > Without it, it's not possible to access any event logs from your lock.
 
-- **To Disable Logs**: Set the `event` property in your YAML configuration to `none` if you don't want to receive log events.
+- **To Enable Logs**: Set the `event` property in your YAML configuration to something else than `none` if you want to receive log events.
   
-- **To View Log Events**: Go to **Home Assistant Developer Tools** -> **Events**, and listen for `esphome.nuki` events to monitor log activity.
+- **To View Log Events**: Go to **Home Assistant Developer Tools** -> **Events**, and listen for `esphome.nuki` events to monitor log activity. You can also use the `on_event_log_action` callback to access the LogEntry which is available as `x`.
 
 These log events provide insights into lock operations and help fine-tune automations based on lock data.
 Keep in mind that the logs **are not displayed in real-time** and may take up to a minute to arrive.

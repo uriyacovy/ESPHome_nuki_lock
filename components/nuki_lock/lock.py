@@ -427,7 +427,7 @@ CONFIG_SCHEMA = cv.All(
             ),
             cv.Optional(CONF_PAIRING_AS_APP, default="false"): cv.boolean,
             cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
-            cv.Optional(CONF_EVENT, default="nuki"): cv.string,
+            cv.Optional(CONF_EVENT, default="none"): cv.string,
             cv.Optional(CONF_SECURITY_PIN): cv.uint16_t,
             cv.Optional(CONF_QUERY_INTERVAL_CONFIG, default="3600s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_QUERY_INTERVAL_AUTH_DATA, default="3600s"): cv.positive_time_period_seconds,
