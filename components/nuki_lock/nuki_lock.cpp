@@ -922,7 +922,7 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
             log.loggingType == NukiLock::LoggingType::KeypadAction) {
             
             int sizeName = sizeof(log.name);
-            strncpy(buffer, log.name, sizeof(buffer) - 1);
+            strncpy(buffer, reinterpret_cast<const char*>(log.name), sizeof(buffer) - 1);
             buffer[sizeof(buffer) - 1] = '\0';
 
             if (strcmp(buffer, "") == 0) {
@@ -982,6 +982,7 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
                     break;
 
                 case NukiLock::LoggingType::KeypadAction:
+                {
                     NukiLock::lockactionToString((NukiLock::LockAction)log.data[0], buffer);
                     event_data["action"] = buffer;
 
@@ -1005,6 +1006,7 @@ void NukiLockComponent::process_log_entries(const std::list<NukiLock::LogEntry>&
                     snprintf(num_buffer, sizeof(num_buffer), "%u", codeId);
                     event_data["codeId"] = num_buffer;
                     break;
+                }
 
                 case NukiLock::LoggingType::DoorSensor:
                     switch (log.data[0]) {
