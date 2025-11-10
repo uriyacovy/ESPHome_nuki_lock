@@ -21,4 +21,4 @@ jobs:
         uses: esphome/build-action@v7.0.0
         with:
           yaml-file: ${{ matrix.config.file }}
-          version: latest
+          version: ${{ github.ref == 'refs/heads/main' && 'latest' || 'dev' }}
