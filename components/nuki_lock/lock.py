@@ -199,15 +199,15 @@ NukiLockAdvertisingModeSelect = nuki_lock_ns.class_("NukiLockAdvertisingModeSele
 NukiLockBatteryTypeSelect = nuki_lock_ns.class_("NukiLockBatteryTypeSelect", select.Select, cg.Component)
 
 NukiLockUnpairAction = nuki_lock_ns.class_(
-    "NukiLockUnpairAction", automation.Action
+    "NukiLockUnpairAction", automation.Action, cg.Parented.template(NukiLock)
 )
 
 NukiLockPairingModeAction = nuki_lock_ns.class_(
-    "NukiLockPairingModeAction", automation.Action
+    "NukiLockPairingModeAction", automation.Action, cg.Parented.template(NukiLock)
 )
 
 NukiLockSecurityPinAction = nuki_lock_ns.class_(
-    "NukiLockSecurityPinAction", automation.Action
+    "NukiLockSecurityPinAction", automation.Action, cg.Parented.template(NukiLock)
 )
 
 PairingModeOnTrigger = nuki_lock_ns.class_("PairingModeOnTrigger", automation.Trigger.template())
