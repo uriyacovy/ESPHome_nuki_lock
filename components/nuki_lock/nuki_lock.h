@@ -54,7 +54,14 @@ struct NukiLockSettings
     PinState pin_state;
 };
 
-class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuki::SmartlockEventHandler {
+class NukiLockComponent :
+    public lock::Lock,
+    public PollingComponent,
+    public Nuki::SmartlockEventHandler
+#ifdef USE_API
+    , public api::CustomAPIDevice
+#endif
+    {
     #ifdef USE_BINARY_SENSOR
     SUB_BINARY_SENSOR(is_connected)
     SUB_BINARY_SENSOR(is_paired)
@@ -279,61 +286,6 @@ class NukiLockComponent : public lock::Lock, public PollingComponent, public Nuk
 
         std::vector<uint16_t> keypad_code_ids_;
         bool keypad_paired_;
-};
-
-// Actions
-template<typename... Ts> class NukiLockUnpairAction : public Action<Ts...> {
-    public:
-        NukiLockUnpairAction(NukiLockComponent *parent) : parent_(parent) {}
-
-        void play(Ts... x) { this->parent_->unpair(); }
-
-    protected:
-        NukiLockComponent *parent_;
-};
-
-template<typename... Ts> class NukiLockPairingModeAction : public Action<Ts...> {
-    public:
-        NukiLockPairingModeAction(NukiLockComponent *parent) : parent_(parent) {}
-        TEMPLATABLE_VALUE(bool, pairing_mode)
-
-        void play(Ts... x) { this->parent_->set_pairing_mode(this->pairing_mode_.value(x...)); }
-
-    protected:
-        NukiLockComponent *parent_;
-};
-
-template<typename... Ts> class NukiLockSecurityPinAction : public Action<Ts...> {
-    public:
-        NukiLockSecurityPinAction(NukiLockComponent *parent) : parent_(parent) {}
-        TEMPLATABLE_VALUE(uint16_t, security_pin)
-
-        void play(Ts... x) { this->parent_->use_security_pin(this->security_pin_.value(x...)); }
-
-    protected:
-        NukiLockComponent *parent_;
-};
-
-// Callbacks
-class PairingModeOnTrigger : public Trigger<> {
-    public:
-        explicit PairingModeOnTrigger(NukiLockComponent *parent) {
-            parent->add_pairing_mode_on_callback([this]() { this->trigger(); });
-        }
-};
-
-class PairingModeOffTrigger : public Trigger<> {
-    public:
-        explicit PairingModeOffTrigger(NukiLockComponent *parent) {
-            parent->add_pairing_mode_off_callback([this]() { this->trigger(); });
-        }
-};
-
-class PairedTrigger : public Trigger<> {
-    public:
-        explicit PairedTrigger(NukiLockComponent *parent) {
-            parent->add_paired_callback([this]() { this->trigger(); });
-        }
 };
 
 // Entities
