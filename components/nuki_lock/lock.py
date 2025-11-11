@@ -199,15 +199,15 @@ NukiLockAdvertisingModeSelect = nuki_lock_ns.class_("NukiLockAdvertisingModeSele
 NukiLockBatteryTypeSelect = nuki_lock_ns.class_("NukiLockBatteryTypeSelect", select.Select, cg.Component)
 
 NukiLockUnpairAction = nuki_lock_ns.class_(
-    "NukiLockUnpairAction", automation.Action
+    "NukiLockUnpairAction", automation.Action, cg.Parented.template(NukiLock)
 )
 
 NukiLockPairingModeAction = nuki_lock_ns.class_(
-    "NukiLockPairingModeAction", automation.Action
+    "NukiLockPairingModeAction", automation.Action, cg.Parented.template(NukiLock)
 )
 
 NukiLockSecurityPinAction = nuki_lock_ns.class_(
-    "NukiLockSecurityPinAction", automation.Action
+    "NukiLockSecurityPinAction", automation.Action, cg.Parented.template(NukiLock)
 )
 
 PairingModeOnTrigger = nuki_lock_ns.class_("PairingModeOnTrigger", automation.Trigger.template())
@@ -792,10 +792,6 @@ FINAL_VALIDATE_SCHEMA = _final_validate
 
 
 # Actions
-NukiLockUnpairAction = nuki_lock_ns.class_(
-    "NukiLockUnpairAction", automation.Action
-)
-
 NUKI_LOCK_UNPAIR_SCHEMA = automation.maybe_simple_id(
     {
         cv.GenerateID(): cv.use_id(NukiLock)
@@ -805,11 +801,10 @@ NUKI_LOCK_UNPAIR_SCHEMA = automation.maybe_simple_id(
 @automation.register_action(
     "nuki_lock.unpair", NukiLockUnpairAction, NUKI_LOCK_UNPAIR_SCHEMA
 )
-
 async def nuki_lock_unpair_to_code(config, action_id, template_arg, args):
-    paren = await cg.get_variable(config[CONF_ID])
-    return cg.new_Pvariable(action_id, template_arg, paren)
-
+    var = cg.new_Pvariable(action_id, template_arg)
+    await cg.register_parented(var, config[CONF_ID])
+    return var
 
 
 NUKI_LOCK_SET_PAIRING_MODE_SCHEMA = automation.maybe_simple_id(
@@ -822,15 +817,12 @@ NUKI_LOCK_SET_PAIRING_MODE_SCHEMA = automation.maybe_simple_id(
 @automation.register_action(
     "nuki_lock.set_pairing_mode", NukiLockPairingModeAction, NUKI_LOCK_SET_PAIRING_MODE_SCHEMA
 )
-
 async def nuki_lock_set_pairing_mode_to_code(config, action_id, template_arg, args):
-    paren = await cg.get_variable(config[CONF_ID])
-    var = cg.new_Pvariable(action_id, template_arg, paren)
+    var = cg.new_Pvariable(action_id, template_arg)
+    await cg.register_parented(var, config[CONF_ID])
     pairing_mode_template_ = await cg.templatable(config[CONF_SET_PAIRING_MODE], args, cg.bool_)
     cg.add(var.set_pairing_mode(pairing_mode_template_))
     return var
-
-
 
 
 NUKI_LOCK_SET_SECURITY_PIN_SCHEMA = automation.maybe_simple_id(
@@ -843,10 +835,9 @@ NUKI_LOCK_SET_SECURITY_PIN_SCHEMA = automation.maybe_simple_id(
 @automation.register_action(
     "nuki_lock.set_security_pin", NukiLockSecurityPinAction, NUKI_LOCK_SET_SECURITY_PIN_SCHEMA
 )
-
 async def nuki_lock_set_security_pin_to_code(config, action_id, template_arg, args):
-    paren = await cg.get_variable(config[CONF_ID])
-    var = cg.new_Pvariable(action_id, template_arg, paren)
+    var = cg.new_Pvariable(action_id, template_arg)
+    await cg.register_parented(var, config[CONF_ID])
     security_pin_template_ = await cg.templatable(config[CONF_SET_SECURITY_PIN], args, cg.uint16)
     cg.add(var.set_security_pin(security_pin_template_))
     return var
