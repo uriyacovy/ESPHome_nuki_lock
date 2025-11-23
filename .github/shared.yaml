@@ -1,15 +1,21 @@
 esphome:
   name: test-nuki
 
+esp32:
+  variant: esp32
+
 wifi:
-  ssid: "My Network"
-  password: "My Password"
+  ssid: "SSID"
+  password: "PASSWORD"
 
 api:
   custom_services: true
   homeassistant_services: true
 
 logger:
+  level: DEBUG
+
+web_server:
 
 external_components:
   - source:
@@ -109,6 +115,9 @@ lock:
     pairing_as_app: false
     query_interval_config: 3600s
     query_interval_auth_data: 7200s
+    ble_general_timeout: 3s
+    ble_command_timeout: 3s
+
 
     on_pairing_mode_on_action:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
@@ -129,8 +138,18 @@ button:
       - nuki_lock.set_pairing_mode:
           pairing_mode: true
 
+  # Set security pin (override)
+  # Used instead of yaml config value
   - platform: template
     name: Override security pin
     on_press:
       - nuki_lock.set_security_pin:
           security_pin: 1234
+
+  # Reset security pin (override)
+  # Fallback to yaml config value
+  - platform: template
+    name: Reset security pin
+    on_press:
+      - nuki_lock.set_security_pin:
+          security_pin: 0

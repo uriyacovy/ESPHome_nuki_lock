@@ -44,13 +44,14 @@ static const char *TAG = "nuki_lock.lock";
 enum PinState
 {
     NotSet = 0,
-    Valid = 1,
-    Invalid = 2
+    Set = 1,
+    Valid = 2,
+    Invalid = 3
 };
 
 struct NukiLockSettings
 {
-    uint16_t security_pin;
+    uint32_t security_pin;
     PinState pin_state;
 };
 
@@ -93,6 +94,7 @@ class NukiLockComponent :
     SUB_SELECT(timezone)
     SUB_SELECT(advertising_mode)
     SUB_SELECT(battery_type)
+    SUB_SELECT(motor_speed)
     #endif
     #ifdef USE_BUTTON
     SUB_BUTTON(unpair)
@@ -113,12 +115,13 @@ class NukiLockComponent :
     SUB_SWITCH(single_lock_enabled)
     SUB_SWITCH(dst_mode_enabled)
     SUB_SWITCH(auto_battery_type_detection_enabled)
+    SUB_SWITCH(slow_speed_during_night_mode_enabled)
     #endif
 
     static const uint8_t BLE_CONNECT_TIMEOUT_SEC = 2;
     static const uint8_t BLE_CONNECT_RETRIES = 5;
 
-    static const uint16_t BLE_DISCONNECT_TIMEOUT = 2000;
+    static const uint32_t BLE_DISCONNECT_TIMEOUT = 2000;
 
     static const uint8_t MAX_ACTION_ATTEMPTS = 5;
     static const uint8_t MAX_TOLERATED_UPDATES_ERRORS = 5;
@@ -126,7 +129,7 @@ class NukiLockComponent :
     static const uint32_t COOLDOWN_COMMANDS_MILLIS = 1000;
     static const uint32_t COOLDOWN_COMMANDS_EXTENDED_MILLIS = 3000;
 
-    static const uint8_t MAX_AUTH_DATA_ENTRIES = 10;
+    static const uint8_t MAX_AUTH_DATA_ENTRIES = 5;
     static const uint8_t MAX_EVENT_LOG_ENTRIES = 3;
 
     public:
@@ -148,18 +151,19 @@ class NukiLockComponent :
         float get_setup_priority() const override { return setup_priority::HARDWARE - 1.0f; }
 
         void set_pairing_as_app(bool pairing_as_app) { this->pairing_as_app_ = pairing_as_app; }
-        void set_pairing_mode_timeout(uint16_t pairing_mode_timeout) { this->pairing_mode_timeout_ = pairing_mode_timeout; }
-        void set_query_interval_config(uint16_t query_interval_config) { this->query_interval_config_ = query_interval_config; }
-        void set_query_interval_auth_data(uint16_t query_interval_auth_data) { this->query_interval_auth_data_ = query_interval_auth_data; }
+        void set_pairing_mode_timeout(uint32_t pairing_mode_timeout) { this->pairing_mode_timeout_ = pairing_mode_timeout; }
+        void set_query_interval_config(uint32_t query_interval_config) { this->query_interval_config_ = query_interval_config; }
+        void set_query_interval_auth_data(uint32_t query_interval_auth_data) { this->query_interval_auth_data_ = query_interval_auth_data; }
+        void set_ble_general_timeout(uint32_t ble_general_timeout) { this->ble_general_timeout_ = ble_general_timeout; }
+        void set_ble_command_timeout(uint32_t ble_command_timeout) { this->ble_command_timeout_ = ble_command_timeout; }
         void set_event(const char *event) {
             this->event_ = event;
             if(strcmp(event, "esphome.none") != 0) {
                 this->send_events_ = true;
             }
         }
-        void set_security_pin(uint16_t security_pin) {
+        void set_security_pin_config(uint32_t security_pin) {
             this->security_pin_config_ = security_pin;
-            this->security_pin_ = security_pin;
         }
 
         void add_pairing_mode_on_callback(std::function<void()> &&callback);
@@ -179,6 +183,9 @@ class NukiLockComponent :
         Nuki::BatteryType battery_type_to_enum(const char* str);
         void battery_type_to_string(const Nuki::BatteryType battery_type, char* str);
 
+        NukiLock::MotorSpeed motor_speed_to_enum(const char* str);
+        void motor_speed_to_string(const NukiLock::MotorSpeed speed, char* str);
+
         NukiLock::ButtonPressAction button_press_action_to_enum(const char* str);
         void button_press_action_to_string(NukiLock::ButtonPressAction action, char* str);
 
@@ -191,8 +198,8 @@ class NukiLockComponent :
         void homekit_status_to_string(const int status, char* str);
 
         void pin_state_to_string(const PinState value, char* str);
-
-        void use_security_pin(uint16_t security_pin);
+        void set_security_pin(uint32_t security_pin);
+        void use_security_pin(uint32_t security_pin, bool override_save);
 
         void unpair();
         void set_pairing_mode(bool enabled);
@@ -223,8 +230,9 @@ class NukiLockComponent :
         void setup_intervals(bool setup = true);
         void publish_pin_state();
 
+        void validatePin();
         bool is_pin_valid();
-        uint16_t get_pin();
+        uint32_t get_saved_pin();
 
         bool execute_lock_action(NukiLock::LockAction lock_action);
 
@@ -256,16 +264,21 @@ class NukiLockComponent :
         bool pairing_as_app_ = false;
 
         PinState pin_state_ = PinState::NotSet;
-        uint16_t security_pin_ = 0;
-        uint16_t security_pin_config_ = 0;
+        uint32_t security_pin_ = 0;
+        uint32_t security_pin_config_ = 0;
+
+        bool connection_state_ = false;
 
         const char* event_;
         bool send_events_ = false;
 
-        uint16_t query_interval_auth_data_ = 0;
-        uint16_t query_interval_config_ = 0;
+        uint32_t query_interval_auth_data_ = 0;
+        uint32_t query_interval_config_ = 0;
 
-        uint16_t pairing_mode_timeout_ = 0;
+        uint32_t ble_general_timeout_ = 0;
+        uint32_t ble_command_timeout_ = 0;
+
+        uint32_t pairing_mode_timeout_ = 0;
         bool pairing_mode_ = false;
 
         uint32_t last_rolling_log_id = 0;
@@ -351,6 +364,13 @@ class NukiLockAdvertisingModeSelect : public select::Select, public Parented<Nuk
 class NukiLockBatteryTypeSelect : public select::Select, public Parented<NukiLockComponent> {
     public:
         NukiLockBatteryTypeSelect() = default;
+    protected:
+        void control(const std::string &value) override;
+};
+
+class NukiLockMotorSpeedSelect : public select::Select, public Parented<NukiLockComponent> {
+    public:
+        NukiLockMotorSpeedSelect() = default;
     protected:
         void control(const std::string &value) override;
 };
@@ -471,6 +491,14 @@ class NukiLockDstModeEnabledSwitch : public switch_::Switch, public Parented<Nuk
 class NukiLockAutoBatteryTypeDetectionEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
     public:
         NukiLockAutoBatteryTypeDetectionEnabledSwitch() = default;
+
+    protected:
+        void write_state(bool state) override;
+};
+
+class NukiLockSlowSpeedDuringNightModeEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockSlowSpeedDuringNightModeEnabledSwitch() = default;
 
     protected:
         void write_state(bool state) override;

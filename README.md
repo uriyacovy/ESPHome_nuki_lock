@@ -22,7 +22,7 @@ To integrate your Nuki Smartlock, add one of the following code snippets to your
 
 ### Example configuration YAML
 <details>
-  <summary>ESP-IDF</summary>
+  <summary>ESP-IDF (recommended)</summary>
 
 ```yaml
 esphome:
@@ -30,7 +30,7 @@ esphome:
   friendly_name: ESPHome Nuki Lock
 
 esp32:
-  board: "esp32dev"  # Or whatever other board you're using
+  variant: "esp32"  # Or whatever other board you're using
   framework:
     type: esp-idf
 
@@ -61,6 +61,8 @@ lock:
     pairing_as_app: false
     query_interval_config: 3600s
     query_interval_auth_data: 7200s
+    ble_general_timeout: 3s
+    ble_command_timeout: 3s
 
   # Optional: Binary Sensors
     is_connected:
@@ -125,6 +127,8 @@ lock:
       name: "Nuki Daylight Saving Time"
     auto_battery_type_detection_enabled:
       name: "Nuki Automatic Battery Type Detection"
+    slow_speed_during_night_mode_enabled:
+      name: "Nuki Slow Speed During Night Mode"
   # Optional: Select Inputs
     single_buton_press_action:
       name: "Nuki Button: Single Press Action"
@@ -142,6 +146,8 @@ lock:
       name: "Nuki Advertising Mode"
     battery_type:
       name: "Nuki Battery Type"
+    motor_speed:
+      name: "Nuki Motor Speed"
   # Optional: Buttons
     unpair:
       name: "Nuki Unpair Device"
@@ -164,7 +170,7 @@ esphome:
   friendly_name: ESPHome Nuki Lock
 
 esp32:
-  board: "esp32dev"  # Or whatever other board you're using
+  variant: "esp32"  # Or whatever other board you're using
   framework:
     type: arduino
 
@@ -195,6 +201,8 @@ lock:
     pairing_as_app: false
     query_interval_config: 3600s
     query_interval_auth_data: 7200s
+    ble_general_timeout: 3s
+    ble_command_timeout: 3s
 
   # Optional: Binary Sensors
     is_connected:
@@ -259,6 +267,8 @@ lock:
       name: "Nuki Daylight Saving Time"
     auto_battery_type_detection_enabled:
       name: "Nuki Automatic Battery Type Detection"
+    slow_speed_during_night_mode_enabled:
+      name: "Nuki Slow Speed During Night Mode"
   # Optional: Select Inputs
     single_buton_press_action:
       name: "Nuki Button: Single Press Action"
@@ -276,6 +286,8 @@ lock:
       name: "Nuki Advertising Mode"
     battery_type:
       name: "Nuki Battery Type"
+    motor_speed:
+      name: "Nuki Motor Speed"
   # Optional: Buttons
     unpair:
       name: "Nuki Unpair Device"
@@ -506,7 +518,8 @@ context:
 - Single Lock
 - Daylight Saving Time
 - Automatic Updates
-- Automatic Battery Type Detection
+- Automatic Battery Type Detection (Smart Lock Gen 1-4)
+- Slow Speed During Night Mode (Smart Lock Ultra)
 
 **Select Input:**  
 - Single Button Press Action
@@ -516,7 +529,8 @@ context:
 - Fob Action 3
 - Timezone
 - Advertising Mode
-- Battery Type
+- Battery Type (Smart Lock Gen 1-4)
+- Motor Speed (Smart Lock Ultra)
 
 **Number Input:**  
 - LED Brightness

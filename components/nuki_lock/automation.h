@@ -24,10 +24,10 @@ class NukiLockPairingModeAction : public Action<Ts...>, public Parented<NukiLock
 
 template<typename... Ts>
 class NukiLockSecurityPinAction : public Action<Ts...>, public Parented<NukiLockComponent> {
-    TEMPLATABLE_VALUE(uint16_t, security_pin)
+    TEMPLATABLE_VALUE(uint32_t, new_pin)
 
     public:
-        void play(const Ts&... x) override { this->parent_->use_security_pin(this->security_pin_.value(x...)); }
+        void play(const Ts&... x) override { this->parent_->set_security_pin(this->new_pin_.value(x...)); }
 };
 
 // Callbacks
