@@ -173,6 +173,7 @@ CONF_SET_SECURITY_PIN = "security_pin"
 CONF_ON_PAIRING_MODE_ON = "on_pairing_mode_on_action"
 CONF_ON_PAIRING_MODE_OFF = "on_pairing_mode_off_action"
 CONF_ON_PAIRED = "on_paired_action"
+CONF_ON_EVENT_LOG = "on_event_log_action"
 
 nuki_lock_ns = cg.esphome_ns.namespace('nuki_lock')
 NukiLock = nuki_lock_ns.class_('NukiLockComponent', lock.Lock, cg.Component)
@@ -222,9 +223,13 @@ NukiLockSecurityPinAction = nuki_lock_ns.class_(
     "NukiLockSecurityPinAction", automation.Action, cg.Parented.template(NukiLock)
 )
 
+nuki_lock_lib_ns = cg.esphome_ns.namespace('NukiLock')
+LogEntry = nuki_lock_lib_ns.struct('LogEntry')
+
 PairingModeOnTrigger = nuki_lock_ns.class_("PairingModeOnTrigger", automation.Trigger.template())
 PairingModeOffTrigger = nuki_lock_ns.class_("PairingModeOffTrigger", automation.Trigger.template())
 PairedTrigger = nuki_lock_ns.class_("PairedTrigger", automation.Trigger.template())
+EventLogReceivedTrigger = nuki_lock_ns.class_("EventLogReceivedTrigger", automation.Trigger.template())
 
 CONFIG_SCHEMA = cv.All(
     lock.lock_schema(NukiLock).extend(
@@ -442,7 +447,7 @@ CONFIG_SCHEMA = cv.All(
             ),
             cv.Optional(CONF_PAIRING_AS_APP, default="false"): cv.boolean,
             cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
-            cv.Optional(CONF_EVENT, default="nuki"): cv.string,
+            cv.Optional(CONF_EVENT, default="none"): cv.string,
             cv.Optional(CONF_SECURITY_PIN): cv.uint32_t,
             cv.Optional(CONF_QUERY_INTERVAL_CONFIG, default="3600s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_QUERY_INTERVAL_AUTH_DATA, default="3600s"): cv.positive_time_period_seconds,
@@ -461,6 +466,11 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_ON_PAIRED): automation.validate_automation(
                 {
                     cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairedTrigger),
+                }
+            ),
+            cv.Optional(CONF_ON_EVENT_LOG): automation.validate_automation(
+                {
+                    cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(EventLogReceivedTrigger),
                 }
             ),
         }
@@ -739,6 +749,10 @@ async def to_code(config):
     for conf in config.get(CONF_ON_PAIRED, []):
         trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
         await automation.build_automation(trigger, [], conf)
+
+    for conf in config.get(CONF_ON_EVENT_LOG, []):
+        trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
+        await automation.build_automation(trigger, [(LogEntry, "x")], conf)
 
     # Libraries
     add_idf_component(
