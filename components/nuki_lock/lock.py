@@ -226,9 +226,6 @@ PairingModeOnTrigger = nuki_lock_ns.class_("PairingModeOnTrigger", automation.Tr
 PairingModeOffTrigger = nuki_lock_ns.class_("PairingModeOffTrigger", automation.Trigger.template())
 PairedTrigger = nuki_lock_ns.class_("PairedTrigger", automation.Trigger.template())
 
-def _validate(config):
-    return config
-
 CONFIG_SCHEMA = cv.All(
     lock.lock_schema(NukiLock).extend(
         {
@@ -449,8 +446,8 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_SECURITY_PIN): cv.uint32_t,
             cv.Optional(CONF_QUERY_INTERVAL_CONFIG, default="3600s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_QUERY_INTERVAL_AUTH_DATA, default="3600s"): cv.positive_time_period_seconds,
-            cv.Optional(CONF_BLE_GENERAL_TIMEOUT, default="7s"): cv.positive_time_period_seconds,
-            cv.Optional(CONF_BLE_COMMAND_TIMEOUT, default="5s"): cv.positive_time_period_seconds,
+            cv.Optional(CONF_BLE_GENERAL_TIMEOUT, default="3s"): cv.positive_time_period_seconds,
+            cv.Optional(CONF_BLE_COMMAND_TIMEOUT, default="3s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_ON_PAIRING_MODE_ON): automation.validate_automation(
                 {
                     cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairingModeOnTrigger),
@@ -469,7 +466,6 @@ CONFIG_SCHEMA = cv.All(
         }
     )
     .extend(cv.polling_component_schema("500ms")),
-    _validate,
 )
 
 
