@@ -205,6 +205,10 @@ class NukiLockComponent :
         void set_pairing_mode(bool enabled);
         void save_settings();
 
+        bool isConnected() {
+            return this->connection_state_;
+        }
+
         #ifdef USE_NUMBER
         void set_config_number(const char* config, float value);
         #endif

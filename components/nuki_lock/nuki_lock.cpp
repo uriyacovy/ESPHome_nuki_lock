@@ -1202,7 +1202,7 @@ uint32_t NukiLockComponent::get_saved_pin() {
 }
 
 void NukiLockComponent::setup() {
-    ESP_LOGI(TAG, "Starting NUKI Lock...");
+    ESP_LOGCONFIG(TAG, "Running setup");
 
     // Increase Watchdog Timeout
     // Fixes Pairing Crash
@@ -1249,13 +1249,13 @@ void NukiLockComponent::setup() {
     }
 
     if (pin_to_use != 0) {
-        ESP_LOGW(TAG, "Set security pin before init: %i", pin_to_use);
+        ESP_LOGD(TAG, "Set security pin before init: %i", pin_to_use);
         this->nuki_lock_.saveUltraPincode(pin_to_use, false);
         this->nuki_lock_.saveSecurityPincode(pin_to_use);
     }
 
-    this->nuki_lock_.setDebugConnect(true);
-    this->nuki_lock_.setDebugCommunication(true);
+    this->nuki_lock_.setDebugConnect(false);
+    this->nuki_lock_.setDebugCommunication(false);
     this->nuki_lock_.setDebugReadableData(false);
     this->nuki_lock_.setDebugHexData(false);
     this->nuki_lock_.setDebugCommand(false);
@@ -1265,8 +1265,8 @@ void NukiLockComponent::setup() {
     this->nuki_lock_.setConnectTimeout(BLE_CONNECT_TIMEOUT_SEC);
     this->nuki_lock_.setConnectRetries(BLE_CONNECT_RETRIES);
     this->nuki_lock_.setDisconnectTimeout(BLE_DISCONNECT_TIMEOUT);
-    this->nuki_lock_.setGeneralTimeout(this->ble_general_timeout_);
-    this->nuki_lock_.setCommandTimeout(this->ble_command_timeout_);
+    this->nuki_lock_.setGeneralTimeout(this->ble_general_timeout_ * 1000);
+    this->nuki_lock_.setCommandTimeout(this->ble_command_timeout_ * 1000);
     
     App.feed_wdt();
 
@@ -1281,7 +1281,12 @@ void NukiLockComponent::setup() {
             this->event_log_update_ = true;
         }
 
-        ESP_LOGI(TAG, "%s Nuki paired", this->deviceName_.c_str());
+        ESP_LOGI(TAG, "The %s bridge is already paired", this->deviceName_.c_str());
+
+        if(this->nuki_lock_.isLockUltra()) {
+            ESP_LOGI(TAG, "The paired smart lock is ultra");
+        }
+
         #ifdef USE_BINARY_SENSOR
         if (this->is_paired_binary_sensor_ != nullptr)
         {
@@ -1294,7 +1299,7 @@ void NukiLockComponent::setup() {
         this->setup_intervals();
 
     } else {
-        ESP_LOGW(TAG, "%s Nuki is not paired", this->deviceName_.c_str());
+        ESP_LOGI(TAG, "The %s bridge is not paired yet", this->deviceName_.c_str());
         #ifdef USE_BINARY_SENSOR
         if (this->is_paired_binary_sensor_ != nullptr)
         {
@@ -1361,6 +1366,14 @@ void NukiLockComponent::update() {
     App.feed_wdt();
     delay(20);
 
+    int64_t ts = millis();
+    int64_t last_received_beacon_ts = this->nuki_lock_.getLastReceivedBeaconTs();
+
+    if(ts > 60000 && last_received_beacon_ts > 0 && (ts - last_received_beacon_ts > 60 * 1000))
+    {
+        ESP_LOGW(TAG, "We received no BLE beacon for %d seconds!", (ts - last_received_beacon_ts) / 1000);
+    }
+
     // Terminate stale Bluetooth connections
     this->nuki_lock_.updateConnectionState();
 
@@ -1368,8 +1381,8 @@ void NukiLockComponent::update() {
 
     if (millis() - last_command_executed_time_ < command_cooldown_millis) {
         // Give the lock time to terminate the previous command
-        uint32_t millisSinceLastExecution = millis() - last_command_executed_time_;
-        uint32_t millisLeft = (millisSinceLastExecution < command_cooldown_millis) ? command_cooldown_millis - millisSinceLastExecution : 1;
+        uint64_t millisSinceLastExecution = millis() - last_command_executed_time_;
+        uint64_t millisLeft = (millisSinceLastExecution < command_cooldown_millis) ? command_cooldown_millis - millisSinceLastExecution : 1;
         ESP_LOGV(TAG, "Cooldown period, %dms left", millisLeft);
         return;
     }
@@ -1472,6 +1485,10 @@ void NukiLockComponent::update() {
 
             if (paired) {
                 ESP_LOGI(TAG, "Nuki paired successfuly as %s!", this->pairing_as_app_ ? "App" : "Bridge");
+
+                if(this->nuki_lock_.isLockUltra()) {
+                    ESP_LOGI(TAG, "The paired smart lock is ultra");
+                }
 
                 // Save initial security pin after pairing
                 // Pairing resets the security pin
@@ -1701,19 +1718,25 @@ void NukiLockComponent::print_keypad_entries() {
 }
 
 void NukiLockComponent::dump_config() {
-    ESP_LOGCONFIG(TAG, "NUKI LOCK:");
+    ESP_LOGCONFIG(TAG, "nuki_lock:");
 
+    #ifdef USE_API_HOMEASSISTANT_SERVICES
     if (strcmp(this->event_, "esphome.none") != 0) {
         ESP_LOGCONFIG(TAG, "  Event: %s", this->event_);
     } else {
         ESP_LOGCONFIG(TAG, "  Event: Disabled");
     }
+    #else
+    ESP_LOGCONFIG(TAG, "  Event: Disabled");
+    #endif
 
     ESP_LOGCONFIG(TAG, "  Pairing Identity: %s",this->pairing_as_app_ ? "App" : "Bridge");
 
     ESP_LOGCONFIG(TAG, "  Pairing mode timeout: %us", this->pairing_mode_timeout_);
     ESP_LOGCONFIG(TAG, "  Configuration query interval: %us", this->query_interval_config_);
     ESP_LOGCONFIG(TAG, "  Auth Data query interval: %us", this->query_interval_auth_data_);
+    ESP_LOGCONFIG(TAG, "  BLE general timeout: %us", this->ble_general_timeout_);
+    ESP_LOGCONFIG(TAG, "  BLE command timeout: %us", this->ble_command_timeout_);
 
     char pin_state_as_string[30] = {0};
     this->pin_state_to_string(this->pin_state_, pin_state_as_string);

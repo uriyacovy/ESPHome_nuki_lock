@@ -175,7 +175,7 @@ CONF_ON_PAIRING_MODE_OFF = "on_pairing_mode_off_action"
 CONF_ON_PAIRED = "on_paired_action"
 
 nuki_lock_ns = cg.esphome_ns.namespace('nuki_lock')
-NukiLock = nuki_lock_ns.class_('NukiLockComponent', lock.Lock, switch.Switch, cg.Component)
+NukiLock = nuki_lock_ns.class_('NukiLockComponent', lock.Lock, cg.Component)
 
 NukiLockUnpairButton = nuki_lock_ns.class_("NukiLockUnpairButton", button.Button, cg.Component)
 
@@ -449,8 +449,8 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_SECURITY_PIN): cv.uint32_t,
             cv.Optional(CONF_QUERY_INTERVAL_CONFIG, default="3600s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_QUERY_INTERVAL_AUTH_DATA, default="3600s"): cv.positive_time_period_seconds,
-            cv.Optional(CONF_BLE_GENERAL_TIMEOUT, default="3s"): cv.positive_time_period_seconds,
-            cv.Optional(CONF_BLE_COMMAND_TIMEOUT, default="3s"): cv.positive_time_period_seconds,
+            cv.Optional(CONF_BLE_GENERAL_TIMEOUT, default="7s"): cv.positive_time_period_seconds,
+            cv.Optional(CONF_BLE_COMMAND_TIMEOUT, default="5s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_ON_PAIRING_MODE_ON): automation.validate_automation(
                 {
                     cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairingModeOnTrigger),
