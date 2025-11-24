@@ -561,6 +561,11 @@ void NukiLockComponent::update_status() {
         if (this->battery_critical_binary_sensor_ != nullptr) {
             this->battery_critical_binary_sensor_->publish_state(this->nuki_lock_.isBatteryCritical());
         }
+
+        // If pin needs validation, validate now
+        if(this->pin_state_ == PinState::Set) {
+            validatePin();
+        }
         
         if (this->door_sensor_binary_sensor_ != nullptr) {
             Nuki::DoorSensorState door_sensor_state = this->retrieved_key_turner_state_.doorSensorState;
@@ -1168,7 +1173,7 @@ void NukiLockComponent::validatePin()
     cancel_retry("validate_pin");
 
     this->set_retry(
-        "validate_pin", 100, 3,
+        "validate_pin", 100, 4,
         [this](const uint8_t remaining_attempts) {
 
             ESP_LOGD(TAG, "verifySecurityPin attempts left: %d", remaining_attempts);
@@ -1268,7 +1273,7 @@ void NukiLockComponent::setup() {
         this->nuki_lock_.saveSecurityPincode(pin_to_use);
     }
 
-    this->nuki_lock_.setDebugConnect(false);
+    this->nuki_lock_.setDebugConnect(true);
     this->nuki_lock_.setDebugCommunication(false);
     this->nuki_lock_.setDebugReadableData(false);
     this->nuki_lock_.setDebugHexData(false);
@@ -1375,13 +1380,18 @@ void NukiLockComponent::setup_intervals(bool setup) {
 }
 
 void NukiLockComponent::update() {
-    int64_t ts = millis();
+    // Check for new advertisements
+    this->scanner_.update();
+    App.feed_wdt();
+    delay(20);
+
+    /*int64_t ts = millis();
     int64_t last_received_beacon_ts = this->nuki_lock_.getLastReceivedBeaconTs();
 
     if(ts > 60000 && last_received_beacon_ts > 0 && (ts - last_received_beacon_ts > 60 * 1000))
     {
         ESP_LOGW(TAG, "We received no BLE beacon for %d seconds!", (ts - last_received_beacon_ts) / 1000);
-    }
+    }*/
 
     // Terminate stale Bluetooth connections
     this->nuki_lock_.updateConnectionState();

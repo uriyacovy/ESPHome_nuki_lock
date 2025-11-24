@@ -758,7 +758,7 @@ async def to_code(config):
     add_idf_component(
         name="NukiBleEsp32",
         repo="https://github.com/AzonInc/NukiBleEsp32.git",
-        ref="idf",
+        ref="logtest",
     )
 
     # General settings
@@ -768,9 +768,12 @@ async def to_code(config):
     add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ROLE_PERIPHERAL", True)
 
     add_idf_sdkconfig_option("CONFIG_BTDM_BLE_SCAN_DUPL", True)
-    add_idf_sdkconfig_option("CONFIG_NIMBLE_CPP_LOG_LEVEL", 0)
-    add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL", 0)
-    add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL_NONE", True)
+    #add_idf_sdkconfig_option("CONFIG_NIMBLE_CPP_LOG_LEVEL", 0)
+    #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL", 0)
+    #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL_NONE", True)
+    add_idf_sdkconfig_option("CONFIG_NIMBLE_CPP_LOG_LEVEL", 4)
+    add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL", 4)
+    add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL_DEBUG", True)
 
     # Defines
     cg.add_define("NUKI_NO_WDT_RESET")
