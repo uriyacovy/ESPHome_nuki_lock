@@ -1792,7 +1792,7 @@ void NukiLockComponent::dump_config() {
 
     char pin_state_as_string[30] = {0};
     this->pin_state_to_string(this->pin_state_, pin_state_as_string);
-    ESP_LOGCONFIG(TAG, "  Pin Status: %s", pin_state_as_string);
+    ESP_LOGCONFIG(TAG, "  Last known security pin state: %s", pin_state_as_string);
 
     LOG_LOCK(TAG, "Nuki Lock", this);
     #ifdef USE_BINARY_SENSOR
@@ -1861,6 +1861,8 @@ void NukiLockComponent::notify(Nuki::EventType event_type) {
         this->save_settings();
         this->publish_pin_state();
     } else if(event_type == Nuki::EventType::KeyTurnerStatusUpdated) {
+        ESP_LOGD(TAG, "KeyTurnerStatusUpdated");
+
         // Request status update
         this->status_update_ = true;
     
