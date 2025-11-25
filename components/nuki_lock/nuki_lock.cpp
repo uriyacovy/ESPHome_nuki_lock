@@ -1161,7 +1161,7 @@ void NukiLockComponent::set_security_pin(uint32_t new_pin) {
     }
 
     // Validate pin after change if paired and connected
-    if (this->nuki_lock_.isPairedWithLock() && this->connection_state_) {
+    if (this->pin_state_ != PinState::NotSet && this->nuki_lock_.isPairedWithLock() && this->connection_state_) {
         this->validatePin();
     }
 }
@@ -1855,7 +1855,8 @@ void NukiLockComponent::notify(Nuki::EventType event_type) {
         ESP_LOGD(TAG, "KeyTurnerStatusReset");
     } else if (event_type == Nuki::EventType::ERROR_BAD_PIN) {
         // Invalid Pin
-        ESP_LOGW(TAG, "Invalid security pin - please check (%d)", this->get_saved_pin());
+        ESP_LOGW(TAG, "Nuki reported invalid security pin");
+        ESP_LOGD(TAG, "NVS pin value: %d", this->get_saved_pin());
         this->pin_state_ = PinState::Invalid;
         this->save_settings();
         this->publish_pin_state();
