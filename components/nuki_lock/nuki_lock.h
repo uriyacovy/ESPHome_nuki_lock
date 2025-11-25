@@ -248,7 +248,6 @@ class NukiLockComponent :
 
         void validatePin();
         bool is_pin_valid();
-        uint32_t get_saved_pin();
 
         bool execute_lock_action(NukiLock::LockAction lock_action);
 

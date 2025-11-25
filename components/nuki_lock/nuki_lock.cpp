@@ -1212,14 +1212,6 @@ bool NukiLockComponent::is_pin_valid() {
     return this->pin_state_ == PinState::Valid;
 }
 
-uint32_t NukiLockComponent::get_saved_pin() {
-    if(this->nuki_lock_.isLockUltra())
-    {
-        return this->nuki_lock_.getUltraPincode();
-    }
-    return this->nuki_lock_.getSecurityPincode();
-}
-
 void NukiLockComponent::setup() {
     ESP_LOGCONFIG(TAG, "Running setup");
 
@@ -1856,7 +1848,9 @@ void NukiLockComponent::notify(Nuki::EventType event_type) {
     } else if (event_type == Nuki::EventType::ERROR_BAD_PIN) {
         // Invalid Pin
         ESP_LOGW(TAG, "Nuki reported invalid security pin");
-        ESP_LOGD(TAG, "NVS pin value: %d", this->get_saved_pin());
+        ESP_LOGD(TAG, "NVS pin value (gen 1-4): %d", this->nuki_lock_.getSecurityPincode());
+        ESP_LOGD(TAG, "NVS pin value (ultra): %d", this->nuki_lock_.getUltraPincode());
+
         this->pin_state_ = PinState::Invalid;
         this->save_settings();
         this->publish_pin_state();
