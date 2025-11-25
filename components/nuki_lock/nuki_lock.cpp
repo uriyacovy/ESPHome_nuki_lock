@@ -1877,6 +1877,8 @@ void NukiLockComponent::unpair() {
 
         this->connection_state_ = false;
 
+        this->publish_state(lock::LOCK_STATE_NONE);
+
         // Reset pin (override)
         this->security_pin_ = 0;
         if(this->security_pin_ == 0 && this->security_pin_config_.value_or(0) == 0) {
