@@ -13,7 +13,7 @@
 namespace esphome {
 namespace nuki_lock {
 
-uint32_t global_nuki_lock_id = 1912044085ULL;
+uint32_t global_nuki_lock_id = 1912044075ULL;
 
 lock::LockState NukiLockComponent::nuki_to_lock_state(NukiLock::LockState nukiLockState) {
     switch(nukiLockState) {
