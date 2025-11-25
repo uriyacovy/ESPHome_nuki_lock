@@ -1516,12 +1516,11 @@ void NukiLockComponent::update() {
             App.feed_wdt();
             
             if (this->security_pin_ != 0) {
-                ESP_LOGW(TAG, "Note: Using security pin override, not yaml config pin!");
-                ESP_LOGD(TAG, "Security pin: %i (override)", this->security_pin_);
+                ESP_LOGW(TAG, "Note: Using security pin override to pair, not yaml config pin!");
             } else if(this->security_pin_config_.value_or(0) != 0) {
-                ESP_LOGD(TAG, "Security pin: %i (yaml config)", this->security_pin_config_.value_or(0));
+                ESP_LOGD(TAG, "Using security pin from yaml config to pair.");
             } else {
-                ESP_LOGW(TAG, "The security pin is not set. Some functions may be unavailable as they require a pin! The security pin is crucial to pair a Smart Lock Ultra.");
+                ESP_LOGW(TAG, "Note: The security pin is crucial to pair a Smart Lock Ultra but is currently not set.");
             }
 
             bool paired = this->nuki_lock_.pairNuki(type) == Nuki::PairingResult::Success;
