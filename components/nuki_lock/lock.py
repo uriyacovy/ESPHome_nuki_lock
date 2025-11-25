@@ -781,17 +781,6 @@ async def to_code(config):
     # Defines
     cg.add_define("NUKI_NO_WDT_RESET")
 
-    # Remove Build flags
-    cg.add_platformio_option(
-        "build_unflags",
-        [
-            f"-DCONFIG_BT_NIMBLE_LOG_LEVEL",
-            f"-DCONFIG_NIMBLE_CPP_LOG_LEVEL",
-            f"-Werror=all",
-            f"-Wall",
-        ],
-    )
-
     # Build flags
     cg.add_build_flag("-Wno-unused-result")
     cg.add_build_flag("-Wno-ignored-qualifiers")
