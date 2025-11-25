@@ -448,7 +448,9 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_PAIRING_AS_APP, default="false"): cv.boolean,
             cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_EVENT, default="none"): cv.string,
-            cv.Optional(CONF_SECURITY_PIN): cv.uint32_t,
+            cv.Optional(CONF_SECURITY_PIN, default="0"): cv.All(
+                cv.templatable(cv.uint32_t), cv.int_range(min=0, max=999999)
+            ),
             cv.Optional(CONF_QUERY_INTERVAL_CONFIG, default="3600s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_QUERY_INTERVAL_AUTH_DATA, default="3600s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_BLE_GENERAL_TIMEOUT, default="3s"): cv.positive_time_period_seconds,
@@ -491,7 +493,8 @@ async def to_code(config):
         cg.add(var.set_event("esphome." + config[CONF_EVENT]))
         
     if CONF_SECURITY_PIN in config:
-        cg.add(var.set_security_pin_config(config[CONF_SECURITY_PIN]))
+        pin_template = await cg.templatable(config[CONF_SECURITY_PIN], [], cg.uint32)
+        cg.add(var.set_security_pin_config(pin_template))
         
     if CONF_PAIRING_AS_APP in config:
         cg.add(var.set_pairing_as_app(config[CONF_PAIRING_AS_APP]))
@@ -882,7 +885,9 @@ async def nuki_lock_set_pairing_mode_to_code(config, action_id, template_arg, ar
 NUKI_LOCK_SET_SECURITY_PIN_SCHEMA = automation.maybe_simple_id(
     {
         cv.GenerateID(): cv.use_id(NukiLock),
-        cv.Required(CONF_SET_SECURITY_PIN): cv.templatable(cv.uint32_t)
+        cv.Required(CONF_SET_SECURITY_PIN): cv.All(
+            cv.templatable(cv.uint32_t), cv.int_range(min=0, max=999999)
+        ),
     }
 )
 

@@ -171,9 +171,8 @@ class NukiLockComponent :
                 this->send_events_ = true;
             }
         }
-        void set_security_pin_config(uint32_t security_pin) {
-            this->security_pin_config_ = security_pin;
-        }
+
+        template<typename T> void set_security_pin_config(T security_pin_config) { this->security_pin_config_ = security_pin_config; }
 
         void add_pairing_mode_on_callback(std::function<void()> &&callback);
         void add_pairing_mode_off_callback(std::function<void()> &&callback);
@@ -280,7 +279,7 @@ class NukiLockComponent :
 
         PinState pin_state_ = PinState::NotSet;
         uint32_t security_pin_ = 0;
-        uint32_t security_pin_config_ = 0;
+        TemplatableValue<uint32_t> security_pin_config_{};
 
         bool connection_state_ = false;
 

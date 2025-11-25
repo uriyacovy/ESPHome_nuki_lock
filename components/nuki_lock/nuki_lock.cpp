@@ -1116,7 +1116,12 @@ bool NukiLockComponent::execute_lock_action(NukiLock::LockAction lock_action) {
 }
 
 void NukiLockComponent::set_security_pin(uint32_t new_pin) {
-    ESP_LOGI(TAG, "Set security pin: %i", new_pin);
+    ESP_LOGI(TAG, "Setting security pin: %i", new_pin);
+
+    if (new_pin > 999999) {
+        ESP_LOGE(TAG, "Invalid pin: %u (max. 6 digits) - abort.", new_pin);
+        return;
+    }
 
     // Reset override pin if new pin is 0
     if (new_pin == 0 && this->security_pin_ != 0) {
@@ -1127,7 +1132,7 @@ void NukiLockComponent::set_security_pin(uint32_t new_pin) {
         this->security_pin_ = new_pin;
     }
 
-    if(this->security_pin_ == 0 && this->security_pin_config_ == 0) {
+    if(this->security_pin_ == 0 && this->security_pin_config_.value_or(0) == 0) {
         this->pin_state_ = PinState::NotSet;
         ESP_LOGI(TAG, "Security pin is unset! Some functions might not be available.");
     } else {
@@ -1138,12 +1143,7 @@ void NukiLockComponent::set_security_pin(uint32_t new_pin) {
     save_settings();
     this->publish_pin_state();
 
-    int32_t pin_to_use = 0;
-    if(this->security_pin_ != 0) {
-        pin_to_use = this->security_pin_;
-    } else if(this->security_pin_config_ != 0) {
-        pin_to_use = this->security_pin_config_;
-    }
+    int32_t pin_to_use = this->security_pin_ != 0 ? this->security_pin_ : this->security_pin_config_.value_or(0);
 
     bool result;
     if (this->nuki_lock_.isLockUltra()) {
@@ -1183,7 +1183,7 @@ void NukiLockComponent::validatePin()
             App.feed_wdt();
 
             if(pin_result == Nuki::CmdResult::Success) {
-                ESP_LOGD(TAG, "Nuki Lock PIN is valid (%d)", this->get_saved_pin());
+                ESP_LOGI(TAG, "Nuki Lock PIN is valid");
 
                 if(this->pin_state_ != PinState::Valid) {
                     this->pin_state_ = PinState::Valid;
@@ -1256,21 +1256,38 @@ void NukiLockComponent::setup() {
 
     App.feed_wdt();
 
+    ESP_LOGD(TAG, "Prepare security pin for initialization");
+
+    if (this->security_pin_ > 999999) {
+        ESP_LOGE(TAG, "Invalid security pin (override) detected! The pin can't be longer than 6 digits. Unset override pin.");
+        this->security_pin_ = 0;
+        this->pin_state_ = PinState::Invalid;
+        this->save_settings();
+    }
+
     uint32_t pin_to_use = 0;
     if (this->security_pin_ != 0) {
-        ESP_LOGD(TAG, "Using security pin (override): %i", this->security_pin_);
+        ESP_LOGW(TAG, "Note: Using security pin override, not yaml config pin!");
+        ESP_LOGD(TAG, "Security pin (override): %i", this->security_pin_);
         pin_to_use = this->security_pin_;
-    } else if(this->security_pin_config_ != 0) {
-        ESP_LOGD(TAG, "Using security pin (yaml config): %i", this->security_pin_config_);
-        pin_to_use = this->security_pin_config_;
+    } else if(this->security_pin_config_.value_or(0) != 0) {
+        ESP_LOGD(TAG, "Security pin (yaml config): %i", this->security_pin_config_.value_or(0));
+        pin_to_use = this->security_pin_config_.value_or(0);
     } else {
+        this->pin_state_ = PinState::NotSet;
         ESP_LOGW(TAG, "The security pin is not set. Some functions may be unavailable as they require a pin! The security pin is crucial to pair a Smart Lock Ultra.");
     }
 
     if (pin_to_use != 0) {
-        ESP_LOGD(TAG, "Set security pin before init: %i", pin_to_use);
-        this->nuki_lock_.saveUltraPincode(pin_to_use, false);
-        this->nuki_lock_.saveSecurityPincode(pin_to_use);
+        if (pin_to_use > 999999) {
+            ESP_LOGE(TAG, "Invalid security pin detected! The pin can't be longer than 6 digits.");
+            this->pin_state_ = PinState::Invalid;
+            this->save_settings();
+        } else {
+            ESP_LOGD(TAG, "Set security pin before init: %i", pin_to_use);
+            this->nuki_lock_.saveUltraPincode(pin_to_use, false);
+            this->nuki_lock_.saveSecurityPincode(pin_to_use);
+        }
     }
 
     this->nuki_lock_.setDebugConnect(true);
@@ -1300,7 +1317,7 @@ void NukiLockComponent::setup() {
             this->event_log_update_ = true;
         }
 
-        ESP_LOGI(TAG, "The %s bridge is already paired", this->deviceName_.c_str());
+        ESP_LOGI(TAG, "This component is already paired as %s", this->deviceName_.c_str());
 
         if(this->nuki_lock_.isLockUltra()) {
             ESP_LOGI(TAG, "The paired smart lock is ultra");
@@ -1318,7 +1335,7 @@ void NukiLockComponent::setup() {
         this->setup_intervals();
 
     } else {
-        ESP_LOGI(TAG, "The %s bridge is not paired yet", this->deviceName_.c_str());
+        ESP_LOGW(TAG, "This component is not paired yet");
         #ifdef USE_BINARY_SENSOR
         if (this->is_paired_binary_sensor_ != nullptr)
         {
@@ -1509,36 +1526,44 @@ void NukiLockComponent::update() {
                     ESP_LOGI(TAG, "The paired smart lock is ultra");
                 }
 
-                // Save initial security pin after pairing
-                // Pairing resets the security pin
-                uint32_t pin_to_use = 0;
-                if(this->security_pin_ != 0) {
-                    pin_to_use = this->security_pin_;
-                } else if(this->security_pin_config_ != 0) {
-                    pin_to_use = this->security_pin_config_;
-                }
-
-                bool result = false;
-                if (this->nuki_lock_.isLockUltra()) {
-                    result = this->nuki_lock_.saveUltraPincode(pin_to_use);
-                    ESP_LOGD(TAG, "Called saveUltraPincode with pin %i", pin_to_use);
-                } else {
-                    result = this->nuki_lock_.saveSecurityPincode(pin_to_use);
-                    ESP_LOGD(TAG, "Called saveSecurityPincode with pin %i", pin_to_use);
-                }
-
-                if (result) {
-                    ESP_LOGI(TAG, "Successfully set security pin");
-                } else {
-                    ESP_LOGE(TAG, "Failed to set security pin");
-                }
-
                 this->update_status();
                 this->paired_callback_.call();
 
                 this->set_pairing_mode(false);
 
-                this->validatePin();
+                // Save initial security pin after pairing
+                // Pairing resets the security pin
+                uint32_t pin_to_use = 0;
+                if(this->security_pin_ != 0) {
+                    pin_to_use = this->security_pin_;
+                    ESP_LOGW(TAG, "Note: Using security pin override, not yaml config pin!");
+                } else if(this->security_pin_config_.value_or(0) != 0) {
+                    pin_to_use = this->security_pin_config_.value_or(0);
+                }
+
+                if (pin_to_use > 999999) {
+                    ESP_LOGE(TAG, "Invalid security pin detected! The pin can't be longer than 6 digits.");
+                    this->pin_state_ = PinState::Invalid;
+                    this->save_settings();
+                    this->publish_pin_state();
+                } else {
+                    bool result = false;
+                    if (this->nuki_lock_.isLockUltra()) {
+                        result = this->nuki_lock_.saveUltraPincode(pin_to_use);
+                        ESP_LOGD(TAG, "Called saveUltraPincode with pin %i", pin_to_use);
+                    } else {
+                        result = this->nuki_lock_.saveSecurityPincode(pin_to_use);
+                        ESP_LOGD(TAG, "Called saveSecurityPincode with pin %i", pin_to_use);
+                    }
+
+                    if (result) {
+                        ESP_LOGI(TAG, "Successfully set security pin");
+                    } else {
+                        ESP_LOGE(TAG, "Failed to set security pin");
+                    }
+
+                    this->validatePin();
+                }
 
                 this->setup_intervals();
             }
@@ -1849,7 +1874,7 @@ void NukiLockComponent::unpair() {
 
         // Reset pin (override)
         this->security_pin_ = 0;
-        if(this->security_pin_ == 0 && this->security_pin_config_ == 0) {
+        if(this->security_pin_ == 0 && this->security_pin_config_.value_or(0) == 0) {
             this->pin_state_ = PinState::NotSet;
             ESP_LOGD(TAG, "The security pin is now unset!");
         } else {
