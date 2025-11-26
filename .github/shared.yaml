@@ -5,8 +5,8 @@ esp32:
   variant: esp32
 
 wifi:
-  ssid: "SSID"
-  password: "PASSWORD"
+  ssid: "My Network"
+  password: "My Password"
 
 api:
   custom_services: true
