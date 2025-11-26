@@ -1,6 +1,6 @@
 # ESPHome Nuki Lock Component (ESP32) [![Build Component](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml/badge.svg)](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml)
 
-Seamlessly integrate Nuki Smart Locks (1st–5th Gen, Ultra, Go, Pro) with ESPHome, enabling a full-featured Home Assistant lock platform with [many available entities](#-entities).
+Seamlessly integrate Nuki Smart Locks (1st–5th Gen, Ultra, Go) with ESPHome, enabling a full-featured Home Assistant lock platform with [many available entities](#-entities).
 The lock state is always up-to-date thanks to Nuki's BLE advertisement mechanism—whether controlled through the Nuki app, Home Assistant, or physically at the door.
 
 ![some dashboard entites](./docs/nuki_dashboard.png)
@@ -473,5 +473,9 @@ This component is based on **NukiBleEsp32** by [I-Connect](https://github.com/I-
 # 🧪 Tested Hardware
 - ESP32-WROOM
 - ESP32-S3-WROOM
-- Nuki Smart Lock 2nd gen/3rd gen/4th gen
-- Nuki door sensor
+- Nuki Smart Lock 2nd gen
+- Nuki Smart Lock 3rd gen
+- Nuki Smart Lock 4th gen
+- Nuki Smart Lock 5th gen
+- Nuki Smart Lock Ultra
+- Nuki Door Sensor
