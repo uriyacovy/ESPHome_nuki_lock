@@ -874,9 +874,7 @@ async def nuki_lock_set_pairing_mode_to_code(config, action_id, template_arg, ar
 NUKI_LOCK_SET_SECURITY_PIN_SCHEMA = automation.maybe_simple_id(
     {
         cv.GenerateID(): cv.use_id(NukiLock),
-        cv.Required(CONF_SET_SECURITY_PIN): cv.All(
-            cv.templatable(cv.uint32_t), cv.int_range(min=0, max=999999)
-        ),
+        cv.Required(CONF_SET_SECURITY_PIN): cv.templatable(cv.uint32_t),
     }
 )
 
