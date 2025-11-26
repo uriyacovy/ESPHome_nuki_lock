@@ -213,9 +213,15 @@ Then continue with the pairing instructions below.
    * `pairing_as_app: true`
    * `security_pin: 123456`: your 6-digit PIN for the Ultra/Go/5th Gen lock
 
+> [!IMPORTANT]
+> If your pin starts with one or more zeros, remove the padding zeros (e.g. 000548 -> 548). Otherwise pairing will fail.
+
 3. Press and hold the button on the Nuki lock until the LED ring lights up and stays on.
 
-4. Once pairing is successful, ESPHome entities will automatically update to reflect the lock status, and pairing mode will disable itself.
+4. Enable pairing mode in the ESPHome component.  
+   You can do this either by toggling the **Pairing Mode** switch in Home Assistant or by calling the `nuki_lock.set_pairing_mode` action in an automation.
+
+5. Once pairing is successful, ESPHome entities will automatically update to reflect the lock status, and pairing mode will disable itself.
 
 ---
 
@@ -225,7 +231,7 @@ The following configuration options allow you to customize the behavior of the N
 
 | Option                     | Description                                   | Default |
 | -------------------------- | --------------------------------------------- | ------- |
-| `security_pin`             | Required for event logs & advanced operations (required for pairing Ultra/Go/5th Gen) | —       |
+| `security_pin`             | Required for event logs & advanced operations (required for pairing Ultra/Go/5th Gen - please remove leading zeros) | —       |
 | `pairing_mode_timeout`     | Auto-timeout for pairing mode                 | `300s`  |
 | `event`                    | Event log event name (`none` disables logs)   | `none`  |
 | `pairing_as_app`           | Pair as app (required for Ultra/Go/5th Gen)   | `false` |
@@ -236,7 +242,7 @@ The following configuration options allow you to customize the behavior of the N
 
 ---
 
-# 🧩 Home Assistant Services
+# 🧩 Home Assistant Actions
 
 > [!IMPORTANT]  
 > In order to use the services, you have to enable them in your `api` configuration.
@@ -247,54 +253,54 @@ The following configuration options allow you to customize the behavior of the N
 > ```
 
 ## Unlatch
-To unlatch doors without a handle, call the `open` service in Home Assistant:
+To unlatch doors without a handle, call the `open` action in Home Assistant:
 ```yaml
-service: lock.open
+action: lock.open
 data: {}
 target:
   entity_id: lock.<NODE_NAME>
 ```
 
 ## Lock ’n’ Go
-To activate the Lock 'n' Go feature on your Nuki Smart Lock, call the following service in Home Assistant:
+To activate the Lock 'n' Go feature on your Nuki Smart Lock, call the following action in Home Assistant:
 
 ```yaml
-service: esphome.<NODE_NAME>_lock_n_go
+action: esphome.<NODE_NAME>_lock_n_go
 data: {}
 ```
 
 ## Print Keypad Entries
-To print the Keypad Entries in the ESPHome Console call the following service in Home Assistant:
+To print the Keypad Entries in the ESPHome Console call the following action in Home Assistant:
 
 ```yaml
-service: esphome.<NODE_NAME>_print_keypad_entries
+action: esphome.<NODE_NAME>_print_keypad_entries
 data: {}
 ```
 
 ## Add a Keypad Entry
-To add a Keypad Entry, call the following service in Home Assistant:
+To add a Keypad Entry, call the following action in Home Assistant:
 
 ```yaml
-service: esphome.<NODE_NAME>_add_keypad_entry
+action: esphome.<NODE_NAME>_add_keypad_entry
 data:
   name: "Name"
   code: 12345678
 ```
 
 ## Remove a Keypad Entry
-To remove a Keypad Entry, call the following service in Home Assistant:
+To remove a Keypad Entry, call the following action in Home Assistant:
 
 ```yaml
-service: esphome.<NODE_NAME>_delete_keypad_entry
+action: esphome.<NODE_NAME>_delete_keypad_entry
 data:
   id: 1
 ```
 
 ## Update a Keypad Entry
-To update a Keypad Entry, call the following service in Home Assistant:
+To update a Keypad Entry, call the following action in Home Assistant:
 
 ```yaml
-service: esphome.<NODE_NAME>_update_keypad_entry
+action: esphome.<NODE_NAME>_update_keypad_entry
 data:
   id: 1
   name: "Name"
@@ -471,8 +477,8 @@ This component is based on **NukiBleEsp32** by [I-Connect](https://github.com/I-
 ---
 
 # 🧪 Tested Hardware
-- ESP32-WROOM
-- ESP32-S3-WROOM
+- ESP32
+- ESP32-S3
 - Nuki Smart Lock 2nd gen
 - Nuki Smart Lock 3rd gen
 - Nuki Smart Lock 4th gen
