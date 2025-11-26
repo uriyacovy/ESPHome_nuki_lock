@@ -1287,7 +1287,7 @@ void NukiLockComponent::setup() {
         }
     }
 
-    this->nuki_lock_.setDebugConnect(true);
+    this->nuki_lock_.setDebugConnect(false);
     this->nuki_lock_.setDebugCommunication(false);
     this->nuki_lock_.setDebugReadableData(false);
     this->nuki_lock_.setDebugHexData(false);
