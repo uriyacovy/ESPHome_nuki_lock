@@ -10,6 +10,9 @@ The lock state is always up-to-date thanks to Nuki's BLE advertisement mechanism
 # 🚀 Quick Start
 
 ## Requirements
+> [!IMPORTANT]  
+> Requires an ESP32
+
 > [!WARNING]  
 > This component uses NimBLE, which is incompatible with ESPHome's BLE stack.
 > Remove all BLE components (esp32_ble, esp32_improv, ...) from your configuration.
@@ -72,9 +75,9 @@ lock:
     ble_command_timeout: 3s
 
   # Optional: Binary Sensors
-    is_connected:
+    connected:
       name: "Nuki Connected"
-    is_paired:
+    paired:
       name: "Nuki Paired"
     battery_critical:
       name: "Nuki Battery Critical"
@@ -214,7 +217,7 @@ Then continue with the pairing instructions below.
    * `security_pin: 123456`: your 6-digit PIN for the Ultra/Go/5th Gen lock
 
 > [!IMPORTANT]
-> If your pin starts with one or more zeros, remove the padding zeros (e.g. 000548 -> 548). Otherwise pairing will fail.
+> If your PIN starts with zeros, remove them (e.g., 000548 → 548). Pairing will fail if you include leading zeros.
 
 3. Press and hold the button on the Nuki lock until the LED ring lights up and stays on.
 
@@ -231,7 +234,7 @@ The following configuration options allow you to customize the behavior of the N
 
 | Option                     | Description                                   | Default |
 | -------------------------- | --------------------------------------------- | ------- |
-| `security_pin`             | Required for event logs & advanced operations (required for pairing Ultra/Go/5th Gen - please remove leading zeros) | —       |
+| `security_pin`             | Required for event logs & advanced operations (mandatory for Ultra/Go/5th Gen pairing - remove leading zeros: 000548 → 548) | —       |
 | `pairing_mode_timeout`     | Auto-timeout for pairing mode                 | `300s`  |
 | `event`                    | Event log event name (`none` disables logs)   | `none`  |
 | `pairing_as_app`           | Pair as app (required for Ultra/Go/5th Gen)   | `false` |
@@ -340,6 +343,28 @@ on_...:
       security_pin: 1234
 ```
 
+## Condition: Connected
+To check if the component recently established a connection to a smart lock, use the following condition:
+```yaml
+on_...:
+  - if:
+      condition:
+        nuki_lock.connected:
+      then:
+        - logger.log: "Recently connected to smart lock! Lock should be available."
+```
+
+## Condition: Paired
+To check if the component is already paired with a smart lock, use the following condition:
+```yaml
+on_...:
+  - if:
+      condition:
+        nuki_lock.paired:
+      then:
+        - logger.log: "Paired!"
+```
+
 ## Callbacks
 To run specific actions when certain events occur, you can use the following callbacks:
 ```yaml
@@ -414,12 +439,25 @@ context:
 > Without the PIN, modifying these settings is not possible.  
 > Additionally, the `Last Unlock User` feature will only function if events are enabled!  
 
+## ESPHome
+**Binary Sensor:**  
+- Paired
+- Connected
+
+**Text Sensor:**  
+- Pin Status
+
+**Switch:**  
+- Pairing Mode
+
+**Button:**  
+- Unpair Device
+
+## Nuki Lock
 **Lock:**  
 - Lock
 
 **Binary Sensor:**  
-- Is Paired
-- Is Connected
 - Critical Battery 
 - Door Sensor
 
@@ -432,10 +470,8 @@ context:
 - Last Unlock User
 - Last Lock Action
 - Last Lock Action Trigger
-- Pin Status
 
 **Switch:**  
-- Pairing Mode
 - Button Enabled
 - LED Enabled
 - Night Mode
@@ -465,9 +501,6 @@ context:
 **Number Input:**  
 - LED Brightness
 - Timezone Offset
-
-**Button:**  
-- Unpair Device
 
 ---
 

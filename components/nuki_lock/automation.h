@@ -30,6 +30,26 @@ class NukiLockSecurityPinAction : public Action<Ts...>, public Parented<NukiLock
         void play(const Ts&... x) override { this->parent_->set_security_pin(this->new_pin_.value(x...)); }
 };
 
+// Conditions
+
+template<typename... Ts>
+class NukiLockConnectedCondition : public Condition<Ts...>, public Parented<NukiLockComponent> {
+    public:
+        bool check(const Ts &...x) override
+        {
+            return this->parent_->is_connected();
+        }
+};
+
+template<typename... Ts>
+class NukiLockPairedCondition : public Condition<Ts...>, public Parented<NukiLockComponent> {
+    public:
+        bool check(const Ts &...x) override
+        {
+            return this->parent_->is_paired();
+        }
+};
+
 // Callbacks
 class PairingModeOnTrigger : public Trigger<> {
     public:

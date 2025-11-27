@@ -24,8 +24,8 @@ LOGGER = logging.getLogger(__name__)
 
 AUTO_LOAD = ["binary_sensor", "text_sensor", "sensor", "switch", "button", "number", "select"]
 
-CONF_IS_CONNECTED_BINARY_SENSOR = "is_connected"
-CONF_IS_PAIRED_BINARY_SENSOR = "is_paired"
+CONF_CONNECTED_BINARY_SENSOR = "connected"
+CONF_PAIRED_BINARY_SENSOR = "paired"
 CONF_BATTERY_CRITICAL_BINARY_SENSOR = "battery_critical"
 CONF_DOOR_SENSOR_BINARY_SENSOR = "door_sensor"
 
@@ -167,19 +167,18 @@ CONF_BLE_GENERAL_TIMEOUT = "ble_general_timeout"
 CONF_BLE_COMMAND_TIMEOUT = "ble_command_timeout"
 CONF_EVENT = "event"
 
-CONF_SET_PAIRING_MODE = "pairing_mode"
-CONF_SET_SECURITY_PIN = "security_pin"
-
 CONF_ON_PAIRING_MODE_ON = "on_pairing_mode_on_action"
 CONF_ON_PAIRING_MODE_OFF = "on_pairing_mode_off_action"
 CONF_ON_PAIRED = "on_paired_action"
 CONF_ON_EVENT_LOG = "on_event_log_action"
 
 nuki_lock_ns = cg.esphome_ns.namespace('nuki_lock')
-NukiLock = nuki_lock_ns.class_('NukiLockComponent', lock.Lock, cg.Component)
+NukiLockComponent = nuki_lock_ns.class_('NukiLockComponent', lock.Lock, cg.Component)
 
+# Buttons
 NukiLockUnpairButton = nuki_lock_ns.class_("NukiLockUnpairButton", button.Button, cg.Component)
 
+# Switches
 NukiLockPairingModeSwitch = nuki_lock_ns.class_("NukiLockPairingModeSwitch", switch.Switch, cg.Component)
 NukiLockAutoUnlatchEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoUnlatchEnabledSwitch", switch.Switch, cg.Component)
 NukiLockButtonEnabledSwitch = nuki_lock_ns.class_("NukiLockButtonEnabledSwitch", switch.Switch, cg.Component)
@@ -197,10 +196,12 @@ NukiLockDstModeEnabledSwitch = nuki_lock_ns.class_("NukiLockDstModeEnabledSwitch
 NukiLockAutoBatteryTypeDetectionEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoBatteryTypeDetectionEnabledSwitch", switch.Switch, cg.Component)
 NukiLockSlowSpeedDuringNightModeEnabledSwitch = nuki_lock_ns.class_("NukiLockSlowSpeedDuringNightModeEnabledSwitch", switch.Switch, cg.Component)
 
+# Number Inputs
 NukiLockLedBrightnessNumber = nuki_lock_ns.class_("NukiLockLedBrightnessNumber", number.Number, cg.Component)
 NukiLockTimeZoneOffsetNumber = nuki_lock_ns.class_("NukiLockTimeZoneOffsetNumber", number.Number, cg.Component)
 NukiLockLockNGoTimeoutNumber = nuki_lock_ns.class_("NukiLockLockNGoTimeoutNumber", number.Number, cg.Component)
 
+# Selects
 NukiLockSingleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockSingleButtonPressActionSelect", select.Select, cg.Component)
 NukiLockDoubleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockDoubleButtonPressActionSelect", select.Select, cg.Component)
 NukiLockFobAction1Select = nuki_lock_ns.class_("NukiLockFobAction1Select", select.Select, cg.Component)
@@ -211,18 +212,29 @@ NukiLockAdvertisingModeSelect = nuki_lock_ns.class_("NukiLockAdvertisingModeSele
 NukiLockBatteryTypeSelect = nuki_lock_ns.class_("NukiLockBatteryTypeSelect", select.Select, cg.Component)
 NukiLockMotorSpeedSelect = nuki_lock_ns.class_("NukiLockMotorSpeedSelect", select.Select, cg.Component)
 
+# Actions
 NukiLockUnpairAction = nuki_lock_ns.class_(
-    "NukiLockUnpairAction", automation.Action, cg.Parented.template(NukiLock)
+    "NukiLockUnpairAction", automation.Action, cg.Parented.template(NukiLockComponent)
 )
 
 NukiLockPairingModeAction = nuki_lock_ns.class_(
-    "NukiLockPairingModeAction", automation.Action, cg.Parented.template(NukiLock)
+    "NukiLockPairingModeAction", automation.Action, cg.Parented.template(NukiLockComponent)
 )
 
 NukiLockSecurityPinAction = nuki_lock_ns.class_(
-    "NukiLockSecurityPinAction", automation.Action, cg.Parented.template(NukiLock)
+    "NukiLockSecurityPinAction", automation.Action, cg.Parented.template(NukiLockComponent)
 )
 
+# Conditions
+NukiLockConnectedCondition = nuki_lock_ns.class_(
+    "NukiLockConnectedCondition", automation.Condition, cg.Parented.template(NukiLockComponent)
+)
+
+NukiLockPairedCondition = nuki_lock_ns.class_(
+    "NukiLockPairedCondition", automation.Condition, cg.Parented.template(NukiLockComponent)
+)
+
+# Triggers
 nuki_lock_lib_ns = cg.esphome_ns.namespace('NukiLock')
 LogEntry = nuki_lock_lib_ns.struct('LogEntry')
 
@@ -232,14 +244,14 @@ PairedTrigger = nuki_lock_ns.class_("PairedTrigger", automation.Trigger.template
 EventLogReceivedTrigger = nuki_lock_ns.class_("EventLogReceivedTrigger", automation.Trigger.template())
 
 CONFIG_SCHEMA = cv.All(
-    lock.lock_schema(NukiLock).extend(
+    lock.lock_schema(NukiLockComponent).extend(
         {
-            cv.Optional(CONF_IS_CONNECTED_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
+            cv.Optional(CONF_CONNECTED_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
                 device_class=DEVICE_CLASS_CONNECTIVITY,
                 entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
                 icon="mdi:link"
             ),
-            cv.Optional(CONF_IS_PAIRED_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
+            cv.Optional(CONF_PAIRED_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
                 device_class=DEVICE_CLASS_CONNECTIVITY,
                 entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
                 icon="mdi:link"
@@ -448,9 +460,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_PAIRING_AS_APP, default="false"): cv.boolean,
             cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_EVENT, default="none"): cv.string,
-            cv.Optional(CONF_SECURITY_PIN, default="0"): cv.All(
-                cv.templatable(cv.uint32_t), cv.int_range(min=0, max=999999)
-            ),
+            cv.Optional(CONF_SECURITY_PIN, default="0"): cv.templatable(cv.uint32_t),
             cv.Optional(CONF_QUERY_INTERVAL_CONFIG, default="3600s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_QUERY_INTERVAL_AUTH_DATA, default="3600s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_BLE_GENERAL_TIMEOUT, default="3s"): cv.positive_time_period_seconds,
@@ -512,13 +522,13 @@ async def to_code(config):
         cg.add(var.set_ble_command_timeout(config[CONF_BLE_COMMAND_TIMEOUT]))
 
     # Binary Sensor
-    if is_connected := config.get(CONF_IS_CONNECTED_BINARY_SENSOR):
-        sens = await binary_sensor.new_binary_sensor(is_connected)
-        cg.add(var.set_is_connected_binary_sensor(sens))
+    if connected := config.get(CONF_CONNECTED_BINARY_SENSOR):
+        sens = await binary_sensor.new_binary_sensor(connected)
+        cg.add(var.set_connected_binary_sensor(sens))
 
-    if is_paired := config.get(CONF_IS_PAIRED_BINARY_SENSOR):
-        sens = await binary_sensor.new_binary_sensor(is_paired)
-        cg.add(var.set_is_paired_binary_sensor(sens))
+    if paired := config.get(CONF_PAIRED_BINARY_SENSOR):
+        sens = await binary_sensor.new_binary_sensor(paired)
+        cg.add(var.set_paired_binary_sensor(sens))
 
     if battery_critical := config.get(CONF_BATTERY_CRITICAL_BINARY_SENSOR):
         sens = await binary_sensor.new_binary_sensor(battery_critical)
@@ -769,13 +779,15 @@ async def to_code(config):
     add_idf_sdkconfig_option("CONFIG_BT_BLUEDROID_ENABLED", False)
     add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ENABLED", True)
     add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ROLE_PERIPHERAL", True)
-
     add_idf_sdkconfig_option("CONFIG_BTDM_BLE_SCAN_DUPL", True)
+
+    # Reduce NimBLE log level to save memory
     add_idf_sdkconfig_option("CONFIG_NIMBLE_CPP_LOG_LEVEL", 0)
     add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL", 0)
     add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL_NONE", True)
-   
-# Used for debugging #add_idf_sdkconfig_option("CONFIG_NIMBLE_CPP_LOG_LEVEL", 4)
+
+    # Set for debugging purposes
+    #add_idf_sdkconfig_option("CONFIG_NIMBLE_CPP_LOG_LEVEL", 4)
     #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL", 4)
     #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL_DEBUG", True)
 
@@ -841,7 +853,7 @@ FINAL_VALIDATE_SCHEMA = _final_validate
 # Actions
 NUKI_LOCK_UNPAIR_SCHEMA = automation.maybe_simple_id(
     {
-        cv.GenerateID(): cv.use_id(NukiLock)
+        cv.GenerateID(): cv.use_id(NukiLockComponent)
     }
 )
 
@@ -856,8 +868,8 @@ async def nuki_lock_unpair_to_code(config, action_id, template_arg, args):
 
 NUKI_LOCK_SET_PAIRING_MODE_SCHEMA = automation.maybe_simple_id(
     {
-        cv.GenerateID(): cv.use_id(NukiLock),
-        cv.Required(CONF_SET_PAIRING_MODE): cv.templatable(cv.boolean)
+        cv.GenerateID(): cv.use_id(NukiLockComponent),
+        cv.Required(CONF_PAIRING_MODE_SWITCH): cv.templatable(cv.boolean)
     }
 )
 
@@ -867,15 +879,15 @@ NUKI_LOCK_SET_PAIRING_MODE_SCHEMA = automation.maybe_simple_id(
 async def nuki_lock_set_pairing_mode_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)
     await cg.register_parented(var, config[CONF_ID])
-    pairing_mode_template_ = await cg.templatable(config[CONF_SET_PAIRING_MODE], args, cg.bool_)
+    pairing_mode_template_ = await cg.templatable(config[CONF_PAIRING_MODE_SWITCH], args, cg.bool_)
     cg.add(var.set_pairing_mode(pairing_mode_template_))
     return var
 
 
 NUKI_LOCK_SET_SECURITY_PIN_SCHEMA = automation.maybe_simple_id(
     {
-        cv.GenerateID(): cv.use_id(NukiLock),
-        cv.Required(CONF_SET_SECURITY_PIN): cv.templatable(cv.uint32_t),
+        cv.GenerateID(): cv.use_id(NukiLockComponent),
+        cv.Required(CONF_SECURITY_PIN): cv.templatable(cv.uint32_t),
     }
 )
 
@@ -885,6 +897,21 @@ NUKI_LOCK_SET_SECURITY_PIN_SCHEMA = automation.maybe_simple_id(
 async def nuki_lock_set_security_pin_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)
     await cg.register_parented(var, config[CONF_ID])
-    pin_template_ = await cg.templatable(config[CONF_SET_SECURITY_PIN], args, cg.uint32)
+    pin_template_ = await cg.templatable(config[CONF_SECURITY_PIN], args, cg.uint32)
     cg.add(var.set_new_pin(pin_template_))
+    return var
+
+
+NUKI_LOCK_CONDITION_SCHEMA = cv.Schema({cv.GenerateID(): cv.use_id(NukiLockComponent)})
+
+@automation.register_condition("nuki_lock.connected", NukiLockConnectedCondition, NUKI_LOCK_CONDITION_SCHEMA)
+async def nuki_lock_connected_to_code(config, condition_id, template_arg, args):
+    var = cg.new_Pvariable(condition_id, template_arg)
+    await cg.register_parented(var, config[CONF_ID])
+    return var
+
+@automation.register_condition("nuki_lock.paired", NukiLockPairedCondition, NUKI_LOCK_CONDITION_SCHEMA)
+async def nuki_lock_paired_to_code(config, condition_id, template_arg, args):
+    var = cg.new_Pvariable(condition_id, template_arg)
+    await cg.register_parented(var, config[CONF_ID])
     return var

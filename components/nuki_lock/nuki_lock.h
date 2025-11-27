@@ -87,8 +87,8 @@ class NukiLockComponent :
 #endif
     {
     #ifdef USE_BINARY_SENSOR
-    SUB_BINARY_SENSOR(is_connected)
-    SUB_BINARY_SENSOR(is_paired)
+    SUB_BINARY_SENSOR(connected)
+    SUB_BINARY_SENSOR(paired)
     SUB_BINARY_SENSOR(battery_critical)
     SUB_BINARY_SENSOR(door_sensor)
     #endif
@@ -215,8 +215,12 @@ class NukiLockComponent :
         void set_pairing_mode(bool enabled);
         void save_settings();
 
-        bool isConnected() {
-            return this->connection_state_;
+        bool is_connected() {
+            return this->connected_;
+        }
+        
+        bool is_paired() {
+            return this->nuki_lock_.isPairedWithLock();
         }
 
         #ifdef USE_NUMBER
@@ -280,7 +284,7 @@ class NukiLockComponent :
         uint32_t security_pin_ = 0;
         TemplatableValue<uint32_t> security_pin_config_{};
 
-        bool connection_state_ = false;
+        bool connected_ = false;
 
         const char* event_;
         bool send_events_ = false;

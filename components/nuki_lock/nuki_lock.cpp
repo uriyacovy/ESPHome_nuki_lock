@@ -533,7 +533,7 @@ void NukiLockComponent::update_status() {
         ESP_LOGD(TAG, "requestKeyTurnerState has resulted in %s (%d)", str, cmd_result);
 
         this->status_update_consecutive_errors_ = 0;
-        this->connection_state_ = true;
+        this->connected_ = true;
 
         NukiLock::LockState current_lock_state = this->retrieved_key_turner_state_.lockState;
         char current_lock_state_as_string[30] = {0};
@@ -554,8 +554,8 @@ void NukiLockComponent::update_status() {
         this->publish_state(this->nuki_to_lock_state(this->retrieved_key_turner_state_.lockState));
 
         #ifdef USE_BINARY_SENSOR
-        if (this->is_connected_binary_sensor_ != nullptr) {
-            this->is_connected_binary_sensor_->publish_state(this->connection_state_);
+        if (this->connected_binary_sensor_ != nullptr) {
+            this->connected_binary_sensor_->publish_state(this->connected_);
         }
         
         if (this->battery_critical_binary_sensor_ != nullptr) {
@@ -626,14 +626,14 @@ void NukiLockComponent::update_status() {
         this->status_update_consecutive_errors_++;
 
         if (this->status_update_consecutive_errors_ > MAX_TOLERATED_UPDATES_ERRORS) {
-            this->connection_state_ = false;
+            this->connected_ = false;
 
             // Publish failed state only when having too many consecutive errors
             this->publish_state(lock::LOCK_STATE_NONE);
 
             #ifdef USE_BINARY_SENSOR
-            if (this->is_connected_binary_sensor_ != nullptr) {
-                this->is_connected_binary_sensor_->publish_state(this->connection_state_);
+            if (this->connected_binary_sensor_ != nullptr) {
+                this->connected_binary_sensor_->publish_state(this->connected_);
             }
             #endif
         }
@@ -1159,7 +1159,7 @@ void NukiLockComponent::set_security_pin(uint32_t new_pin) {
     }
 
     // Validate pin if lock is paired and connected
-    if (this->nuki_lock_.isPairedWithLock() && this->connection_state_) {
+    if (this->nuki_lock_.isPairedWithLock() && this->connected_) {
         ESP_LOGD(TAG, "Validating new security pin");
         this->validatePin();
     } else {
@@ -1319,9 +1319,9 @@ void NukiLockComponent::setup() {
         ESP_LOGI(TAG, "This component is already paired as %s with a %s smart lock!", pairing_type, lock_type);
 
         #ifdef USE_BINARY_SENSOR
-        if (this->is_paired_binary_sensor_ != nullptr)
+        if (this->paired_binary_sensor_ != nullptr)
         {
-            this->is_paired_binary_sensor_->publish_initial_state(true);
+            this->paired_binary_sensor_->publish_initial_state(true);
         }
         #endif
 
@@ -1332,9 +1332,9 @@ void NukiLockComponent::setup() {
     } else {
         ESP_LOGI(TAG, "This component is not paired yet. Enable the pairing mode to pair with your smart lock.");
         #ifdef USE_BINARY_SENSOR
-        if (this->is_paired_binary_sensor_ != nullptr)
+        if (this->paired_binary_sensor_ != nullptr)
         {
-            this->is_paired_binary_sensor_->publish_initial_state(false);
+            this->paired_binary_sensor_->publish_initial_state(false);
         }     
         #endif
     }
@@ -1420,9 +1420,9 @@ void NukiLockComponent::update() {
 
     if (this->nuki_lock_.isPairedWithLock()) {
         #ifdef USE_BINARY_SENSOR
-        if (this->is_paired_binary_sensor_ != nullptr)
+        if (this->paired_binary_sensor_ != nullptr)
         {
-            this->is_paired_binary_sensor_->publish_state(true);
+            this->paired_binary_sensor_->publish_state(true);
         } 
         #endif
 
@@ -1448,15 +1448,15 @@ void NukiLockComponent::update() {
                     this->action_attempts_ = 0;
                 }
             } else if (this->action_attempts_ == 0) {
-                this->connection_state_ = false;
+                this->connected_ = false;
                 
                 // Publish failed state only when no attempts are left
                 this->publish_state(lock::LOCK_STATE_NONE);
 
                 #ifdef USE_BINARY_SENSOR
-                if (this->is_connected_binary_sensor_ != nullptr)
+                if (this->connected_binary_sensor_ != nullptr)
                 {
-                    this->is_connected_binary_sensor_->publish_state(this->connection_state_);
+                    this->connected_binary_sensor_->publish_state(this->connected_);
                 }  
                 #endif
             }
@@ -1492,14 +1492,14 @@ void NukiLockComponent::update() {
         last_command_executed_time_ = millis();
 
     } else {
-        this->connection_state_ = false;
+        this->connected_ = false;
 
         #ifdef USE_BINARY_SENSOR
-        if (this->is_paired_binary_sensor_ != nullptr) {
-            this->is_paired_binary_sensor_->publish_state(false);
+        if (this->paired_binary_sensor_ != nullptr) {
+            this->paired_binary_sensor_->publish_state(false);
         }
-        if (this->is_connected_binary_sensor_ != nullptr) {
-            this->is_connected_binary_sensor_->publish_state(connection_state_);
+        if (this->connected_binary_sensor_ != nullptr) {
+            this->connected_binary_sensor_->publish_state(connected_);
         }
         #endif
 
@@ -1578,8 +1578,8 @@ void NukiLockComponent::update() {
             }
 
             #ifdef USE_BINARY_SENSOR
-            if (this->is_paired_binary_sensor_ != nullptr) {
-                this->is_paired_binary_sensor_->publish_state(paired);
+            if (this->paired_binary_sensor_ != nullptr) {
+                this->paired_binary_sensor_->publish_state(paired);
             }
             #endif
         }    
@@ -1784,6 +1784,7 @@ void NukiLockComponent::dump_config() {
     #endif
 
     ESP_LOGCONFIG(TAG, "  Pairing Identity: %s",this->pairing_as_app_ ? "App" : "Bridge");
+    ESP_LOGCONFIG(TAG, "  Is Paired: %s", YESNO(this->is_paired()));
 
     ESP_LOGCONFIG(TAG, "  Pairing mode timeout: %us", this->pairing_mode_timeout_);
     ESP_LOGCONFIG(TAG, "  Configuration query interval: %us", this->query_interval_config_);
@@ -1797,8 +1798,8 @@ void NukiLockComponent::dump_config() {
 
     LOG_LOCK(TAG, "Nuki Lock", this);
     #ifdef USE_BINARY_SENSOR
-    LOG_BINARY_SENSOR(TAG, "Is Connected", this->is_connected_binary_sensor_);
-    LOG_BINARY_SENSOR(TAG, "Is Paired", this->is_paired_binary_sensor_);
+    LOG_BINARY_SENSOR(TAG, "Connected", this->connected_binary_sensor_);
+    LOG_BINARY_SENSOR(TAG, "Paired", this->paired_binary_sensor_);
     LOG_BINARY_SENSOR(TAG, "Battery Critical", this->battery_critical_binary_sensor_);
     LOG_BINARY_SENSOR(TAG, "Door Sensor", this->door_sensor_binary_sensor_);
     #endif
@@ -1884,7 +1885,7 @@ void NukiLockComponent::unpair() {
     if (this->nuki_lock_.isPairedWithLock()) {
         this->nuki_lock_.unPairNuki();
 
-        this->connection_state_ = false;
+        this->connected_ = false;
 
         this->publish_state(lock::LOCK_STATE_NONE);
 
