@@ -564,7 +564,7 @@ void NukiLockComponent::update_status() {
 
         // If pin needs validation, validate now
         if(this->pin_state_ == PinState::Set) {
-            validatePin();
+            validate_pin();
         }
         
         if (this->door_sensor_binary_sensor_ != nullptr) {
@@ -838,7 +838,7 @@ void NukiLockComponent::update_auth_data() {
     this->auth_data_update_ = false;
     this->cancel_timeout("wait_for_auth_data");
 
-    if(!is_pin_valid()) {
+    if(this->pin_state_ != PinState::Valid) {
         ESP_LOGW(TAG, "It seems like you did not set a valid pin!");
         return;
     }
@@ -897,7 +897,7 @@ void NukiLockComponent::update_event_logs() {
     this->event_log_update_ = false;
     this->cancel_timeout("wait_for_log_entries");
 
-    if(!is_pin_valid()) {
+    if(this->pin_state_ != PinState::Valid) {
         ESP_LOGW(TAG, "It seems like you did not set a valid pin!");
         return;
     }
@@ -1161,13 +1161,13 @@ void NukiLockComponent::set_security_pin(uint32_t new_pin) {
     // Validate pin if lock is paired and connected
     if (this->nuki_lock_.isPairedWithLock() && this->connected_) {
         ESP_LOGD(TAG, "Validating new security pin");
-        this->validatePin();
+        this->validate_pin();
     } else {
         ESP_LOGD(TAG, "Skipping pin validation (not paired or not connected)");
     }
 }
 
-void NukiLockComponent::validatePin()
+void NukiLockComponent::validate_pin()
 {
     ESP_LOGD(TAG, "Check if pin is valid and save state");
 
@@ -1212,10 +1212,6 @@ void NukiLockComponent::validatePin()
         },
         1.0f
     );
-}
-
-bool NukiLockComponent::is_pin_valid() {
-    return this->pin_state_ == PinState::Valid;
 }
 
 void NukiLockComponent::setup() {
@@ -1325,7 +1321,7 @@ void NukiLockComponent::setup() {
         }
         #endif
 
-        this->validatePin();
+        this->validate_pin();
 
         this->setup_intervals();
 
@@ -1571,7 +1567,7 @@ void NukiLockComponent::update() {
 
                     this->save_settings();
                     this->publish_pin_state();
-                    this->validatePin();
+                    this->validate_pin();
                 }
 
                 this->setup_intervals();
@@ -1662,7 +1658,7 @@ void NukiLockComponent::add_keypad_entry(std::string name, int32_t code) {
         return;
     }
 
-    if(!is_pin_valid()) {
+    if(this->pin_state_ != PinState::Valid) {
         ESP_LOGW(TAG, "It seems like you did not set a valid pin!");
         return;
     }
@@ -1691,7 +1687,7 @@ void NukiLockComponent::update_keypad_entry(int32_t id, std::string name, int32_
         return;
     }
 
-    if(!is_pin_valid()) {
+    if(this->pin_state_ != PinState::Valid) {
         ESP_LOGW(TAG, "It seems like you did not set a valid pin!");
         return;
     }
@@ -1722,7 +1718,7 @@ void NukiLockComponent::delete_keypad_entry(int32_t id) {
         return;
     }
 
-    if(!is_pin_valid()) {
+    if(this->pin_state_ != PinState::Valid) {
         ESP_LOGW(TAG, "It seems like you did not set a valid pin!");
         return;
     }
@@ -1746,7 +1742,7 @@ void NukiLockComponent::print_keypad_entries() {
         return;
     }
 
-    if(!is_pin_valid()) {
+    if(this->pin_state_ != PinState::Valid) {
         ESP_LOGW(TAG, "It seems like you did not set a valid pin!");
         return;
     }

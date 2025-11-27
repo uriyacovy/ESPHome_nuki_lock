@@ -209,7 +209,6 @@ class NukiLockComponent :
 
         void pin_state_to_string(const PinState value, char* str);
         void set_security_pin(uint32_t security_pin);
-        void use_security_pin(uint32_t security_pin, bool override_save);
 
         void unpair();
         void set_pairing_mode(bool enabled);
@@ -250,8 +249,7 @@ class NukiLockComponent :
         void setup_intervals(bool setup = true);
         void publish_pin_state();
 
-        void validatePin();
-        bool is_pin_valid();
+        void validate_pin();
 
         bool execute_lock_action(NukiLock::LockAction lock_action);
 

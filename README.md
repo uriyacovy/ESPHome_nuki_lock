@@ -13,12 +13,12 @@ The lock state is always up-to-date thanks to Nuki's BLE advertisement mechanism
 > [!IMPORTANT]  
 > Requires an ESP32
 
-> [!WARNING]  
+> [!IMPORTANT]  
+> Requires **ESPHome >= 2025.11.0**
+
+> [!IMPORTANT]  
 > This component uses NimBLE, which is incompatible with ESPHome's BLE stack.
 > Remove all BLE components (esp32_ble, esp32_improv, ...) from your configuration.
-
-> [!WARNING]  
-> Requires **ESPHome >= 2025.11.0**
 
 > [!TIP]  
 > If your ESP32 has PSRAM, add the `psram` component to improve BLE stability.
@@ -59,11 +59,13 @@ lock:
   - platform: nuki_lock
     name: Nuki Lock
 
-  # Optional: Settings
+  # Component Settings
   # Change if you want to use event logs
     event: "none"
+    
   # Needed to change most of the lock settings
   # Needed to pair with Smart Lock Ultra/5th Gen/Go (6 digit pin)
+  # Supports templating
     security_pin: 1234
 
   # Optional: Advanced Settings
@@ -74,11 +76,23 @@ lock:
     ble_general_timeout: 3s
     ble_command_timeout: 3s
 
-  # Optional: Binary Sensors
+
+  # Component Entities
+  # Switches
+    pairing_mode:
+      name: "Pairing Mode"
+  # Binary Sensors
     connected:
-      name: "Nuki Connected"
+      name: "Connected"
     paired:
-      name: "Nuki Paired"
+      name: "Paired"
+  # Buttons
+    unpair:
+      name: "Unpair Smart Lock"
+
+
+  # Nuki Smart Lock Entities
+  # Optional: Binary Sensors
     battery_critical:
       name: "Nuki Battery Critical"
     door_sensor:
@@ -111,8 +125,6 @@ lock:
       name: "Nuki LockNGo Timeout"
 
   # Optional: Switches
-    pairing_mode:
-      name: "Nuki Pairing Mode"
     auto_unlatch:
       name: "Nuki Auto unlatch"
     button_enabled:
@@ -163,10 +175,6 @@ lock:
       name: "Nuki Battery Type"
     motor_speed:
       name: "Nuki Motor Speed"
-
-  # Optional: Buttons
-    unpair:
-      name: "Nuki Unpair Device"
 
   # Optional: Callbacks
     on_pairing_mode_on_action:
