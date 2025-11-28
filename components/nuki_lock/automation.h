@@ -24,10 +24,30 @@ class NukiLockPairingModeAction : public Action<Ts...>, public Parented<NukiLock
 
 template<typename... Ts>
 class NukiLockSecurityPinAction : public Action<Ts...>, public Parented<NukiLockComponent> {
-    TEMPLATABLE_VALUE(uint16_t, security_pin)
+    TEMPLATABLE_VALUE(uint32_t, new_pin)
 
     public:
-        void play(const Ts&... x) override { this->parent_->use_security_pin(this->security_pin_.value(x...)); }
+        void play(const Ts&... x) override { this->parent_->set_security_pin(this->new_pin_.value(x...)); }
+};
+
+// Conditions
+
+template<typename... Ts>
+class NukiLockConnectedCondition : public Condition<Ts...>, public Parented<NukiLockComponent> {
+    public:
+        bool check(const Ts &...x) override
+        {
+            return this->parent_->is_connected();
+        }
+};
+
+template<typename... Ts>
+class NukiLockPairedCondition : public Condition<Ts...>, public Parented<NukiLockComponent> {
+    public:
+        bool check(const Ts &...x) override
+        {
+            return this->parent_->is_paired();
+        }
 };
 
 // Callbacks
@@ -49,6 +69,13 @@ class PairedTrigger : public Trigger<> {
     public:
         explicit PairedTrigger(NukiLockComponent *parent) {
             parent->add_paired_callback([this]() { this->trigger(); });
+        }
+};
+
+class EventLogReceivedTrigger : public Trigger<NukiLock::LogEntry> {
+    public:
+        explicit EventLogReceivedTrigger(NukiLockComponent *parent) {
+            parent->add_event_log_received_callback([this](const NukiLock::LogEntry &value) { this->trigger(value); });
         }
 };
 

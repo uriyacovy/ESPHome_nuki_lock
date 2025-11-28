@@ -1,5 +1,14 @@
 esphome:
   name: test-nuki
+  on_boot:
+    - if:
+        condition:
+          nuki_lock.paired:
+        then:
+          - lambda: ESP_LOGI("nuki_lock", "Component already paired with Lock");
+
+esp32:
+  variant: esp32
 
 wifi:
   ssid: "My Network"
@@ -10,6 +19,10 @@ api:
   homeassistant_services: true
 
 logger:
+  level: DEBUG
+
+# For local tests without connecting to Home Assistant
+web_server:
 
 external_components:
   - source:
@@ -20,9 +33,9 @@ lock:
   - platform: nuki_lock
     name: Nuki Lock
 
-    is_connected:
+    connected:
       name: "Nuki Connected"
-    is_paired:
+    paired:
       name: "Nuki Paired"
     battery_critical:
       name: "Nuki Battery Critical"
@@ -109,6 +122,9 @@ lock:
     pairing_as_app: false
     query_interval_config: 3600s
     query_interval_auth_data: 7200s
+    ble_general_timeout: 3s
+    ble_command_timeout: 3s
+
 
     on_pairing_mode_on_action:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
@@ -116,6 +132,9 @@ lock:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned off");
     on_paired_action:
       - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
+    on_event_log_action:
+      - lambda: |-
+          ESP_LOGI("nuki_lock", "Event Log (NukiLock::LogEntry) received index: %i, authId: %i", x.index, x.authId);
 
 button:
   - platform: template
@@ -130,7 +149,32 @@ button:
           pairing_mode: true
 
   - platform: template
+    name: Check connection
+    on_press:
+      - if:
+          condition:
+            nuki_lock.connected:
+          then:
+            - logger.log: "Lock is connected"
+
+  # Set security pin (override)
+  # Used instead of yaml config value
+  - platform: template
     name: Override security pin
     on_press:
       - nuki_lock.set_security_pin:
-          security_pin: 1234
+          security_pin: 5678
+      # Alernatively using a lambda
+      - nuki_lock.set_security_pin:
+          security_pin: !lambda 'return 5678;'
+
+  # Reset security pin (override)
+  # Fallback to yaml config value
+  - platform: template
+    name: Reset security pin
+    on_press:
+      - nuki_lock.set_security_pin:
+          security_pin: 0
+      # Alernatively using a lambda
+      - nuki_lock.set_security_pin:
+          security_pin: !lambda 'return 0;'

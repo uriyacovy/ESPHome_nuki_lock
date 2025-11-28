@@ -1,0 +1,31 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "ESPHome: Compile & Upload - IDF",
+            "command": "esphome",
+            "args": [
+                "run",
+                "idf-component.yaml"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "./.github/"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "ESPHome: Compile & Upload - Arduino",
+            "command": "esphome",
+            "args": [
+                "run",
+                "idf-component.yaml"
+            ],
+            "type": "shell",
+            "options": {
+                "cwd": "./.github/"
+            },
+            "problemMatcher": []
+        }
+    ]
+}
