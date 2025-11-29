@@ -107,6 +107,8 @@ class NukiLockComponent :
     SUB_NUMBER(led_brightness)
     SUB_NUMBER(timezone_offset)
     SUB_NUMBER(lock_n_go_timeout)
+    SUB_NUMBER(auto_lock_timeout)
+    SUB_NUMBER(unlatch_duration)
     #endif
     #ifdef USE_SELECT
     SUB_SELECT(single_button_press_action)
@@ -121,9 +123,11 @@ class NukiLockComponent :
     #endif
     #ifdef USE_BUTTON
     SUB_BUTTON(unpair)
+    SUB_BUTTON(request_calibration)
     #endif
     #ifdef USE_SWITCH
     SUB_SWITCH(pairing_mode)
+    SUB_SWITCH(pairing_enabled)
     SUB_SWITCH(button_enabled)
     SUB_SWITCH(auto_unlatch_enabled)
     SUB_SWITCH(led_enabled)
@@ -213,6 +217,8 @@ class NukiLockComponent :
         void unpair();
         void set_pairing_mode(bool enabled);
         void save_settings();
+
+        void request_calibration();
 
         bool is_connected() {
             return this->connected_;
@@ -324,6 +330,13 @@ class NukiLockUnpairButton : public button::Button, public Parented<NukiLockComp
     protected:
         void press_action() override;
 };
+
+class NukiLockRequestCalibrationButton : public button::Button, public Parented<NukiLockComponent> {
+    public:
+        NukiLockRequestCalibrationButton() = default;
+    protected:
+        void press_action() override;
+};
 #endif
 
 #ifdef USE_SELECT
@@ -395,6 +408,13 @@ class NukiLockMotorSpeedSelect : public select::Select, public Parented<NukiLock
 class NukiLockPairingModeSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
     public:
         NukiLockPairingModeSwitch() = default;
+    protected:
+        void write_state(bool state) override;
+};
+
+class NukiLockPairingEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockPairingEnabledSwitch() = default;
     protected:
         void write_state(bool state) override;
 };
@@ -538,6 +558,21 @@ class NukiLockTimeZoneOffsetNumber : public number::Number, public Parented<Nuki
 class NukiLockLockNGoTimeoutNumber : public number::Number, public Parented<NukiLockComponent> {
     public:
         NukiLockLockNGoTimeoutNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+class NukiLockAutoLockTimeoutNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockAutoLockTimeoutNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+
+class NukiLockUnlatchDurationNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockUnlatchDurationNumber() = default;
 
     protected:
         void control(float value) override;

@@ -39,8 +39,10 @@ CONF_LAST_LOCK_ACTION_TRIGGER_TEXT_SENSOR = "last_lock_action_trigger"
 CONF_PIN_STATE_TEXT_SENSOR = "pin_status"
 
 CONF_UNPAIR_BUTTON = "unpair"
+CONF_REQUEST_CALIBRATION_BUTTON = "request_calibration"
 
 CONF_PAIRING_MODE_SWITCH = "pairing_mode"
+CONF_PAIRING_ENABLED_SWITCH = "pairing_enabled"
 CONF_AUTO_UNLATCH_SWITCH = "auto_unlatch"
 CONF_BUTTON_ENABLED_SWITCH = "button_enabled"
 CONF_LED_ENABLED_SWITCH = "led_enabled"
@@ -70,6 +72,8 @@ CONF_MOTOR_SPEED_SELECT = "motor_speed"
 CONF_LED_BRIGHTNESS_NUMBER = "led_brightness"
 CONF_TIMEZONE_OFFSET_NUMBER = "timezone_offset"
 CONF_LOCK_N_GO_TIMEOUT_NUMBER = "lock_n_go_timeout"
+CONF_AUTO_LOCK_TIMEOUT_NUMBER = "auto_lock_timeout"
+CONF_UNLATCH_DURATION_NUMBER = "unlatch_duration"
 
 CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS = [
     "No Action",
@@ -177,9 +181,11 @@ NukiLockComponent = nuki_lock_ns.class_('NukiLockComponent', lock.Lock, cg.Compo
 
 # Buttons
 NukiLockUnpairButton = nuki_lock_ns.class_("NukiLockUnpairButton", button.Button, cg.Component)
+NukiLockRequestCalibrationButton = nuki_lock_ns.class_("NukiLockRequestCalibrationButton", button.Button, cg.Component)
 
 # Switches
 NukiLockPairingModeSwitch = nuki_lock_ns.class_("NukiLockPairingModeSwitch", switch.Switch, cg.Component)
+NukiLockPairingEnabledSwitch = nuki_lock_ns.class_("NukiLockPairingEnabledSwitch", switch.Switch, cg.Component)
 NukiLockAutoUnlatchEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoUnlatchEnabledSwitch", switch.Switch, cg.Component)
 NukiLockButtonEnabledSwitch = nuki_lock_ns.class_("NukiLockButtonEnabledSwitch", switch.Switch, cg.Component)
 NukiLockLedEnabledSwitch = nuki_lock_ns.class_("NukiLockLedEnabledSwitch", switch.Switch, cg.Component)
@@ -200,6 +206,8 @@ NukiLockSlowSpeedDuringNightModeEnabledSwitch = nuki_lock_ns.class_("NukiLockSlo
 NukiLockLedBrightnessNumber = nuki_lock_ns.class_("NukiLockLedBrightnessNumber", number.Number, cg.Component)
 NukiLockTimeZoneOffsetNumber = nuki_lock_ns.class_("NukiLockTimeZoneOffsetNumber", number.Number, cg.Component)
 NukiLockLockNGoTimeoutNumber = nuki_lock_ns.class_("NukiLockLockNGoTimeoutNumber", number.Number, cg.Component)
+NukiLockAutoLockTimeoutNumber = nuki_lock_ns.class_("NukiLockAutoLockTimeoutNumber", number.Number, cg.Component)
+NukiLockUnlatchDurationNumber = nuki_lock_ns.class_("NukiLockUnlatchDurationNumber", number.Number, cg.Component)
 
 # Selects
 NukiLockSingleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockSingleButtonPressActionSelect", select.Select, cg.Component)
@@ -215,6 +223,10 @@ NukiLockMotorSpeedSelect = nuki_lock_ns.class_("NukiLockMotorSpeedSelect", selec
 # Actions
 NukiLockUnpairAction = nuki_lock_ns.class_(
     "NukiLockUnpairAction", automation.Action, cg.Parented.template(NukiLockComponent)
+)
+
+NukiLockRequestCalibrationAction = nuki_lock_ns.class_(
+    "NukiLockRequestCalibrationAction", automation.Action, cg.Parented.template(NukiLockComponent)
 )
 
 NukiLockPairingModeAction = nuki_lock_ns.class_(
@@ -302,8 +314,18 @@ CONFIG_SCHEMA = cv.All(
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:link-off",
             ),
+            cv.Optional(CONF_REQUEST_CALIBRATION_BUTTON): button.button_schema(
+                NukiLockRequestCalibrationButton,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:progress-wrench",
+            ),
             cv.Optional(CONF_PAIRING_MODE_SWITCH): switch.switch_schema(
                 NukiLockPairingModeSwitch,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:bluetooth"
+            ),
+            cv.Optional(CONF_PAIRING_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockPairingEnabledSwitch,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:bluetooth"
             ),
@@ -409,6 +431,16 @@ CONFIG_SCHEMA = cv.All(
             ),
             cv.Optional(CONF_LOCK_N_GO_TIMEOUT_NUMBER): number.number_schema(
                 NukiLockLockNGoTimeoutNumber,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:clock-end",
+            ),
+            cv.Optional(CONF_AUTO_LOCK_TIMEOUT_NUMBER): number.number_schema(
+                NukiLockAutoLockTimeoutNumber,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:clock-end",
+            ),
+            cv.Optional(CONF_UNLATCH_DURATION_NUMBER): number.number_schema(
+                NukiLockUnlatchDurationNumber,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:clock-end",
             ),
@@ -574,6 +606,11 @@ async def to_code(config):
         await cg.register_parented(b, config[CONF_ID])
         cg.add(var.set_unpair_button(b))
 
+    if request_calibration := config.get(CONF_REQUEST_CALIBRATION_BUTTON):
+        b = await button.new_button(request_calibration)
+        await cg.register_parented(b, config[CONF_ID])
+        cg.add(var.set_request_calibration_button(b))
+
     # Number
     if led_brightness := config.get(CONF_LED_BRIGHTNESS_NUMBER):
         n = await number.new_number(
@@ -596,11 +633,30 @@ async def to_code(config):
         await cg.register_parented(n, config[CONF_ID])
         cg.add(var.set_lock_n_go_timeout_number(n))
 
+    if auto_lock_timeout := config.get(CONF_AUTO_LOCK_TIMEOUT_NUMBER):
+        n = await number.new_number(
+            auto_lock_timeout, min_value=5, max_value=60, step=1
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_auto_lock_timeout_number(n))
+
+    if unlatch_duration := config.get(CONF_UNLATCH_DURATION_NUMBER):
+        n = await number.new_number(
+            unlatch_duration, min_value=5, max_value=60, step=1
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_unlatch_duration_number(n))
+
     # Switch
     if pairing_mode := config.get(CONF_PAIRING_MODE_SWITCH):
         s = await switch.new_switch(pairing_mode)
         await cg.register_parented(s, config[CONF_ID])
         cg.add(var.set_pairing_mode_switch(s))
+
+    if pairing_enabled := config.get(CONF_PAIRING_ENABLED_SWITCH):
+        s = await switch.new_switch(pairing_enabled)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_pairing_enabled_switch(s))
 
     if button_enabled := config.get(CONF_BUTTON_ENABLED_SWITCH):
         s = await switch.new_switch(button_enabled)
@@ -851,16 +907,25 @@ FINAL_VALIDATE_SCHEMA = _final_validate
 
 
 # Actions
-NUKI_LOCK_UNPAIR_SCHEMA = automation.maybe_simple_id(
+NUKI_LOCK_ACTION_SCHEMA = automation.maybe_simple_id(
     {
         cv.GenerateID(): cv.use_id(NukiLockComponent)
     }
 )
 
 @automation.register_action(
-    "nuki_lock.unpair", NukiLockUnpairAction, NUKI_LOCK_UNPAIR_SCHEMA
+    "nuki_lock.unpair", NukiLockUnpairAction, NUKI_LOCK_ACTION_SCHEMA
 )
 async def nuki_lock_unpair_to_code(config, action_id, template_arg, args):
+    var = cg.new_Pvariable(action_id, template_arg)
+    await cg.register_parented(var, config[CONF_ID])
+    return var
+
+
+@automation.register_action(
+    "nuki_lock.request_calibration", NukiLockRequestCalibrationAction, NUKI_LOCK_ACTION_SCHEMA
+)
+async def nuki_lock_request_calibration_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)
     await cg.register_parented(var, config[CONF_ID])
     return var

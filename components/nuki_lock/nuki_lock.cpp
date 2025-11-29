@@ -657,6 +657,10 @@ void NukiLockComponent::update_config() {
         keypad_paired_ = config.hasKeypad || config.hasKeypadV2;
 
         #ifdef USE_SWITCH
+        if (this->pairing_enabled_switch_ != nullptr) {
+            this->pairing_enabled_switch_->publish_state(config.pairingEnabled);
+        }
+
         if (this->auto_unlatch_enabled_switch_ != nullptr) {
             this->auto_unlatch_enabled_switch_->publish_state(config.autoUnlatch);
         }
@@ -798,6 +802,12 @@ void NukiLockComponent::update_advanced_config() {
         #ifdef USE_NUMBER
         if (this->lock_n_go_timeout_number_ != nullptr) {
             this->lock_n_go_timeout_number_->publish_state(advanced_config.lockNgoTimeout);
+        }
+        if (this->auto_lock_timeout_number_ != nullptr) {
+            this->auto_lock_timeout_number_->publish_state(advanced_config.autoLockTimeOut);
+        }
+        if (this->unlatch_duration_number_ != nullptr) {
+            this->unlatch_duration_number_->publish_state(advanced_config.unlatchDuration);
         }
         #endif
 
@@ -1810,8 +1820,13 @@ void NukiLockComponent::dump_config() {
     LOG_SENSOR(TAG, "Battery Level", this->battery_level_sensor_);
     LOG_SENSOR(TAG, "Bluetooth Signal", this->bt_signal_sensor_);
     #endif
+    #ifdef USE_SENSOR
+    LOG_BUTTON(TAG, "Unpair", this->unpair_button_);
+    LOG_BUTTON(TAG, "Request Calibration", this->request_calibration_button_);
+    #endif
     #ifdef USE_SWITCH
     LOG_SWITCH(TAG, "Pairing Mode", this->pairing_mode_switch_);
+    LOG_SWITCH(TAG, "Pairing Enabled", this->pairing_enabled_switch_);
     LOG_SWITCH(TAG, "Auto Unlatch Enabled", this->auto_unlatch_enabled_switch_);
     LOG_SWITCH(TAG, "Button Enabled", this->button_enabled_switch_);
     LOG_SWITCH(TAG, "LED Enabled", this->led_enabled_switch_);
@@ -1831,6 +1846,8 @@ void NukiLockComponent::dump_config() {
     LOG_NUMBER(TAG, "LED Brightness", this->led_brightness_number_);
     LOG_NUMBER(TAG, "Timezone Offset", this->timezone_offset_number_);
     LOG_NUMBER(TAG, "LockNGo Timeout", this->lock_n_go_timeout_number_);
+    LOG_NUMBER(TAG, "Auto Lock Timeout", this->auto_lock_timeout_number_);
+    LOG_NUMBER(TAG, "Unlatch Duration", this->unlatch_duration_number_);
     #endif
     #ifdef USE_SELECT
     LOG_SELECT(TAG, "Single Button Press Action", this->single_button_press_action_select_);
@@ -1901,6 +1918,19 @@ void NukiLockComponent::unpair() {
         ESP_LOGI(TAG, "Unpaired Nuki! Turn on Pairing Mode to pair a new Nuki.");
     } else {
         ESP_LOGE(TAG, "Unpair action called for unpaired Nuki");
+    }
+}
+
+void NukiLockComponent::request_calibration() {
+    if (this->nuki_lock_.isPairedWithLock()) {
+        Nuki::CmdResult result = this->nuki_lock_.requestCalibration();
+        if (result == Nuki::CmdResult::Success) {
+            ESP_LOGI(TAG, "Calibration requested successfully");
+        } else {
+            ESP_LOGE(TAG, "Failed to request calibration (result %d)", result);
+        }
+    } else {
+        ESP_LOGE(TAG, "Request calibration called for unpaired Nuki");
     }
 }
 
@@ -2014,7 +2044,9 @@ void NukiLockComponent::set_config_switch(const char* config, bool value) {
     bool is_advanced = false;
 
     // Update Config
-    if (strcmp(config, "auto_unlatch_enabled") == 0) {
+    if (strcmp(config, "pairing_enabled") == 0) {
+        cmd_result = this->nuki_lock_.enablePairing(value);
+    } else if (strcmp(config, "auto_unlatch_enabled") == 0) {
         cmd_result = this->nuki_lock_.enableAutoUnlatch(value);
     } else if (strcmp(config, "button_enabled") == 0) {
         cmd_result = this->nuki_lock_.enableButton(value);
@@ -2056,7 +2088,9 @@ void NukiLockComponent::set_config_switch(const char* config, bool value) {
 
     if (cmd_result == Nuki::CmdResult::Success)
     {
-        if (strcmp(config, "auto_unlatch_enabled") == 0 && this->auto_unlatch_enabled_switch_ != nullptr) {
+        if (strcmp(config, "pairing_enabled") == 0 && this->pairing_enabled_switch_ != nullptr) {
+            this->pairing_enabled_switch_->publish_state(value);
+        } else if (strcmp(config, "auto_unlatch_enabled") == 0 && this->auto_unlatch_enabled_switch_ != nullptr) {
             this->auto_unlatch_enabled_switch_->publish_state(value);
         } else if (strcmp(config, "button_enabled") == 0 && this->button_enabled_switch_ != nullptr) {
             this->button_enabled_switch_->publish_state(value);
@@ -2113,6 +2147,16 @@ void NukiLockComponent::set_config_number(const char* config, float value) {
             cmd_result = this->nuki_lock_.setLockNgoTimeout(value);
             is_advanced = true;
         }
+    } else if (strcmp(config, "auto_lock_timeout") == 0) {
+        if (value >= 30 && value <= 1800) {
+            cmd_result = this->nuki_lock_.setAutoLockTimeOut(value);
+            is_advanced = true;
+        }
+    } else if (strcmp(config, "unlatch_duration") == 0) {
+        if (value >= 1 && value <= 30) {
+            cmd_result = this->nuki_lock_.setUnlatchDuration(value);
+            is_advanced = true;
+        }
     }
 
     if (cmd_result == Nuki::CmdResult::Success) {
@@ -2122,6 +2166,10 @@ void NukiLockComponent::set_config_number(const char* config, float value) {
             this->timezone_offset_number_->publish_state(value);
         } else if (strcmp(config, "lock_n_go_timeout") == 0 && this->lock_n_go_timeout_number_ != nullptr) {
             this->lock_n_go_timeout_number_->publish_state(value);
+        } else if (strcmp(config, "auto_lock_timeout") == 0 && this->auto_lock_timeout_number_ != nullptr) {
+            this->auto_lock_timeout_number_->publish_state(value);
+        } else if (strcmp(config, "unlatch_duration") == 0 && this->unlatch_duration_number_ != nullptr) {
+            this->unlatch_duration_number_->publish_state(value);
         }
         
         this->config_update_ = !is_advanced;
@@ -2135,6 +2183,10 @@ void NukiLockComponent::set_config_number(const char* config, float value) {
 #ifdef USE_BUTTON
 void NukiLockUnpairButton::press_action() {
     this->parent_->unpair();
+}
+
+void NukiLockRequestCalibrationButton::press_action() {
+    this->parent_->request_calibration();
 }
 #endif
 #ifdef USE_SELECT
@@ -2177,6 +2229,10 @@ void NukiLockMotorSpeedSelect::control(const std::string &mode) {
 #ifdef USE_SWITCH
 void NukiLockPairingModeSwitch::write_state(bool state) {
     this->parent_->set_pairing_mode(state);
+}
+
+void NukiLockPairingEnabledSwitch::write_state(bool state) {
+    this->parent_->set_config_switch("pairing_enabled", state);
 }
 
 void NukiLockAutoUnlatchEnabledSwitch::write_state(bool state) {
@@ -2248,6 +2304,12 @@ void NukiLockTimeZoneOffsetNumber::control(float value) {
 }
 void NukiLockLockNGoTimeoutNumber::control(float value) {
     this->parent_->set_config_number("lock_n_go_timeout", value);
+}
+void NukiLockAutoLockTimeoutNumber::control(float value) {
+    this->parent_->set_config_number("auto_lock_timeout", value);
+}
+void NukiLockUnlatchDurationNumber::control(float value) {
+    this->parent_->set_config_number("unlatch_duration", value);
 }
 #endif
 

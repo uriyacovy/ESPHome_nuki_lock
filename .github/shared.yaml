@@ -33,6 +33,20 @@ lock:
   - platform: nuki_lock
     name: Nuki Lock
 
+    pairing_mode_timeout: 300s
+    event: "nuki"
+    security_pin: 1234
+    pairing_as_app: false
+    query_interval_config: 3600s
+    query_interval_auth_data: 7200s
+    ble_general_timeout: 3s
+    ble_command_timeout: 3s
+
+    unpair:
+      name: "Unpair Device"
+    pairing_mode:
+      name: "Pairing Mode"
+
     connected:
       name: "Nuki Connected"
     paired:
@@ -45,7 +59,7 @@ lock:
     battery_level:
       name: "Nuki Battery Level"
     bt_signal_strength:
-      name: "Bluetooth Signal Strength"
+      name: "Nuki Bluetooth Signal Strength"
     
     door_sensor_state:
       name: "Nuki Door Sensor: State"
@@ -58,11 +72,11 @@ lock:
     pin_status:
       name: "Nuki Security Pin Status"
 
-    unpair:
-      name: "Nuki Unpair Device"
+    request_calibration:
+      name: "Nuki Request Calibration"
       
-    pairing_mode:
-      name: "Nuki Pairing Mode"
+    pairing_enabled:
+      name: "Nuki Pairing Enabled"
     auto_unlatch:
       name: "Nuki Auto unlatch"
     button_enabled:
@@ -98,6 +112,10 @@ lock:
       name: "Nuki Timezone: Offset"
     lock_n_go_timeout:
       name: "Nuki LockNGo Timeout"
+    auto_lock_timeout:
+      name: "Nuki Auto Lock Timeout"
+    unlatch_duration:
+      name: "Nuki Unlatch Duration"
 
     single_buton_press_action:
       name: "Nuki Single Button Press Action"
@@ -116,16 +134,6 @@ lock:
     battery_type:
       name: "Nuki Battery Type"
 
-    pairing_mode_timeout: 300s
-    event: "nuki"
-    security_pin: 1234
-    pairing_as_app: false
-    query_interval_config: 3600s
-    query_interval_auth_data: 7200s
-    ble_general_timeout: 3s
-    ble_command_timeout: 3s
-
-
     on_pairing_mode_on_action:
       - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
     on_pairing_mode_off_action:
@@ -141,6 +149,11 @@ button:
     name: Unpair
     on_press:
       - nuki_lock.unpair:
+
+  - platform: template
+    name: Request Calibration
+    on_press:
+      - nuki_lock.request_calibration:
 
   - platform: template
     name: Enable pairing-mode

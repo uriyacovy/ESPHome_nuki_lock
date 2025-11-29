@@ -102,7 +102,7 @@ lock:
     battery_level:
       name: "Nuki Battery Level"
     bt_signal_strength:
-      name: "Bluetooth Signal Strength"
+      name: "Nuki Bluetooth Signal Strength"
 
   # Optional: Text Sensors
     door_sensor_state:
@@ -123,8 +123,14 @@ lock:
       name: "Nuki Timezone: Offset"
     lock_n_go_timeout:
       name: "Nuki LockNGo Timeout"
+    auto_lock_timeout:
+      name: "Nuki Auto Lock Timeout"
+    unlatch_duration:
+      name: "Nuki Unlatch Duration"
 
   # Optional: Switches
+    pairing_enabled:
+      name: "Nuki Pairing Enabled"
     auto_unlatch:
       name: "Nuki Auto unlatch"
     button_enabled:
@@ -338,6 +344,13 @@ on_...:
   - nuki_lock.unpair:
 ```
 
+## Action: Request Calibration
+To request a calibration of your Nuki Smart Lock, use the following action:
+```yaml
+on_...:
+  - nuki_lock.request_calibration:
+```
+
 ## Action: Security Pin
 
 > [!CAUTION]  
@@ -480,6 +493,7 @@ context:
 - Last Lock Action Trigger
 
 **Switch:**  
+- Pairing Enabled
 - Button Enabled
 - LED Enabled
 - Night Mode
@@ -495,6 +509,9 @@ context:
 - Automatic Battery Type Detection (Smart Lock Gen 1-4)
 - Slow Speed During Night Mode (Smart Lock Ultra)
 
+**Button:**  
+- Request Calibration
+
 **Select Input:**  
 - Single Button Press Action
 - Double Button Press Action
@@ -509,6 +526,9 @@ context:
 **Number Input:**  
 - LED Brightness
 - Timezone Offset
+- LockNGo Timeout
+- Auto Lock Timeout
+- Unlatch Duration
 
 ---
 
