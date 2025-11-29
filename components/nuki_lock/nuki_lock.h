@@ -168,7 +168,6 @@ class NukiLockComponent :
         void notify(Nuki::EventType event_type) override;
         float get_setup_priority() const override { return setup_priority::HARDWARE - 1.0f; }
 
-        void set_pairing_as_app(bool pairing_as_app) { this->pairing_as_app_ = pairing_as_app; }
         void set_pairing_mode_timeout(uint32_t pairing_mode_timeout) { this->pairing_mode_timeout_ = pairing_mode_timeout; }
         void set_query_interval_config(uint32_t query_interval_config) { this->query_interval_config_ = query_interval_config; }
         void set_query_interval_auth_data(uint32_t query_interval_auth_data) { this->query_interval_auth_data_ = query_interval_auth_data; }
@@ -182,6 +181,7 @@ class NukiLockComponent :
         }
 
         template<typename T> void set_security_pin_config(T security_pin_config) { this->security_pin_config_ = security_pin_config; }
+        template<typename T> void set_pairing_as_app(T pairing_as_app) { this->pairing_as_app_ = pairing_as_app; }
 
         void add_pairing_mode_on_callback(std::function<void()> &&callback);
         void add_pairing_mode_off_callback(std::function<void()> &&callback);
@@ -286,12 +286,12 @@ class NukiLockComponent :
         bool event_log_update_;
         bool open_latch_;
         bool lock_n_go_;
-
-        bool pairing_as_app_ = false;
-
+        
         PinState pin_state_ = PinState::NotSet;
         uint32_t security_pin_ = 0;
         TemplatableValue<uint32_t> security_pin_config_{};
+
+        TemplatableValue<bool> pairing_as_app_{};
 
         bool connected_ = false;
 

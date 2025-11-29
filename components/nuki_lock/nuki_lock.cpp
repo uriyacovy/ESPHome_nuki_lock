@@ -1336,7 +1336,7 @@ void NukiLockComponent::setup() {
             this->event_log_update_ = true;
         }
 
-        const char* pairing_type = this->pairing_as_app_ ? "App" : "Bridge";
+        const char* pairing_type = this->pairing_as_app_.value_or(false) ? "App" : "Bridge";
         const char* lock_type = this->nuki_lock_.isLockUltra() ? "Ultra / Go / 5th Gen" : "1st - 4th Gen";
         ESP_LOGI(TAG, "This component is already paired as %s with a %s smart lock!", pairing_type, lock_type);
 
@@ -1528,7 +1528,7 @@ void NukiLockComponent::update() {
         // Pairing Mode is active
         if (this->pairing_mode_) {
             // Pair Nuki
-            Nuki::AuthorizationIdType type = this->pairing_as_app_ ? Nuki::AuthorizationIdType::App : Nuki::AuthorizationIdType::Bridge;
+            Nuki::AuthorizationIdType type = this->pairing_as_app_.value_or(false) ? Nuki::AuthorizationIdType::App : Nuki::AuthorizationIdType::Bridge;
             
             App.feed_wdt();
             
@@ -1551,7 +1551,7 @@ void NukiLockComponent::update() {
             App.feed_wdt();
 
             if (paired) {
-                const char* pairing_type = this->pairing_as_app_ ? "App" : "Bridge";
+                const char* pairing_type = this->pairing_as_app_.value_or(false) ? "App" : "Bridge";
                 const char* lock_type = this->nuki_lock_.isLockUltra() ? "Ultra / Go / 5th Gen" : "1st - 4th Gen";
                 ESP_LOGI(TAG, "Successfully paired as %s with a %s smart lock!", pairing_type, lock_type);
 
@@ -1805,7 +1805,7 @@ void NukiLockComponent::dump_config() {
     ESP_LOGCONFIG(TAG, "  Event: Disabled");
     #endif
 
-    ESP_LOGCONFIG(TAG, "  Pairing Identity: %s",this->pairing_as_app_ ? "App" : "Bridge");
+    ESP_LOGCONFIG(TAG, "  Pairing Identity: %s", this->pairing_as_app_.value_or(false) ? "App" : "Bridge");
     ESP_LOGCONFIG(TAG, "  Is Paired: %s", YESNO(this->is_paired()));
 
     ESP_LOGCONFIG(TAG, "  Pairing mode timeout: %us", this->pairing_mode_timeout_);

@@ -525,7 +525,7 @@ CONFIG_SCHEMA = cv.All(
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:speedometer-medium",
             ),
-            cv.Optional(CONF_PAIRING_AS_APP, default="false"): cv.boolean,
+            cv.Optional(CONF_PAIRING_AS_APP, default="false"): cv.templatable(cv.boolean),
             cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_EVENT, default="none"): cv.string,
             cv.Optional(CONF_SECURITY_PIN, default="0"): cv.templatable(cv.uint32_t),
@@ -575,7 +575,8 @@ async def to_code(config):
         cg.add(var.set_security_pin_config(pin_template))
         
     if CONF_PAIRING_AS_APP in config:
-        cg.add(var.set_pairing_as_app(config[CONF_PAIRING_AS_APP]))
+        pairing_as_app_template = await cg.templatable(config[CONF_PAIRING_AS_APP], [], cg.bool_)
+        cg.add(var.set_pairing_as_app(pairing_as_app_template))
 
     if CONF_QUERY_INTERVAL_CONFIG in config:
         cg.add(var.set_query_interval_config(config[CONF_QUERY_INTERVAL_CONFIG]))
@@ -945,16 +946,10 @@ def _final_validate(config):
         
         # Check for PSRAM support
         if "psram" in full_config:
-            if CORE.using_esp_idf:
-                add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL", True)
-                add_idf_sdkconfig_option("CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL", 50768)
-                add_idf_sdkconfig_option("CONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST", True)
-                add_idf_sdkconfig_option("CONFIG_BT_BLE_DYNAMIC_ENV_MEMORY", True)
-            else:
-                cg.add_build_flag(f"-DCONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL=1")
-                cg.add_build_flag(f"-DCONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL=50768")
-                cg.add_build_flag(f"-DCONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST=1")
-                cg.add_build_flag(f"-DCONFIG_BT_BLE_DYNAMIC_ENV_MEMORY=1")
+            add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL", True)
+            add_idf_sdkconfig_option("CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL", 50768)
+            add_idf_sdkconfig_option("CONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST", True)
+            add_idf_sdkconfig_option("CONFIG_BT_BLE_DYNAMIC_ENV_MEMORY", True)
         else:
             LOGGER.warning("Consider enabling PSRAM support if it's available for the NimBLE Stack.")
 

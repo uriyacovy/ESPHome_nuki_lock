@@ -35,8 +35,8 @@ lock:
 
     pairing_mode_timeout: 300s
     event: "nuki"
-    security_pin: 1234
-    pairing_as_app: false
+    security_pin: 1234 # templatable
+    pairing_as_app: false # templatable
     query_interval_config: 3600s
     query_interval_auth_data: 7200s
     ble_general_timeout: 3s
