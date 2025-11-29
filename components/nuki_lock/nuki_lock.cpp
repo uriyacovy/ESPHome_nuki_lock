@@ -799,7 +799,7 @@ void NukiLockComponent::update_advanced_config() {
         }
 
         if (this->detached_cylinder_enabled_switch_ != nullptr) {
-            this->detached_cylinder_enabled_switch_->publish_state(advanced_config.enableDetachedCylinder);
+            this->detached_cylinder_enabled_switch_->publish_state(advanced_config.detachedCylinder);
         }
         #endif
 
