@@ -105,17 +105,27 @@ lock:
       name: "Nuki Daylight Saving Time"
     auto_battery_type_detection_enabled:
       name: "Nuki Automatic Battery Type Detection"
+    detached_cylinder_enabled:
+      name: "Nuki Detached Cylinder"
 
     led_brightness:
       name: "Nuki LED Brightness"
     timezone_offset:
       name: "Nuki Timezone: Offset"
     lock_n_go_timeout:
-      name: "Nuki LockNGo Timeout"
+      name: "Nuki Lock 'n' Go Timeout"
     auto_lock_timeout:
       name: "Nuki Auto Lock Timeout"
     unlatch_duration:
       name: "Nuki Unlatch Duration"
+    unlocked_position_offset:
+      name: "Nuki Unlocked Position Offset Degrees"
+    locked_position_offset:
+      name: "Nuki Locked Position Offset Degrees"
+    single_locked_position_offset:
+      name: "Nuki Single Locked Position Offset Degrees"
+    unlocked_to_locked_transition_offset:
+      name: "Nuki Unlocked to Locked Transition Offset Degrees"
 
     single_buton_press_action:
       name: "Nuki Single Button Press Action"

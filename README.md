@@ -122,11 +122,20 @@ lock:
     timezone_offset:
       name: "Nuki Timezone: Offset"
     lock_n_go_timeout:
-      name: "Nuki LockNGo Timeout"
+      name: "Nuki Lock 'n' Go Timeout"
     auto_lock_timeout:
       name: "Nuki Auto Lock Timeout"
     unlatch_duration:
       name: "Nuki Unlatch Duration"
+    # Advanced Calibration
+    unlocked_position_offset:
+      name: "Nuki Unlocked Position Offset Degrees"
+    locked_position_offset:
+      name: "Nuki Locked Position Offset Degrees"
+    single_locked_position_offset:
+      name: "Nuki Single Locked Position Offset Degrees"
+    unlocked_to_locked_transition_offset:
+      name: "Nuki Unlocked to Locked Transition Offset Degrees"
 
   # Optional: Switches
     pairing_enabled:
@@ -161,6 +170,8 @@ lock:
       name: "Nuki Automatic Battery Type Detection"
     slow_speed_during_night_mode_enabled:
       name: "Nuki Slow Speed During Night Mode"
+    detached_cylinder_enabled:
+      name: "Nuki Detached Cylinder"
 
   # Optional: Select Inputs
     single_buton_press_action:
@@ -508,6 +519,7 @@ context:
 - Automatic Updates
 - Automatic Battery Type Detection (Smart Lock Gen 1-4)
 - Slow Speed During Night Mode (Smart Lock Ultra)
+- Detached Cylinder
 
 **Button:**  
 - Request Calibration
@@ -526,9 +538,13 @@ context:
 **Number Input:**  
 - LED Brightness
 - Timezone Offset
-- LockNGo Timeout
+- Lock 'n' Go Timeout
 - Auto Lock Timeout
 - Unlatch Duration
+- Unlocked Position Offset Degrees
+- Locked Position Offset Degrees
+- Single Locked Position Offset Degrees
+- Unlocked to Locked Transition Offset Degrees
 
 ---
 

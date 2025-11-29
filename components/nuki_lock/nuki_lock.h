@@ -109,6 +109,10 @@ class NukiLockComponent :
     SUB_NUMBER(lock_n_go_timeout)
     SUB_NUMBER(auto_lock_timeout)
     SUB_NUMBER(unlatch_duration)
+    SUB_NUMBER(unlocked_position_offset)
+    SUB_NUMBER(locked_position_offset)
+    SUB_NUMBER(single_locked_position_offset)
+    SUB_NUMBER(unlocked_to_locked_transition_offset)
     #endif
     #ifdef USE_SELECT
     SUB_SELECT(single_button_press_action)
@@ -143,6 +147,7 @@ class NukiLockComponent :
     SUB_SWITCH(dst_mode_enabled)
     SUB_SWITCH(auto_battery_type_detection_enabled)
     SUB_SWITCH(slow_speed_during_night_mode_enabled)
+    SUB_SWITCH(detached_cylinder_enabled)
     #endif
 
     public:
@@ -538,6 +543,14 @@ class NukiLockSlowSpeedDuringNightModeEnabledSwitch : public switch_::Switch, pu
     protected:
         void write_state(bool state) override;
 };
+
+class NukiLockDetachedCylinderEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockDetachedCylinderEnabledSwitch() = default;
+
+    protected:
+        void write_state(bool state) override;
+};
 #endif
 
 #ifdef USE_NUMBER
@@ -573,6 +586,38 @@ class NukiLockAutoLockTimeoutNumber : public number::Number, public Parented<Nuk
 class NukiLockUnlatchDurationNumber : public number::Number, public Parented<NukiLockComponent> {
     public:
         NukiLockUnlatchDurationNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+
+class NukiLockUnlockedPositionOffsetDegreesNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockUnlockedPositionOffsetDegreesNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+
+class NukiLockLockedPositionOffsetDegreesNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockLockedPositionOffsetDegreesNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+
+class NukiLockSingleLockedPositionOffsetDegreesNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockSingleLockedPositionOffsetDegreesNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+
+class NukiLockUnlockedToLockedTransitionOffsetDegreesNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockUnlockedToLockedTransitionOffsetDegreesNumber() = default;
 
     protected:
         void control(float value) override;

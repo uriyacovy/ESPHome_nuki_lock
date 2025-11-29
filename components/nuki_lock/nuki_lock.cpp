@@ -797,6 +797,10 @@ void NukiLockComponent::update_advanced_config() {
         if (this->nuki_lock_.isLockUltra() && this->slow_speed_during_night_mode_enabled_switch_ != nullptr) {
             this->slow_speed_during_night_mode_enabled_switch_->publish_state(advanced_config.enableSlowSpeedDuringNightMode);
         }
+
+        if (this->detached_cylinder_enabled_switch_ != nullptr) {
+            this->detached_cylinder_enabled_switch_->publish_state(advanced_config.enableDetachedCylinder);
+        }
         #endif
 
         #ifdef USE_NUMBER
@@ -808,6 +812,18 @@ void NukiLockComponent::update_advanced_config() {
         }
         if (this->unlatch_duration_number_ != nullptr) {
             this->unlatch_duration_number_->publish_state(advanced_config.unlatchDuration);
+        }
+        if (this->unlocked_position_offset_number_ != nullptr) {
+            this->unlocked_position_offset_number_->publish_state(advanced_config.unlockedPositionOffsetDegrees);
+        }
+        if (this->locked_position_offset_number_ != nullptr) {
+            this->locked_position_offset_number_->publish_state(advanced_config.lockedPositionOffsetDegrees);
+        }
+        if (this->single_locked_position_offset_number_ != nullptr) {
+            this->single_locked_position_offset_number_->publish_state(advanced_config.singleLockedPositionOffsetDegrees);
+        }
+        if (this->unlocked_to_locked_transition_offset_number_ != nullptr) {
+            this->unlocked_to_locked_transition_offset_number_->publish_state(advanced_config.unlockedToLockedTransitionOffsetDegrees);
         }
         #endif
 
@@ -1841,6 +1857,7 @@ void NukiLockComponent::dump_config() {
     LOG_SWITCH(TAG, "Single Lock Enabled", this->single_lock_enabled_switch_);
     LOG_SWITCH(TAG, "DST Mode Enabled", this->dst_mode_enabled_switch_);
     LOG_SWITCH(TAG, "Slow Speed During Night Mode Enabled", this->slow_speed_during_night_mode_enabled_switch_);
+    LOG_SWITCH(TAG, "Detached Cylinder Enabled", this->detached_cylinder_enabled_switch_);
     #endif
     #ifdef USE_NUMBER
     LOG_NUMBER(TAG, "LED Brightness", this->led_brightness_number_);
@@ -1848,6 +1865,10 @@ void NukiLockComponent::dump_config() {
     LOG_NUMBER(TAG, "LockNGo Timeout", this->lock_n_go_timeout_number_);
     LOG_NUMBER(TAG, "Auto Lock Timeout", this->auto_lock_timeout_number_);
     LOG_NUMBER(TAG, "Unlatch Duration", this->unlatch_duration_number_);
+    LOG_NUMBER(TAG, "Unlocked Position Offset Degrees", this->unlocked_position_offset_number_);
+    LOG_NUMBER(TAG, "Locked Position Offset Degrees", this->locked_position_offset_number_);
+    LOG_NUMBER(TAG, "Single Locked Position Offset Degrees", this->single_locked_position_offset_number_);
+    LOG_NUMBER(TAG, "Unlocked To Locked Transition Offset Degrees", this->unlocked_to_locked_transition_offset_number_);
     #endif
     #ifdef USE_SELECT
     LOG_SELECT(TAG, "Single Button Press Action", this->single_button_press_action_select_);
@@ -1880,13 +1901,8 @@ void NukiLockComponent::notify(Nuki::EventType event_type) {
     } else if(event_type == Nuki::EventType::KeyTurnerStatusUpdated) {
         ESP_LOGD(TAG, "KeyTurnerStatusUpdated");
 
-        // Request status update
+        // Request status update (incl. event log request)
         this->status_update_ = true;
-    
-        // Request event logs
-        if (this->send_events_) {
-            this->event_log_update_ = true;
-        }
     } else if(event_type == Nuki::EventType::BLE_ERROR_ON_DISCONNECT) {
         ESP_LOGE(TAG, "Failed to disconnect from Nuki. Restarting ESP...");
         delay(100);  // NOLINT
@@ -2084,6 +2100,8 @@ void NukiLockComponent::set_config_switch(const char* config, bool value) {
         cmd_result = this->nuki_lock_.enableAutoBatteryTypeDetection(value);
     } else if (this->nuki_lock_.isLockUltra() && strcmp(config, "slow_speed_during_night_mode_enabled") == 0) {
         cmd_result = this->nuki_lock_.enableSlowSpeedDuringNightMode(value);
+    } else if (strcmp(config, "detached_cylinder_enabled") == 0) {
+        cmd_result = this->nuki_lock_.enableDetachedCylinder(value);
     }
 
     if (cmd_result == Nuki::CmdResult::Success)
@@ -2120,6 +2138,8 @@ void NukiLockComponent::set_config_switch(const char* config, bool value) {
             this->auto_battery_type_detection_enabled_switch_->publish_state(value);
         } else if (this->nuki_lock_.isLockUltra() && strcmp(config, "slow_speed_during_night_mode_enabled") == 0 && this->slow_speed_during_night_mode_enabled_switch_ != nullptr) {
             this->slow_speed_during_night_mode_enabled_switch_->publish_state(value);
+        } else if (strcmp(config, "detached_cylinder_enabled") == 0 && this->detached_cylinder_enabled_switch_ != nullptr) {
+            this->detached_cylinder_enabled_switch_->publish_state(value);
         }
 
         this->config_update_ = !is_advanced;
@@ -2157,6 +2177,26 @@ void NukiLockComponent::set_config_number(const char* config, float value) {
             cmd_result = this->nuki_lock_.setUnlatchDuration(value);
             is_advanced = true;
         }
+    } else if (strcmp(config, "unlocked_position_offset") == 0) {
+        if (value >= -90 && value <= 180) {
+            cmd_result = this->nuki_lock_.setUnlockedPositionOffsetDegrees(value);
+            is_advanced = true;
+        }
+    } else if (strcmp(config, "locked_position_offset") == 0) {
+        if (value >= -180 && value <= 90) {
+            cmd_result = this->nuki_lock_.setLockedPositionOffsetDegrees(value);
+            is_advanced = true;
+        }
+    } else if (strcmp(config, "single_locked_position_offset") == 0) {
+        if (value >= -180 && value <= 180) {
+            cmd_result = this->nuki_lock_.setSingleLockedPositionOffsetDegrees(value);
+            is_advanced = true;
+        }
+    } else if (strcmp(config, "unlocked_to_locked_transition_offset") == 0) {
+        if (value >= -180 && value <= 180) {
+            cmd_result = this->nuki_lock_.setUnlockedToLockedTransitionOffsetDegrees(value);
+            is_advanced = true;
+        }
     }
 
     if (cmd_result == Nuki::CmdResult::Success) {
@@ -2170,6 +2210,14 @@ void NukiLockComponent::set_config_number(const char* config, float value) {
             this->auto_lock_timeout_number_->publish_state(value);
         } else if (strcmp(config, "unlatch_duration") == 0 && this->unlatch_duration_number_ != nullptr) {
             this->unlatch_duration_number_->publish_state(value);
+        } else if (strcmp(config, "unlocked_position_offset") == 0 && this->unlocked_position_offset_number_ != nullptr) {
+            this->unlocked_position_offset_number_->publish_state(value);
+        } else if (strcmp(config, "locked_position_offset") == 0 && this->locked_position_offset_number_ != nullptr) {
+            this->locked_position_offset_number_->publish_state(value);
+        } else if (strcmp(config, "single_locked_position_offset") == 0 && this->single_locked_position_offset_number_ != nullptr) {
+            this->single_locked_position_offset_number_->publish_state(value);
+        } else if (strcmp(config, "unlocked_to_locked_transition_offset") == 0 && this->unlocked_to_locked_transition_offset_number_ != nullptr) {
+            this->unlocked_to_locked_transition_offset_number_->publish_state(value);
         }
         
         this->config_update_ = !is_advanced;
@@ -2294,6 +2342,9 @@ void NukiLockAutoBatteryTypeDetectionEnabledSwitch::write_state(bool state) {
 void NukiLockSlowSpeedDuringNightModeEnabledSwitch::write_state(bool state) {
     this->parent_->set_config_switch("slow_speed_during_night_mode_enabled", state);
 }
+void NukiLockDetachedCylinderEnabledSwitch::write_state(bool state) {
+    this->parent_->set_config_switch("detached_cylinder_enabled", state);
+}
 #endif
 #ifdef USE_NUMBER
 void NukiLockLedBrightnessNumber::control(float value) {
@@ -2310,6 +2361,18 @@ void NukiLockAutoLockTimeoutNumber::control(float value) {
 }
 void NukiLockUnlatchDurationNumber::control(float value) {
     this->parent_->set_config_number("unlatch_duration", value);
+}
+void NukiLockUnlockedPositionOffsetDegreesNumber::control(float value) {
+    this->parent_->set_config_number("unlocked_position_offset", value);
+}
+void NukiLockLockedPositionOffsetDegreesNumber::control(float value) {
+    this->parent_->set_config_number("locked_position_offset", value);
+}
+void NukiLockSingleLockedPositionOffsetDegreesNumber::control(float value) {
+    this->parent_->set_config_number("single_locked_position_offset", value);
+}
+void NukiLockUnlockedToLockedTransitionOffsetDegreesNumber::control(float value) {
+    this->parent_->set_config_number("unlocked_to_locked_transition_offset", value);
 }
 #endif
 

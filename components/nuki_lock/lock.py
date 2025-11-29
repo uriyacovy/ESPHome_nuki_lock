@@ -58,6 +58,7 @@ CONF_SINGLE_LOCK_ENABLED_SWITCH = "single_lock_enabled"
 CONF_DST_MODE_ENABLED_SWITCH = "dst_mode_enabled"
 CONF_AUTO_BATTERY_TYPE_DETECTION_ENABLED_SWITCH = "auto_battery_type_detection_enabled"
 CONF_SLOW_SPEED_DURING_NIGHT_MODE_ENABLED_SWITCH = "slow_speed_during_night_mode"
+CONF_DETACHED_CYLINDER_ENABLED_SWITCH = "detached_cylinder_enabled"
 
 CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT = "single_buton_press_action"
 CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT = "double_buton_press_action"
@@ -74,6 +75,10 @@ CONF_TIMEZONE_OFFSET_NUMBER = "timezone_offset"
 CONF_LOCK_N_GO_TIMEOUT_NUMBER = "lock_n_go_timeout"
 CONF_AUTO_LOCK_TIMEOUT_NUMBER = "auto_lock_timeout"
 CONF_UNLATCH_DURATION_NUMBER = "unlatch_duration"
+CONF_UNLOCKED_POSITION_OFFSET_NUMBER = "unlocked_position_offset"
+CONF_LOCKED_POSITION_OFFSET_NUMBER = "locked_position_offset"
+CONF_SINGLE_LOCKED_POSITION_OFFSET_NUMBER = "single_locked_position_offset"
+CONF_UNLOCKED_TO_LOCKED_TRANSITION_OFFSET_NUMBER = "unlocked_to_locked_transition_offset"
 
 CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS = [
     "No Action",
@@ -201,6 +206,7 @@ NukiLockSingleLockEnabledSwitch = nuki_lock_ns.class_("NukiLockSingleLockEnabled
 NukiLockDstModeEnabledSwitch = nuki_lock_ns.class_("NukiLockDstModeEnabledSwitch", switch.Switch, cg.Component)
 NukiLockAutoBatteryTypeDetectionEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoBatteryTypeDetectionEnabledSwitch", switch.Switch, cg.Component)
 NukiLockSlowSpeedDuringNightModeEnabledSwitch = nuki_lock_ns.class_("NukiLockSlowSpeedDuringNightModeEnabledSwitch", switch.Switch, cg.Component)
+NukiLockDetachedCylinderEnabledSwitch = nuki_lock_ns.class_("NukiLockDetachedCylinderEnabledSwitch", switch.Switch, cg.Component)
 
 # Number Inputs
 NukiLockLedBrightnessNumber = nuki_lock_ns.class_("NukiLockLedBrightnessNumber", number.Number, cg.Component)
@@ -208,6 +214,10 @@ NukiLockTimeZoneOffsetNumber = nuki_lock_ns.class_("NukiLockTimeZoneOffsetNumber
 NukiLockLockNGoTimeoutNumber = nuki_lock_ns.class_("NukiLockLockNGoTimeoutNumber", number.Number, cg.Component)
 NukiLockAutoLockTimeoutNumber = nuki_lock_ns.class_("NukiLockAutoLockTimeoutNumber", number.Number, cg.Component)
 NukiLockUnlatchDurationNumber = nuki_lock_ns.class_("NukiLockUnlatchDurationNumber", number.Number, cg.Component)
+NukiLockUnlockedPositionOffsetDegreesNumber = nuki_lock_ns.class_("NukiLockUnlockedPositionOffsetDegreesNumber", number.Number, cg.Component)
+NukiLockLockedPositionOffsetDegreesNumber = nuki_lock_ns.class_("NukiLockLockedPositionOffsetDegreesNumber", number.Number, cg.Component)
+NukiLockSingleLockedPositionOffsetDegreesNumber = nuki_lock_ns.class_("NukiLockSingleLockedPositionOffsetDegreesNumber", number.Number, cg.Component)
+NukiLockUnlockedToLockedTransitionOffsetDegreesNumber = nuki_lock_ns.class_("NukiLockUnlockedToLockedTransitionOffsetDegreesNumber", number.Number, cg.Component)
 
 # Selects
 NukiLockSingleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockSingleButtonPressActionSelect", select.Select, cg.Component)
@@ -419,6 +429,12 @@ CONFIG_SCHEMA = cv.All(
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:speedometer-slow",
             ),
+            cv.Optional(CONF_DETACHED_CYLINDER_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockDetachedCylinderEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:rotate-orbit",
+            ),
             cv.Optional(CONF_LED_BRIGHTNESS_NUMBER): number.number_schema(
                 NukiLockLedBrightnessNumber,
                 entity_category=ENTITY_CATEGORY_CONFIG,
@@ -443,6 +459,26 @@ CONFIG_SCHEMA = cv.All(
                 NukiLockUnlatchDurationNumber,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:clock-end",
+            ),
+            cv.Optional(CONF_UNLOCKED_POSITION_OFFSET_NUMBER): number.number_schema(
+                NukiLockUnlockedPositionOffsetDegreesNumber,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:horizontal-rotate-clockwise",
+            ),
+            cv.Optional(CONF_LOCKED_POSITION_OFFSET_NUMBER): number.number_schema(
+                NukiLockLockedPositionOffsetDegreesNumber,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:horizontal-rotate-clockwise",
+            ),
+            cv.Optional(CONF_SINGLE_LOCKED_POSITION_OFFSET_NUMBER): number.number_schema(
+                NukiLockSingleLockedPositionOffsetDegreesNumber,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:horizontal-rotate-clockwise",
+            ),
+            cv.Optional(CONF_UNLOCKED_TO_LOCKED_TRANSITION_OFFSET_NUMBER): number.number_schema(
+                NukiLockUnlockedToLockedTransitionOffsetDegreesNumber,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:horizontal-rotate-clockwise",
             ),
             cv.Optional(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT): select.select_schema(
                 NukiLockSingleButtonPressActionSelect,
@@ -647,6 +683,34 @@ async def to_code(config):
         await cg.register_parented(n, config[CONF_ID])
         cg.add(var.set_unlatch_duration_number(n))
 
+    if unlocked_position_offset := config.get(CONF_UNLOCKED_POSITION_OFFSET_NUMBER):
+        n = await number.new_number(
+            unlocked_position_offset, min_value=-90, max_value=180, step=1
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_unlocked_position_offset_number(n))
+
+    if locked_position_offset := config.get(CONF_LOCKED_POSITION_OFFSET_NUMBER):
+        n = await number.new_number(
+            locked_position_offset, min_value=-180, max_value=90, step=1
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_locked_position_offset_number(n))
+
+    if single_locked_position_offset := config.get(CONF_SINGLE_LOCKED_POSITION_OFFSET_NUMBER):
+        n = await number.new_number(
+            single_locked_position_offset, min_value=-180, max_value=180, step=1
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_single_locked_position_offset_number(n))
+
+    if unlocked_to_locked_transition_offset := config.get(CONF_UNLOCKED_TO_LOCKED_TRANSITION_OFFSET_NUMBER):
+        n = await number.new_number(
+            unlocked_to_locked_transition_offset, min_value=-180, max_value=180, step=1
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_unlocked_to_locked_transition_offset_number(n))
+
     # Switch
     if pairing_mode := config.get(CONF_PAIRING_MODE_SWITCH):
         s = await switch.new_switch(pairing_mode)
@@ -732,6 +796,11 @@ async def to_code(config):
         s = await switch.new_switch(slow_speed_during_night_mode)
         await cg.register_parented(s, config[CONF_ID])
         cg.add(var.set_slow_speed_during_night_mode_enabled_switch(s))
+
+    if detached_cylinder := config.get(CONF_DETACHED_CYLINDER_ENABLED_SWITCH):
+        s = await switch.new_switch(detached_cylinder)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_detached_cylinder_enabled_switch(s))
 
     # Select
     if single_button_press_action := config.get(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT):
