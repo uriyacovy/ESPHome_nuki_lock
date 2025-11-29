@@ -118,7 +118,7 @@ lock:
 
   # Optional: Number Inputs
     led_brightness:
-      name: "Nuki LED Brightness"
+      name: "Nuki LED: Brightness"
     timezone_offset:
       name: "Nuki Timezone: Offset"
     lock_n_go_timeout:
@@ -139,13 +139,13 @@ lock:
 
   # Optional: Switches
     pairing_enabled:
-      name: "Nuki Pairing Enabled"
+      name: "Nuki Button: Bluetooth Pairing"
     auto_unlatch:
       name: "Nuki Auto unlatch"
     button_enabled:
       name: "Nuki Button: Locking operations"
     led_enabled:
-      name: "Nuki LED Signal"
+      name: "Nuki LED: Signal"
     night_mode_enabled:
       name: "Nuki Night Mode"
     night_mode_auto_lock_enabled:
@@ -504,9 +504,9 @@ context:
 - Last Lock Action Trigger
 
 **Switch:**  
-- Pairing Enabled
-- Button Enabled
-- LED Enabled
+- Button: Bluetooth Pairing
+- Button: Locking operations
+- LED Signal
 - Night Mode
 - Night Mode: Auto Lock
 - Night Mode: Reject Auto Unlock
@@ -536,7 +536,7 @@ context:
 - Motor Speed (Smart Lock Ultra)
 
 **Number Input:**  
-- LED Brightness
+- LED: Brightness
 - Timezone Offset
 - Lock 'n' Go Timeout
 - Auto Lock Timeout
