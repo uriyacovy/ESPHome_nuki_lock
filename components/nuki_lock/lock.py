@@ -14,7 +14,6 @@ from esphome.const import (
     DEVICE_CLASS_BATTERY,
     DEVICE_CLASS_DOOR,
     DEVICE_CLASS_SWITCH,
-    DEVICE_CLASS_BUTTON,
     DEVICE_CLASS_SIGNAL_STRENGTH,
     UNIT_SECOND,
     UNIT_MINUTE,
@@ -325,13 +324,11 @@ CONFIG_SCHEMA = cv.All(
             ),
             cv.Optional(CONF_UNPAIR_BUTTON): button.button_schema(
                 NukiLockUnpairButton,
-                device_class=DEVICE_CLASS_BUTTON,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:link-off",
             ),
             cv.Optional(CONF_REQUEST_CALIBRATION_BUTTON): button.button_schema(
                 NukiLockRequestCalibrationButton,
-                device_class=DEVICE_CLASS_BUTTON,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:progress-wrench",
             ),
