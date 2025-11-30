@@ -15,7 +15,6 @@ from esphome.const import (
     DEVICE_CLASS_DOOR,
     DEVICE_CLASS_SWITCH,
     DEVICE_CLASS_BUTTON,
-    DEVICE_CLASS_LIGHT,
     DEVICE_CLASS_SIGNAL_STRENGTH,
     UNIT_SECOND,
     UNIT_MINUTE,
@@ -362,7 +361,7 @@ CONFIG_SCHEMA = cv.All(
             ),
             cv.Optional(CONF_LED_ENABLED_SWITCH): switch.switch_schema(
                 NukiLockLedEnabledSwitch,
-                device_class=DEVICE_CLASS_LIGHT,
+                device_class=DEVICE_CLASS_SWITCH,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:led-on"
             ),
