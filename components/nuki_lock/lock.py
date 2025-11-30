@@ -7,16 +7,21 @@ from esphome.components.esp32 import add_idf_component, add_idf_sdkconfig_option
 from esphome.components import lock, binary_sensor, text_sensor, sensor, switch, button, number, select
 from esphome.const import (
     CONF_ID,
+    CONF_TRIGGER_ID,
+    ENTITY_CATEGORY_CONFIG,
+    ENTITY_CATEGORY_DIAGNOSTIC,
     DEVICE_CLASS_CONNECTIVITY,
     DEVICE_CLASS_BATTERY,
     DEVICE_CLASS_DOOR,
     DEVICE_CLASS_SWITCH,
+    DEVICE_CLASS_BUTTON,
+    DEVICE_CLASS_LIGHT,
     DEVICE_CLASS_SIGNAL_STRENGTH,
+    UNIT_SECOND,
+    UNIT_MINUTE,
+    UNIT_DEGREES,
     UNIT_PERCENT,
     UNIT_DECIBEL_MILLIWATT,
-    ENTITY_CATEGORY_CONFIG,
-    ENTITY_CATEGORY_DIAGNOSTIC,
-    CONF_TRIGGER_ID,
 )
 import esphome.final_validate as fv
 
@@ -321,21 +326,25 @@ CONFIG_SCHEMA = cv.All(
             ),
             cv.Optional(CONF_UNPAIR_BUTTON): button.button_schema(
                 NukiLockUnpairButton,
+                device_class=DEVICE_CLASS_BUTTON,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:link-off",
             ),
             cv.Optional(CONF_REQUEST_CALIBRATION_BUTTON): button.button_schema(
                 NukiLockRequestCalibrationButton,
+                device_class=DEVICE_CLASS_BUTTON,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:progress-wrench",
             ),
             cv.Optional(CONF_PAIRING_MODE_SWITCH): switch.switch_schema(
                 NukiLockPairingModeSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:bluetooth"
             ),
             cv.Optional(CONF_PAIRING_ENABLED_SWITCH): switch.switch_schema(
                 NukiLockPairingEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:bluetooth"
             ),
@@ -353,7 +362,7 @@ CONFIG_SCHEMA = cv.All(
             ),
             cv.Optional(CONF_LED_ENABLED_SWITCH): switch.switch_schema(
                 NukiLockLedEnabledSwitch,
-                device_class=DEVICE_CLASS_SWITCH,
+                device_class=DEVICE_CLASS_LIGHT,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:led-on"
             ),
@@ -442,41 +451,49 @@ CONFIG_SCHEMA = cv.All(
             ),
             cv.Optional(CONF_TIMEZONE_OFFSET_NUMBER): number.number_schema(
                 NukiLockTimeZoneOffsetNumber,
+                unit_of_measurement=UNIT_MINUTE,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:clock-end",
             ),
             cv.Optional(CONF_LOCK_N_GO_TIMEOUT_NUMBER): number.number_schema(
                 NukiLockLockNGoTimeoutNumber,
+                unit_of_measurement=UNIT_SECOND,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:clock-end",
             ),
             cv.Optional(CONF_AUTO_LOCK_TIMEOUT_NUMBER): number.number_schema(
                 NukiLockAutoLockTimeoutNumber,
+                unit_of_measurement=UNIT_SECOND,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:clock-end",
             ),
             cv.Optional(CONF_UNLATCH_DURATION_NUMBER): number.number_schema(
                 NukiLockUnlatchDurationNumber,
+                unit_of_measurement=UNIT_SECOND,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:clock-end",
             ),
             cv.Optional(CONF_UNLOCKED_POSITION_OFFSET_NUMBER): number.number_schema(
                 NukiLockUnlockedPositionOffsetDegreesNumber,
+                unit_of_measurement=UNIT_DEGREES,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:horizontal-rotate-clockwise",
             ),
             cv.Optional(CONF_LOCKED_POSITION_OFFSET_NUMBER): number.number_schema(
                 NukiLockLockedPositionOffsetDegreesNumber,
+                unit_of_measurement=UNIT_DEGREES,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:horizontal-rotate-clockwise",
             ),
             cv.Optional(CONF_SINGLE_LOCKED_POSITION_OFFSET_NUMBER): number.number_schema(
                 NukiLockSingleLockedPositionOffsetDegreesNumber,
+                unit_of_measurement=UNIT_DEGREES,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:horizontal-rotate-clockwise",
             ),
             cv.Optional(CONF_UNLOCKED_TO_LOCKED_TRANSITION_OFFSET_NUMBER): number.number_schema(
                 NukiLockUnlockedToLockedTransitionOffsetDegreesNumber,
+                unit_of_measurement=UNIT_DEGREES,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:horizontal-rotate-clockwise",
             ),
