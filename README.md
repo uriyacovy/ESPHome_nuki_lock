@@ -238,7 +238,6 @@ Then continue with the pairing instructions below.
 
 2. Before activating pairing mode on the lock, configure ESPHome with:
 
-   * `pairing_as_app: true`
    * `security_pin: 123456`: your 6-digit PIN for the Ultra/Go/5th Gen lock
 
 > [!IMPORTANT]
@@ -262,7 +261,7 @@ The following configuration options allow you to customize the behavior of the N
 | `security_pin`             | Required for event logs & advanced operations (mandatory for Ultra/Go/5th Gen pairing - remove leading zeros: 000548 → 548) | —       |
 | `pairing_mode_timeout`     | Auto-timeout for pairing mode                 | `300s`  |
 | `event`                    | Event log event name (`none` disables logs)   | `none`  |
-| `pairing_as_app`           | Pair as app (required for Ultra/Go/5th Gen)   | `false` |
+| `pairing_as_app`           | Pair as app                                   | `false` |
 | `query_interval_config`    | Config refresh interval                       | `3600s` |
 | `query_interval_auth_data` | Auth data refresh interval                    | `7200s` |
 | `ble_general_timeout`      | General BLE timeout                           | `3s`    |
