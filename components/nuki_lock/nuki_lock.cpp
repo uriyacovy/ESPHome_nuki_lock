@@ -1531,20 +1531,6 @@ void NukiLockComponent::update() {
             Nuki::AuthorizationIdType type = this->pairing_as_app_.value_or(false) ? Nuki::AuthorizationIdType::App : Nuki::AuthorizationIdType::Bridge;
             
             App.feed_wdt();
-            
-            if (this->security_pin_ != 0) {
-                ESP_LOGW(TAG, "Note: Using security pin override to pair, not yaml config pin!");
-            } else if(this->security_pin_config_.value_or(0) != 0) {
-                ESP_LOGD(TAG, "Using security pin from yaml config to pair.");
-            } else {
-                ESP_LOGW(TAG, "Note: The security pin is crucial to pair a Smart Lock Ultra but is currently not set.");
-            }
-
-            ESP_LOGD(TAG, "NVS pin value (gen 1-4): %d", this->nuki_lock_.getSecurityPincode());
-            ESP_LOGD(TAG, "NVS pin value (ultra/go/gen5): %d", this->nuki_lock_.getUltraPincode());
-
-            ESP_LOGD(TAG, "ESPHome pin value (gen 1-4): %d", this->security_pin_);
-            ESP_LOGD(TAG, "ESPHome pin value (ultra/go/gen5): %d", this->security_pin_config_.value_or(0));
 
             bool paired = this->nuki_lock_.pairNuki(type) == Nuki::PairingResult::Success;
 
@@ -1964,6 +1950,20 @@ void NukiLockComponent::set_pairing_mode(bool enabled) {
     if (enabled) {
         ESP_LOGI(TAG, "Pairing Mode turned on for %d seconds", this->pairing_mode_timeout_);
         this->pairing_mode_on_callback_.call();
+
+        if (this->security_pin_ != 0) {
+            ESP_LOGW(TAG, "Note: Using security pin override to pair, not yaml config pin!");
+        } else if(this->security_pin_config_.value_or(0) != 0) {
+            ESP_LOGD(TAG, "Using security pin from yaml config to pair.");
+        } else {
+            ESP_LOGW(TAG, "Note: The security pin is crucial to pair a Smart Lock Ultra but is currently not set.");
+        }
+
+        ESP_LOGD(TAG, "NVS pin value (gen 1-4): %d", this->nuki_lock_.getSecurityPincode());
+        ESP_LOGD(TAG, "NVS pin value (ultra/go/gen5): %d", this->nuki_lock_.getUltraPincode());
+
+        ESP_LOGD(TAG, "ESPHome pin value (override): %d", this->security_pin_);
+        ESP_LOGD(TAG, "ESPHome pin value (yaml config): %d", this->security_pin_config_.value_or(0));
 
         ESP_LOGI(TAG, "Waiting for Nuki to enter pairing mode...");
 
