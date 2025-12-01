@@ -1785,10 +1785,10 @@ void NukiLockComponent::dump_config() {
     if (strcmp(this->event_, "esphome.none") != 0) {
         ESP_LOGCONFIG(TAG, "  Event: %s", this->event_);
     } else {
-        ESP_LOGCONFIG(TAG, "  Event: Disabled");
+        ESP_LOGCONFIG(TAG, "  Event: Disabled (event name set to none)");
     }
     #else
-    ESP_LOGCONFIG(TAG, "  Event: Disabled");
+    ESP_LOGCONFIG(TAG, "  Event: Disabled (Home Assistant services not enabled)");
     #endif
 
     ESP_LOGCONFIG(TAG, "  Pairing Identity: %s", this->pairing_as_app_.value_or(false) ? "App" : "Bridge");
@@ -1822,7 +1822,7 @@ void NukiLockComponent::dump_config() {
     LOG_SENSOR(TAG, "Battery Level", this->battery_level_sensor_);
     LOG_SENSOR(TAG, "Bluetooth Signal", this->bt_signal_sensor_);
     #endif
-    #ifdef USE_SENSOR
+    #ifdef USE_BUTTON
     LOG_BUTTON(TAG, "Unpair", this->unpair_button_);
     LOG_BUTTON(TAG, "Request Calibration", this->request_calibration_button_);
     #endif
@@ -1877,9 +1877,19 @@ void NukiLockComponent::notify(Nuki::EventType event_type) {
         ESP_LOGD(TAG, "KeyTurnerStatusReset");
     } else if (event_type == Nuki::EventType::ERROR_BAD_PIN) {
         // Invalid Pin
-        ESP_LOGW(TAG, "Nuki reported invalid security pin");
-        ESP_LOGD(TAG, "NVS pin value (gen 1-4): %d", this->nuki_lock_.getSecurityPincode());
-        ESP_LOGD(TAG, "NVS pin value (ultra/go/gen5): %d", this->nuki_lock_.getUltraPincode());
+        ESP_LOGW(TAG, "Nuki reported an invalid security PIN");
+
+        ESP_LOGD(TAG, "NVS PIN (Gen 1-4): %d", this->nuki_lock_.getSecurityPincode());
+        ESP_LOGD(TAG, "NVS PIN (Ultra/Go/Pro/Gen 5): %d", this->nuki_lock_.getUltraPincode());
+        ESP_LOGD(TAG, "ESPHome PIN (override): %d", this->security_pin_);
+        ESP_LOGD(TAG, "ESPHome PIN (YAML): %d", this->security_pin_config_.value_or(0));
+
+        const uint32_t saved_pin = this->nuki_lock_.isLockUltra() ? this->nuki_lock_.getUltraPincode() : this->nuki_lock_.getSecurityPincode();
+        const uint32_t actual_pin = this->security_pin_ != 0 ? this->security_pin_ : this->security_pin_config_.value_or(0);
+
+        if(saved_pin != actual_pin) {
+            ESP_LOGW(TAG, "The PIN stored in NVS does not match your configured PIN. Please remove leading zeros if any.");
+        }
 
         this->pin_state_ = PinState::Invalid;
         this->save_settings();
@@ -1959,11 +1969,10 @@ void NukiLockComponent::set_pairing_mode(bool enabled) {
             ESP_LOGW(TAG, "Note: The security pin is crucial to pair a Smart Lock Ultra but is currently not set.");
         }
 
-        ESP_LOGD(TAG, "NVS pin value (gen 1-4): %d", this->nuki_lock_.getSecurityPincode());
-        ESP_LOGD(TAG, "NVS pin value (ultra/go/gen5): %d", this->nuki_lock_.getUltraPincode());
-
-        ESP_LOGD(TAG, "ESPHome pin value (override): %d", this->security_pin_);
-        ESP_LOGD(TAG, "ESPHome pin value (yaml config): %d", this->security_pin_config_.value_or(0));
+        ESP_LOGD(TAG, "NVS PIN (Gen 1-4): %d", this->nuki_lock_.getSecurityPincode());
+        ESP_LOGD(TAG, "NVS PIN (Ultra/Go/Pro/Gen 5): %d", this->nuki_lock_.getUltraPincode());
+        ESP_LOGD(TAG, "ESPHome PIN (override): %d", this->security_pin_);
+        ESP_LOGD(TAG, "ESPHome PIN (YAML): %d", this->security_pin_config_.value_or(0));
 
         ESP_LOGI(TAG, "Waiting for Nuki to enter pairing mode...");
 

@@ -1,6 +1,6 @@
 # ESPHome Nuki Lock Component (ESP32) [![Build Component](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml/badge.svg)](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml)
 
-Seamlessly integrate Nuki Smart Locks (1st–5th Gen, Ultra, Go) with ESPHome, enabling a full-featured Home Assistant lock platform with [many available entities](#-entities).
+Seamlessly integrate Nuki Smart Locks (1st–5th Gen, Ultra, Go, Pro) with ESPHome, enabling a full-featured Home Assistant lock platform with [many available entities](#-entities).
 The lock state is always up-to-date thanks to Nuki's BLE advertisement mechanism—whether controlled through the Nuki app, Home Assistant, or physically at the door.
 
 ![some dashboard entites](./docs/nuki_dashboard.png)
@@ -64,7 +64,7 @@ lock:
     event: "none"
     
   # Needed to change most of the lock settings
-  # Needed to pair with Smart Lock Ultra/5th Gen/Go (6 digit pin)
+  # Needed to pair with Smart Lock Ultra/5th Gen/Go/Pro (6 digit pin)
   # Supports templating
     security_pin: 1234
 
@@ -217,7 +217,7 @@ Then continue with the pairing instructions below.
 
 # 🔐 Pairing Your Nuki Lock
 
-## Pairing with Nuki Lock (1st–4th Gen)
+## Pairing with Nuki Smart Lock (1st – 4th Gen)
 
 1. In the official Nuki App, make sure **Bluetooth pairing** is enabled:  
    **Settings → Features & Configuration → Button and LED**.  
@@ -231,14 +231,14 @@ Then continue with the pairing instructions below.
 > [!NOTE]  
 > The ESPHome bridge *can* run alongside an official Nuki Bridge, but this is not recommended (except in hybrid mode). Running both may increase battery drain and cause missed updates. If you need both, set `pairing_as_app: true` **before pairing**. Otherwise, pairing with the ESPHome bridge will unregister the official Bridge.
 
-## Pairing with Nuki Lock Ultra / Nuki Lock Go / Nuki Lock 5th Gen Pro
+## Pairing with Nuki Smart Lock Ultra / 5th Gen / Go / Pro
 
 1. In the official Nuki App, ensure **Bluetooth pairing** is enabled:  
    **Settings → Features & Configuration → Button and LED**.
 
 2. Before activating pairing mode on the lock, configure ESPHome with:
 
-   * `security_pin: 123456`: your 6-digit PIN for the Ultra/Go/5th Gen lock
+   * `security_pin: 123456`: your 6-digit PIN for the Nuki Smart Lock Ultra/5th Gen/Go/Pro
 
 > [!IMPORTANT]
 > If your PIN starts with zeros, remove them (e.g., 000548 → 548). Pairing will fail if you include leading zeros.
@@ -258,7 +258,7 @@ The following configuration options allow you to customize the behavior of the N
 
 | Option                     | Description                                   | Default |
 | -------------------------- | --------------------------------------------- | ------- |
-| `security_pin`             | Required for event logs & advanced operations (mandatory for Ultra/Go/5th Gen pairing - remove leading zeros: 000548 → 548) | —       |
+| `security_pin`             | Required for event logs & advanced operations (mandatory for Ultra/5th Gen/Go/Pro pairing - remove leading zeros: 000548 → 548) | —       |
 | `pairing_mode_timeout`     | Auto-timeout for pairing mode                 | `300s`  |
 | `event`                    | Event log event name (`none` disables logs)   | `none`  |
 | `pairing_as_app`           | Pair as app                                   | `false` |

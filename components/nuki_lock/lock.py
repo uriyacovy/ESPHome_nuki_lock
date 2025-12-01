@@ -970,7 +970,7 @@ def _final_validate(config):
         if "api" in full_config:
             api_conf = full_config.get("api", {})
             if api_conf.get("encryption"):
-                LOGGER.warning("You may need to disable API encryption to successfully pair with the Nuki Smart Lock, as it consumes quite a bit of memory.")
+                LOGGER.warning("Consider disabling API encryption to successfully pair with the Nuki Smart Lock (it consumes quite a bit of memory and might lead to crashes).")
             
             if not api_conf.get("custom_services", False):
                 LOGGER.warning("Enable custom_services to use API services like 'lock_n_go', 'add_keypad_entry', etc.")
