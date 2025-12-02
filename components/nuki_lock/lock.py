@@ -964,7 +964,7 @@ def _final_validate(config):
             add_idf_sdkconfig_option("CONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST", True)
             add_idf_sdkconfig_option("CONFIG_BT_BLE_DYNAMIC_ENV_MEMORY", True)
         else:
-            LOGGER.warning("Consider enabling PSRAM support if it's available for the NimBLE Stack.")
+            LOGGER.warning("Consider enabling PSRAM if available for the NimBLE Stack.")
 
         # Check API configuration
         if "api" in full_config:
