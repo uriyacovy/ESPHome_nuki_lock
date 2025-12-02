@@ -908,6 +908,24 @@ async def to_code(config):
 
     # Libraries
     add_idf_component(
+        name="espressif/libsodium",
+        ref="^1.0.20~2",
+    )
+    add_idf_component(
+        name="crc16",
+        repo="https://github.com/AzonInc/Crc16.git",
+    )
+    add_idf_component(
+        name="ble-scanner",
+        repo="https://github.com/AzonInc/ble-scanner.git",
+        ref="2.1.0",
+    )
+    add_idf_component(
+        name="esp-nimble-cpp",
+        repo="https://github.com/h2zero/esp-nimble-cpp.git",
+        ref="2.3.3",
+    )
+    add_idf_component(
         name="NukiBleEsp32",
         repo="https://github.com/AzonInc/NukiBleEsp32.git",
         ref="idf",
