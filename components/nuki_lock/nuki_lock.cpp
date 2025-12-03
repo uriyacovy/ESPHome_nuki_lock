@@ -1108,7 +1108,7 @@ const char* NukiLockComponent::get_auth_name(uint32_t authId) const {
 bool NukiLockComponent::execute_lock_action(NukiLock::LockAction lock_action) {
     if (!this->nuki_lock_.isPairedWithLock()) {
         ESP_LOGE(TAG, "Lock is not paired, cannot execute lock action");
-        return;
+        return false;
     }
 
     // Publish the assumed transitional lock state
