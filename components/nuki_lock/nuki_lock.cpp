@@ -1371,7 +1371,7 @@ void NukiLockComponent::setup() {
     this->publish_state(lock::LOCK_STATE_NONE);
 
     #ifdef USE_API
-        #ifdef USE_API_SERVICES
+        #ifdef USE_API_CUSTOM_SERVICES
         this->register_service(&NukiLockComponent::lock_n_go, "lock_n_go");
         this->register_service(&NukiLockComponent::print_keypad_entries, "print_keypad_entries");
         this->register_service(&NukiLockComponent::add_keypad_entry, "add_keypad_entry", {"name", "code"});
