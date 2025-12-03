@@ -1106,6 +1106,11 @@ const char* NukiLockComponent::get_auth_name(uint32_t authId) const {
 }
 
 bool NukiLockComponent::execute_lock_action(NukiLock::LockAction lock_action) {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot execute lock action");
+        return;
+    }
+
     // Publish the assumed transitional lock state
     switch (lock_action) {
         case NukiLock::LockAction::Unlatch:
@@ -1598,6 +1603,10 @@ void NukiLockComponent::update() {
  * @brief Add a new lock action that will be executed on the next update() call.
  */
 void NukiLockComponent::control(const lock::LockCall &call) {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot execute lock action");
+        return;
+    }
 
     lock::LockState state = *call.get_state();
 
@@ -1665,6 +1674,11 @@ bool NukiLockComponent::valid_keypad_code(int32_t code) {
 }
 
 void NukiLockComponent::add_keypad_entry(std::string name, int32_t code) {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot add keypad entry");
+        return;
+    }
+
     if (!keypad_paired_) {
         ESP_LOGE(TAG, "Keypad is not paired to Nuki");
         return;
@@ -1694,6 +1708,11 @@ void NukiLockComponent::add_keypad_entry(std::string name, int32_t code) {
 }
 
 void NukiLockComponent::update_keypad_entry(int32_t id, std::string name, int32_t code, bool enabled) {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot update keypad entry");
+        return;
+    }
+
     if (!keypad_paired_) {
         ESP_LOGE(TAG, "keypad is not paired to Nuki");
         return;
@@ -1725,6 +1744,11 @@ void NukiLockComponent::update_keypad_entry(int32_t id, std::string name, int32_
 }
 
 void NukiLockComponent::delete_keypad_entry(int32_t id) {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot retrieve delete entry");
+        return;
+    }
+
     if (!keypad_paired_) {
         ESP_LOGE(TAG, "keypad is not paired to Nuki");
         return;
@@ -1749,6 +1773,11 @@ void NukiLockComponent::delete_keypad_entry(int32_t id) {
 }
 
 void NukiLockComponent::print_keypad_entries() {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot retrieve keypad entries");
+        return;
+    }
+
     if (!keypad_paired_) {
         ESP_LOGE(TAG, "Keypad is not paired to Nuki");
         return;
@@ -1907,42 +1936,44 @@ void NukiLockComponent::notify(Nuki::EventType event_type) {
 }
 
 void NukiLockComponent::unpair() {
-    if (this->nuki_lock_.isPairedWithLock()) {
-        this->nuki_lock_.unPairNuki();
-
-        this->connected_ = false;
-
-        this->publish_state(lock::LOCK_STATE_NONE);
-
-        // Reset pin (override)
-        this->security_pin_ = 0;
-        if(this->security_pin_ == 0 && this->security_pin_config_.value_or(0) == 0) {
-            this->pin_state_ = PinState::NotSet;
-            ESP_LOGD(TAG, "The security pin is now unset!");
-        } else {
-            this->pin_state_ = PinState::Set;
-        }
-        this->publish_pin_state();
-        this->save_settings();
-
-        this->setup_intervals(false);
-
-        ESP_LOGI(TAG, "Unpaired Nuki! Turn on Pairing Mode to pair a new Nuki.");
-    } else {
-        ESP_LOGE(TAG, "Unpair action called for unpaired Nuki");
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot unpair");
+        return;
     }
+
+    this->nuki_lock_.unPairNuki();
+
+    this->connected_ = false;
+
+    this->publish_state(lock::LOCK_STATE_NONE);
+
+    // Reset pin (override)
+    this->security_pin_ = 0;
+    if(this->security_pin_ == 0 && this->security_pin_config_.value_or(0) == 0) {
+        this->pin_state_ = PinState::NotSet;
+        ESP_LOGD(TAG, "The security pin is now unset!");
+    } else {
+        this->pin_state_ = PinState::Set;
+    }
+    this->publish_pin_state();
+    this->save_settings();
+
+    this->setup_intervals(false);
+
+    ESP_LOGI(TAG, "Unpaired Nuki! Turn on Pairing Mode to pair a new Nuki.");
 }
 
 void NukiLockComponent::request_calibration() {
-    if (this->nuki_lock_.isPairedWithLock()) {
-        Nuki::CmdResult result = this->nuki_lock_.requestCalibration();
-        if (result == Nuki::CmdResult::Success) {
-            ESP_LOGI(TAG, "Calibration requested successfully");
-        } else {
-            ESP_LOGE(TAG, "Failed to request calibration (result %d)", result);
-        }
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot request calibration");
+        return;
+    }
+
+    Nuki::CmdResult result = this->nuki_lock_.requestCalibration();
+    if (result == Nuki::CmdResult::Success) {
+        ESP_LOGI(TAG, "Calibration requested successfully");
     } else {
-        ESP_LOGE(TAG, "Request calibration called for unpaired Nuki");
+        ESP_LOGE(TAG, "Failed to request calibration (result %d)", result);
     }
 }
 
@@ -1989,6 +2020,10 @@ void NukiLockComponent::set_pairing_mode(bool enabled) {
 
 #ifdef USE_SELECT
 void NukiLockComponent::set_config_select(const char* config, const char* value) {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot change setting %s", config);
+        return;
+    }
 
     Nuki::CmdResult cmd_result = (Nuki::CmdResult)-1;
     bool is_advanced = false;
@@ -2064,6 +2099,10 @@ void NukiLockComponent::set_config_select(const char* config, const char* value)
 
 #ifdef USE_SWITCH
 void NukiLockComponent::set_config_switch(const char* config, bool value) {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot change setting %s", config);
+        return;
+    }
 
     Nuki::CmdResult cmd_result = (Nuki::CmdResult)-1;
     bool is_advanced = false;
@@ -2160,6 +2199,10 @@ void NukiLockComponent::set_config_switch(const char* config, bool value) {
 #endif
 #ifdef USE_NUMBER
 void NukiLockComponent::set_config_number(const char* config, float value) {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot change setting %s", config);
+        return;
+    }
 
     Nuki::CmdResult cmd_result = (Nuki::CmdResult)-1;
     bool is_advanced = false;
