@@ -84,21 +84,21 @@ CONF_SINGLE_LOCKED_POSITION_OFFSET_NUMBER = "single_locked_position_offset"
 CONF_UNLOCKED_TO_LOCKED_TRANSITION_OFFSET_NUMBER = "unlocked_to_locked_transition_offset"
 
 CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS = [
-    "No Action",
     "Intelligent",
     "Unlock",
     "Lock",
-    "Unlatch",
-    "Lock n Go",
-    "Show Status"
+    "Open door",
+    "Lock 'n' Go",
+    "Show state",
+    "No action",
 ]
 
 CONF_FOB_ACTION_SELECT_OPTIONS = [
-    "No Action",
     "Unlock",
     "Lock",
-    "Lock n Go",
-    "Intelligent"
+    "Lock 'n' Go",
+    "Intelligent",
+    "No action"
 ]
 
 CONF_MOTOR_SPEED_SELECT_OPTIONS = [

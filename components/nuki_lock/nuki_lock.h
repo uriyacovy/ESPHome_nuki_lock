@@ -166,7 +166,7 @@ class NukiLockComponent :
         void update() override;
         void dump_config() override;
         void notify(Nuki::EventType event_type) override;
-        float get_setup_priority() const override { return setup_priority::HARDWARE; }
+        float get_setup_priority() const override { return setup_priority::AFTER_BLUETOOTH; }
 
         void set_pairing_mode_timeout(uint32_t pairing_mode_timeout) { this->pairing_mode_timeout_ = pairing_mode_timeout; }
         void set_query_interval_config(uint32_t query_interval_config) { this->query_interval_config_ = query_interval_config; }

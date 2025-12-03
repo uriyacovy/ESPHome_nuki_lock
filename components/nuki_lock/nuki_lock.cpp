@@ -43,7 +43,7 @@ bool NukiLockComponent::nuki_doorsensor_to_binary(Nuki::DoorSensorState nuki_doo
 
 NukiLock::ButtonPressAction NukiLockComponent::button_press_action_to_enum(const char* str)
 {
-    if (strcmp(str, "No Action") == 0) {
+    if (strcmp(str, "No action") == 0) {
         return NukiLock::ButtonPressAction::NoAction;
     } else if (strcmp(str, "Intelligent") == 0) {
         return NukiLock::ButtonPressAction::Intelligent;
@@ -51,11 +51,11 @@ NukiLock::ButtonPressAction NukiLockComponent::button_press_action_to_enum(const
         return NukiLock::ButtonPressAction::Unlock;
     } else if (strcmp(str, "Lock") == 0) {
         return NukiLock::ButtonPressAction::Lock;
-    } else if (strcmp(str, "Unlatch") == 0) {
+    } else if (strcmp(str, "Open door") == 0) {
         return NukiLock::ButtonPressAction::Unlatch;
-    } else if (strcmp(str, "Lock n Go") == 0) {
+    } else if (strcmp(str, "Lock 'n' Go") == 0) {
         return NukiLock::ButtonPressAction::LockNgo;
-    } else if (strcmp(str, "Show Status") == 0) {
+    } else if (strcmp(str, "Show state") == 0) {
         return NukiLock::ButtonPressAction::ShowStatus;
     }
     return NukiLock::ButtonPressAction::NoAction;
@@ -64,7 +64,7 @@ NukiLock::ButtonPressAction NukiLockComponent::button_press_action_to_enum(const
 void NukiLockComponent::button_press_action_to_string(const NukiLock::ButtonPressAction action, char* str) {
     switch (action) {
         case NukiLock::ButtonPressAction::NoAction:
-            strcpy(str, "No Action");
+            strcpy(str, "No action");
             break;
         case NukiLock::ButtonPressAction::Intelligent:
             strcpy(str, "Intelligent");
@@ -76,16 +76,16 @@ void NukiLockComponent::button_press_action_to_string(const NukiLock::ButtonPres
             strcpy(str, "Lock");
             break;
         case NukiLock::ButtonPressAction::Unlatch:
-            strcpy(str, "Unlatch");
+            strcpy(str, "Open door");
             break;
         case NukiLock::ButtonPressAction::LockNgo:
-            strcpy(str, "Lock n Go");
+            strcpy(str, "Lock 'n' Go");
             break;
         case NukiLock::ButtonPressAction::ShowStatus:
-            strcpy(str, "Show Status");
+            strcpy(str, "Show state");
             break;
         default:
-            strcpy(str, "No Action");
+            strcpy(str, "No action");
             break;
     }
 }
@@ -167,13 +167,13 @@ NukiLock::MotorSpeed NukiLockComponent::motor_speed_to_enum(const char* str) {
 }
 
 uint8_t NukiLockComponent::fob_action_to_int(const char *str) {
-    if(strcmp(str, "No Action") == 0) {
+    if(strcmp(str, "No action") == 0) {
         return 0;
     } else if(strcmp(str, "Unlock") == 0) {
         return 1;
     } else if(strcmp(str, "Lock") == 0) {
         return 2;
-    } else if(strcmp(str, "Lock n Go") == 0) {
+    } else if(strcmp(str, "Lock 'n' Go") == 0) {
         return 3;
     } else if(strcmp(str, "Intelligent") == 0) {
         return 4;
@@ -184,7 +184,7 @@ uint8_t NukiLockComponent::fob_action_to_int(const char *str) {
 void NukiLockComponent::fob_action_to_string(const int action, char* str) {
     switch (action) {
         case 0:
-            strcpy(str, "No Action");
+            strcpy(str, "No action");
             break;
         case 1:
             strcpy(str, "Unlock");
@@ -193,13 +193,13 @@ void NukiLockComponent::fob_action_to_string(const int action, char* str) {
             strcpy(str, "Lock");
             break;
         case 3:
-            strcpy(str, "Lock n Go");
+            strcpy(str, "Lock 'n' Go");
             break;
         case 4:
             strcpy(str, "Intelligent");
             break;
         default:
-            strcpy(str, "No Action");
+            strcpy(str, "No action");
             break;
     }
 }
