@@ -170,13 +170,13 @@ CONF_BATTERY_TYPE_SELECT_OPTIONS = [
     "Lithium"
 ]
 
-CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_PAIRING_AS_APP = "pairing_as_app"
 CONF_SECURITY_PIN = "security_pin"
 CONF_QUERY_INTERVAL_CONFIG = "query_interval_config"
 CONF_QUERY_INTERVAL_AUTH_DATA = "query_interval_auth_data"
 CONF_BLE_GENERAL_TIMEOUT = "ble_general_timeout"
 CONF_BLE_COMMAND_TIMEOUT = "ble_command_timeout"
+CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_EVENT = "event"
 
 CONF_ON_PAIRING_MODE_ON = "on_pairing_mode_on_action"
@@ -568,7 +568,6 @@ CONFIG_SCHEMA = cv.All(
             ),
         }
     )
-    .extend(cv.polling_component_schema("500ms")),
 )
 
 

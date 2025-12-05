@@ -1,8 +1,7 @@
 #pragma once
 
-#include <map>
-#include <unordered_map>
-
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 #include "esphome/core/component.h"
 #include "esphome/components/lock/lock.h"
@@ -38,8 +37,9 @@
 #include "NukiConstants.h"
 #include "BleScanner.h"
 
-namespace esphome {
-namespace nuki_lock {
+#include "utils.h"
+
+namespace esphome::nuki_lock {
 
 static const char *TAG = "nuki_lock.lock";
 
@@ -59,14 +59,6 @@ static const uint8_t MAX_EVENT_LOG_ENTRIES = 3;
 
 static const uint8_t MAX_NAME_LEN = 32;
 
-enum PinState
-{
-    NotSet = 0,
-    Set = 1,
-    Valid = 2,
-    Invalid = 3
-};
-
 struct AuthEntry {
     uint32_t authId;
     char name[MAX_NAME_LEN];
@@ -80,7 +72,7 @@ struct NukiLockSettings
 
 class NukiLockComponent :
     public lock::Lock,
-    public PollingComponent,
+    public Component,
     public Nuki::SmartlockEventHandler
 #ifdef USE_API
     , public api::CustomAPIDevice
@@ -154,20 +146,17 @@ class NukiLockComponent :
         const uint32_t deviceId_ = 2020002;
         const std::string deviceName_ = "Nuki ESPHome";
 
-        explicit NukiLockComponent() : Lock(), open_latch_(false),
-                                    lock_n_go_(false),
-                                    keypad_paired_(false),
-                                    nuki_lock_(deviceName_, deviceId_) {
-                this->traits.set_supports_open(true);
-                this->nuki_lock_.setEventHandler(this);
-        }
+        explicit NukiLockComponent() : Lock(), nuki_lock_(deviceName_, deviceId_) {}
 
+        // ESPHome overrides
         void setup() override;
-        void update() override;
         void dump_config() override;
-        void notify(Nuki::EventType event_type) override;
-        float get_setup_priority() const override { return setup_priority::AFTER_BLUETOOTH; }
+        float get_setup_priority() const override { return setup_priority::HARDWARE; }
 
+        // NukiBLE overrides
+        void notify(Nuki::EventType event_type) override;
+
+        // Configuration setters
         void set_pairing_mode_timeout(uint32_t pairing_mode_timeout) { this->pairing_mode_timeout_ = pairing_mode_timeout; }
         void set_query_interval_config(uint32_t query_interval_config) { this->query_interval_config_ = query_interval_config; }
         void set_query_interval_auth_data(uint32_t query_interval_auth_data) { this->query_interval_auth_data_ = query_interval_auth_data; }
@@ -179,152 +168,135 @@ class NukiLockComponent :
                 this->send_events_ = true;
             }
         }
+        void set_security_pin(uint32_t security_pin);
+        void set_pairing_mode(bool enabled);
 
+        // Template configuration setters
         template<typename T> void set_security_pin_config(T security_pin_config) { this->security_pin_config_ = security_pin_config; }
         template<typename T> void set_pairing_as_app(T pairing_as_app) { this->pairing_as_app_ = pairing_as_app; }
 
+        // Callback registration & managers
         void add_pairing_mode_on_callback(std::function<void()> &&callback);
         void add_pairing_mode_off_callback(std::function<void()> &&callback);
         void add_paired_callback(std::function<void()> &&callback);
         void add_event_log_received_callback(std::function<void(NukiLock::LogEntry)> &&callback);
-
         CallbackManager<void()> pairing_mode_on_callback_{};
         CallbackManager<void()> pairing_mode_off_callback_{};
         CallbackManager<void()> paired_callback_{};
         CallbackManager<void(NukiLock::LogEntry)> event_log_received_callback_{};
 
-        lock::LockState nuki_to_lock_state(NukiLock::LockState);
-        bool nuki_doorsensor_to_binary(Nuki::DoorSensorState);
-
-        uint8_t fob_action_to_int(const char *str);
-        void fob_action_to_string(const int action, char* str);
-
-        Nuki::BatteryType battery_type_to_enum(const char* str);
-        void battery_type_to_string(const Nuki::BatteryType battery_type, char* str);
-
-        NukiLock::MotorSpeed motor_speed_to_enum(const char* str);
-        void motor_speed_to_string(const NukiLock::MotorSpeed speed, char* str);
-
-        NukiLock::ButtonPressAction button_press_action_to_enum(const char* str);
-        void button_press_action_to_string(NukiLock::ButtonPressAction action, char* str);
-
-        Nuki::TimeZoneId timezone_to_enum(const char *str);
-        void timezone_to_string(const Nuki::TimeZoneId timeZoneId, char* str);
-
-        Nuki::AdvertisingMode advertising_mode_to_enum(const char *str);
-        void advertising_mode_to_string(const Nuki::AdvertisingMode mode, char* str);
-
-        void homekit_status_to_string(const int status, char* str);
-
-        void pin_state_to_string(const PinState value, char* str);
-        void set_security_pin(uint32_t security_pin);
 
         void unpair();
-        void set_pairing_mode(bool enabled);
         void save_settings();
-
         void request_calibration();
+        void setup_lock(bool new_pairing = false);
 
-        bool is_connected() {
-            return this->connected_;
-        }
-        
-        bool is_paired() {
-            return this->nuki_lock_.isPairedWithLock();
-        }
-
-        #ifdef USE_NUMBER
-        void set_config_number(const char* config, float value);
-        #endif
-        #ifdef USE_SWITCH
-        void set_config_switch(const char* config, bool value);
-        #endif
-        #ifdef USE_SELECT
-        void set_config_select(const char* config, const char* value);
-        #endif
-
-    protected:
-        void control(const lock::LockCall &call) override;
-        void open_latch() override { this->open_latch_ = true; unlock();}
-
-        void update_status();
-        void update_config();
-        void update_advanced_config();
-
-        void update_event_logs();
-        void update_auth_data();
-        void process_log_entries(const std::list<NukiLock::LogEntry>& log_entries);
-
-        const char* get_auth_name(uint32_t authId) const;
-
-        void setup_intervals(bool setup = true);
-        void publish_pin_state();
-
-        void validate_pin();
-
-        bool execute_lock_action(NukiLock::LockAction lock_action);
-
-        BleScanner::Scanner scanner_;
-        NukiLock::KeyTurnerState retrieved_key_turner_state_;
-        NukiLock::LockAction lock_action_;
-
-        AuthEntry auth_entries_[MAX_AUTH_DATA_ENTRIES];
-        size_t auth_entries_count_ = 0;
-
-        uint32_t auth_id_ = 0;
-        char auth_name_[33] = {0};
-
-        uint32_t last_command_executed_time_ = 0;
-        uint32_t command_cooldown_millis = 0;
-        uint8_t action_attempts_ = 0;
-        uint32_t status_update_consecutive_errors_ = 0;
-
-        bool status_update_;
-        bool config_update_;
-        bool advanced_config_update_;
-        bool auth_data_update_;
-        bool event_log_update_;
-        bool open_latch_;
-        bool lock_n_go_;
-        
-        PinState pin_state_ = PinState::NotSet;
-        uint32_t security_pin_ = 0;
-        TemplatableValue<uint32_t> security_pin_config_{};
-
-        TemplatableValue<bool> pairing_as_app_{};
-
-        bool connected_ = false;
-
-        const char* event_;
-        bool send_events_ = false;
-
-        uint32_t query_interval_auth_data_ = 0;
-        uint32_t query_interval_config_ = 0;
-
-        uint32_t ble_general_timeout_ = 0;
-        uint32_t ble_command_timeout_ = 0;
-
-        uint32_t pairing_mode_timeout_ = 0;
-        bool pairing_mode_ = false;
-
-        uint32_t last_rolling_log_id = 0;
-
-        ESPPreferenceObject pref_;
-
-    private:
-        NukiLock::NukiLock nuki_lock_;
+        bool is_connected() { return this->connected_; }
+        bool is_paired() { return this->nuki_lock_.isPairedWithLock(); }
 
         void lock_n_go();
         void print_keypad_entries();
         void add_keypad_entry(std::string name, int32_t code);
         void update_keypad_entry(int32_t id, std::string name, int32_t code, bool enabled);
         void delete_keypad_entry(int32_t id);
+
+        NukiLock::NukiLock* get_nuki_lock() { return &this->nuki_lock_; }
+        NukiLock::Config* get_nuki_lock_config() { return &this->nuki_lock_config_; }
+        NukiLock::AdvancedConfig* get_nuki_lock_advanced_config() { return &this->nuki_lock_advanced_config_; }
+
+    protected:
+        void control(const lock::LockCall &call) override;
+        void open_latch() override { this->open_latch_ = true; unlock();}
+
+    private:
+        // Task management
+        static void nuki_task_fn(void *arg);
+        void nuki_task_loop();
+        TaskHandle_t nuki_task_handle_{nullptr};
+
+        // Core components
+        ESPPreferenceObject pref_;
+        BleScanner::Scanner scanner_;
+        NukiLock::NukiLock nuki_lock_;
+
+        // Nuki state & configuration
+        NukiLock::KeyTurnerState retrieved_key_turner_state_;
+        NukiLock::LockAction lock_action_;
+        NukiLock::Config nuki_lock_config_;
+        NukiLock::AdvancedConfig nuki_lock_advanced_config_;
+
+        // Methods to retrieve or set data
+        void update_status();
+        void update_config();
+        void update_advanced_config();
+        void update_event_logs();
+        void update_auth_data();
+        void validate_pin();
+        bool execute_lock_action(NukiLock::LockAction lock_action);
+
+        // Setup & utility methods
+        void setup_intervals(bool setup = true);
+        void publish_pin_state();
+        void process_auth_data();
+        void process_log_entries();
+
+        // PIN management
+        PinState pin_state_ = PinState::NotSet;
+        uint32_t security_pin_ = 0;
+        uint32_t pin_validation_start_time_ = 0;
+        uint8_t pin_validation_attempts_ = 0;
+        bool pin_validation_pending_{false};
+        TemplatableValue<uint32_t> security_pin_config_{};
+
+        // Authorization Entries
+        AuthEntry auth_entries_[MAX_AUTH_DATA_ENTRIES];
+        size_t auth_entries_count_ = 0;
+        uint32_t auth_id_ = 0;
+        char auth_name_[33] = {0};
+        const char* get_auth_name(uint32_t authId) const;
+        uint32_t auth_data_ready_time_ = 0;
+
+        // Keypad management
         bool valid_keypad_id(int32_t id);
         bool valid_keypad_name(std::string name);
         bool valid_keypad_code(int32_t code);
-
+        bool keypad_paired_{false};
         std::vector<uint16_t> keypad_code_ids_;
-        bool keypad_paired_;
+
+        // Connection & State flags
+        bool connected_{false};
+        bool pairing_mode_{false};
+        bool send_events_{false};
+        TemplatableValue<bool> pairing_as_app_{};
+
+        // Update flags
+        bool status_update_{false};
+        bool config_update_{false};
+        bool advanced_config_update_{false};
+        bool auth_data_update_{false};
+        bool event_log_update_{false};
+
+        // Action flags
+        bool open_latch_{false};
+        bool lock_n_go_{false};
+
+        // Timing & Intervals
+        uint32_t last_command_executed_time_ = 0;
+        uint32_t command_cooldown_millis = 0;
+        uint32_t query_interval_auth_data_ = 0;
+        uint32_t query_interval_config_ = 0;
+        uint32_t ble_general_timeout_ = 0;
+        uint32_t ble_command_timeout_ = 0;
+        uint32_t pairing_mode_timeout_ = 0;
+
+        // Error tracking & counters
+        uint8_t action_attempts_ = 0;
+        uint32_t status_update_consecutive_errors_ = 0;
+
+        // Event Logs
+        const char* event_;
+        uint32_t last_rolling_log_id = 0;
+        uint32_t event_log_ready_time_ = 0;
 };
 
 // Entities
@@ -624,5 +596,4 @@ class NukiLockUnlockedToLockedTransitionOffsetDegreesNumber : public number::Num
 };
 #endif
 
-} //namespace nuki_lock
-} //namespace esphome
+}

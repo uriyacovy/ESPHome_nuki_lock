@@ -4,8 +4,7 @@
 #include "esphome/core/component.h"
 #include "nuki_lock.h"
 
-namespace esphome {
-namespace nuki_lock {
+namespace esphome::nuki_lock {
 
 // Actions
 template<typename... Ts>
@@ -85,5 +84,4 @@ class EventLogReceivedTrigger : public Trigger<NukiLock::LogEntry> {
         }
 };
 
-} //namespace nuki_lock
-} //namespace esphome
+}
