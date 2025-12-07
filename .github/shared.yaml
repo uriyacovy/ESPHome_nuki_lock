@@ -5,7 +5,7 @@ esphome:
         condition:
           nuki_lock.paired:
         then:
-          - lambda: ESP_LOGI("nuki_lock", "Component already paired with Lock");
+          - logger.log: "YAML: Component already paired with Lock"
 
 esp32:
   variant: esp32
@@ -17,6 +17,7 @@ wifi:
 api:
   custom_services: true
   homeassistant_services: true
+  reboot_timeout: 0s
 
 logger:
   level: DEBUG
@@ -33,6 +34,20 @@ lock:
   - platform: nuki_lock
     name: Nuki Lock
 
+    pairing_mode_timeout: 300s
+    event: "nuki"
+    security_pin: 1234 # templatable
+    pairing_as_app: false # templatable
+    query_interval_config: 3600s
+    query_interval_auth_data: 7200s
+    ble_general_timeout: 3s
+    ble_command_timeout: 3s
+
+    unpair:
+      name: "Unpair Device"
+    pairing_mode:
+      name: "Pairing Mode"
+
     connected:
       name: "Nuki Connected"
     paired:
@@ -45,7 +60,7 @@ lock:
     battery_level:
       name: "Nuki Battery Level"
     bt_signal_strength:
-      name: "Bluetooth Signal Strength"
+      name: "Nuki Bluetooth Signal Strength"
     
     door_sensor_state:
       name: "Nuki Door Sensor: State"
@@ -58,17 +73,17 @@ lock:
     pin_status:
       name: "Nuki Security Pin Status"
 
-    unpair:
-      name: "Nuki Unpair Device"
+    request_calibration:
+      name: "Nuki Request Calibration"
       
-    pairing_mode:
-      name: "Nuki Pairing Mode"
+    pairing_enabled:
+      name: "Nuki Button: Bluetooth Pairing"
     auto_unlatch:
       name: "Nuki Auto unlatch"
     button_enabled:
       name: "Nuki Button: Locking operations"
     led_enabled:
-      name: "Nuki LED Signal"
+      name: "Nuki LED: Signal"
     night_mode_enabled:
       name: "Nuki Night Mode"
     night_mode_auto_lock_enabled:
@@ -91,13 +106,27 @@ lock:
       name: "Nuki Daylight Saving Time"
     auto_battery_type_detection_enabled:
       name: "Nuki Automatic Battery Type Detection"
+    detached_cylinder_enabled:
+      name: "Nuki Detached Cylinder"
 
     led_brightness:
-      name: "Nuki LED Brightness"
+      name: "Nuki LED: Brightness"
     timezone_offset:
       name: "Nuki Timezone: Offset"
     lock_n_go_timeout:
-      name: "Nuki LockNGo Timeout"
+      name: "Nuki Lock 'n' Go Timeout"
+    auto_lock_timeout:
+      name: "Nuki Auto Lock Timeout"
+    unlatch_duration:
+      name: "Nuki Unlatch Duration"
+    unlocked_position_offset:
+      name: "Nuki Unlocked Position Offset Degrees"
+    locked_position_offset:
+      name: "Nuki Locked Position Offset Degrees"
+    single_locked_position_offset:
+      name: "Nuki Single Locked Position Offset Degrees"
+    unlocked_to_locked_transition_offset:
+      name: "Nuki Unlocked to Locked Transition Offset Degrees"
 
     single_buton_press_action:
       name: "Nuki Single Button Press Action"
@@ -116,62 +145,59 @@ lock:
     battery_type:
       name: "Nuki Battery Type"
 
-    pairing_mode_timeout: 300s
-    event: "nuki"
-    security_pin: 1234
-    pairing_as_app: false
-    query_interval_config: 3600s
-    query_interval_auth_data: 7200s
-    ble_general_timeout: 3s
-    ble_command_timeout: 3s
-
-
     on_pairing_mode_on_action:
-      - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
+      - logger.log: "YAML: Pairing mode turned on"
     on_pairing_mode_off_action:
-      - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned off");
+      - logger.log: "YAML: Pairing mode turned off"
     on_paired_action:
-      - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
+      - logger.log: "YAML: Paired sucessfuly"
     on_event_log_action:
       - lambda: |-
           ESP_LOGI("nuki_lock", "Event Log (NukiLock::LogEntry) received index: %i, authId: %i", x.index, x.authId);
 
 button:
   - platform: template
-    name: Unpair
+    name: Action Test - Unpair
     on_press:
       - nuki_lock.unpair:
 
   - platform: template
-    name: Enable pairing-mode
+    name: Action Test - Request Calibration
+    on_press:
+      - nuki_lock.request_calibration:
+
+  - platform: template
+    name: Action Test - Enable pairing-mode
     on_press:
       - nuki_lock.set_pairing_mode:
           pairing_mode: true
 
   - platform: template
-    name: Check connection
+    name: Condition Test - Check connection
     on_press:
       - if:
           condition:
             nuki_lock.connected:
           then:
-            - logger.log: "Lock is connected"
+            - logger.log: "YAML: Lock is connected"
+          else:
+            - logger.log: "YAML: Lock is not connected"
 
   # Set security pin (override)
   # Used instead of yaml config value
   - platform: template
-    name: Override security pin
+    name: Action Test - Override security pin
     on_press:
       - nuki_lock.set_security_pin:
-          security_pin: 5678
+          security_pin: 1234
       # Alernatively using a lambda
       - nuki_lock.set_security_pin:
-          security_pin: !lambda 'return 5678;'
+          security_pin: !lambda 'return 1234;'
 
   # Reset security pin (override)
   # Fallback to yaml config value
   - platform: template
-    name: Reset security pin
+    name: Action Test - Reset security pin
     on_press:
       - nuki_lock.set_security_pin:
           security_pin: 0

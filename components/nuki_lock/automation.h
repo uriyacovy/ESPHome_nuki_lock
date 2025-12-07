@@ -4,14 +4,19 @@
 #include "esphome/core/component.h"
 #include "nuki_lock.h"
 
-namespace esphome {
-namespace nuki_lock {
+namespace esphome::nuki_lock {
 
 // Actions
 template<typename... Ts>
 class NukiLockUnpairAction : public Action<Ts...>, public Parented<NukiLockComponent> {
     public:
         void play(const Ts&... x) override { this->parent_->unpair(); }
+};
+
+template<typename... Ts>
+class NukiLockRequestCalibrationAction : public Action<Ts...>, public Parented<NukiLockComponent> {
+    public:
+        void play(const Ts&... x) override { this->parent_->request_calibration(); }
 };
 
 template<typename... Ts>
@@ -79,5 +84,4 @@ class EventLogReceivedTrigger : public Trigger<NukiLock::LogEntry> {
         }
 };
 
-} //namespace nuki_lock
-} //namespace esphome
+}

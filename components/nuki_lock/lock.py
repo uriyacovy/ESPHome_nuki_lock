@@ -7,16 +7,19 @@ from esphome.components.esp32 import add_idf_component, add_idf_sdkconfig_option
 from esphome.components import lock, binary_sensor, text_sensor, sensor, switch, button, number, select
 from esphome.const import (
     CONF_ID,
+    CONF_TRIGGER_ID,
+    ENTITY_CATEGORY_CONFIG,
+    ENTITY_CATEGORY_DIAGNOSTIC,
     DEVICE_CLASS_CONNECTIVITY,
     DEVICE_CLASS_BATTERY,
     DEVICE_CLASS_DOOR,
     DEVICE_CLASS_SWITCH,
     DEVICE_CLASS_SIGNAL_STRENGTH,
+    UNIT_SECOND,
+    UNIT_MINUTE,
+    UNIT_DEGREES,
     UNIT_PERCENT,
     UNIT_DECIBEL_MILLIWATT,
-    ENTITY_CATEGORY_CONFIG,
-    ENTITY_CATEGORY_DIAGNOSTIC,
-    CONF_TRIGGER_ID,
 )
 import esphome.final_validate as fv
 
@@ -39,8 +42,10 @@ CONF_LAST_LOCK_ACTION_TRIGGER_TEXT_SENSOR = "last_lock_action_trigger"
 CONF_PIN_STATE_TEXT_SENSOR = "pin_status"
 
 CONF_UNPAIR_BUTTON = "unpair"
+CONF_REQUEST_CALIBRATION_BUTTON = "request_calibration"
 
 CONF_PAIRING_MODE_SWITCH = "pairing_mode"
+CONF_PAIRING_ENABLED_SWITCH = "pairing_enabled"
 CONF_AUTO_UNLATCH_SWITCH = "auto_unlatch"
 CONF_BUTTON_ENABLED_SWITCH = "button_enabled"
 CONF_LED_ENABLED_SWITCH = "led_enabled"
@@ -56,6 +61,7 @@ CONF_SINGLE_LOCK_ENABLED_SWITCH = "single_lock_enabled"
 CONF_DST_MODE_ENABLED_SWITCH = "dst_mode_enabled"
 CONF_AUTO_BATTERY_TYPE_DETECTION_ENABLED_SWITCH = "auto_battery_type_detection_enabled"
 CONF_SLOW_SPEED_DURING_NIGHT_MODE_ENABLED_SWITCH = "slow_speed_during_night_mode"
+CONF_DETACHED_CYLINDER_ENABLED_SWITCH = "detached_cylinder_enabled"
 
 CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT = "single_buton_press_action"
 CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT = "double_buton_press_action"
@@ -70,23 +76,29 @@ CONF_MOTOR_SPEED_SELECT = "motor_speed"
 CONF_LED_BRIGHTNESS_NUMBER = "led_brightness"
 CONF_TIMEZONE_OFFSET_NUMBER = "timezone_offset"
 CONF_LOCK_N_GO_TIMEOUT_NUMBER = "lock_n_go_timeout"
+CONF_AUTO_LOCK_TIMEOUT_NUMBER = "auto_lock_timeout"
+CONF_UNLATCH_DURATION_NUMBER = "unlatch_duration"
+CONF_UNLOCKED_POSITION_OFFSET_NUMBER = "unlocked_position_offset"
+CONF_LOCKED_POSITION_OFFSET_NUMBER = "locked_position_offset"
+CONF_SINGLE_LOCKED_POSITION_OFFSET_NUMBER = "single_locked_position_offset"
+CONF_UNLOCKED_TO_LOCKED_TRANSITION_OFFSET_NUMBER = "unlocked_to_locked_transition_offset"
 
 CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS = [
-    "No Action",
     "Intelligent",
     "Unlock",
     "Lock",
-    "Unlatch",
-    "Lock n Go",
-    "Show Status"
+    "Open door",
+    "Lock 'n' Go",
+    "Show state",
+    "No action",
 ]
 
 CONF_FOB_ACTION_SELECT_OPTIONS = [
-    "No Action",
     "Unlock",
     "Lock",
-    "Lock n Go",
-    "Intelligent"
+    "Lock 'n' Go",
+    "Intelligent",
+    "No action"
 ]
 
 CONF_MOTOR_SPEED_SELECT_OPTIONS = [
@@ -158,13 +170,13 @@ CONF_BATTERY_TYPE_SELECT_OPTIONS = [
     "Lithium"
 ]
 
-CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_PAIRING_AS_APP = "pairing_as_app"
 CONF_SECURITY_PIN = "security_pin"
 CONF_QUERY_INTERVAL_CONFIG = "query_interval_config"
 CONF_QUERY_INTERVAL_AUTH_DATA = "query_interval_auth_data"
 CONF_BLE_GENERAL_TIMEOUT = "ble_general_timeout"
 CONF_BLE_COMMAND_TIMEOUT = "ble_command_timeout"
+CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_EVENT = "event"
 
 CONF_ON_PAIRING_MODE_ON = "on_pairing_mode_on_action"
@@ -177,9 +189,11 @@ NukiLockComponent = nuki_lock_ns.class_('NukiLockComponent', lock.Lock, cg.Compo
 
 # Buttons
 NukiLockUnpairButton = nuki_lock_ns.class_("NukiLockUnpairButton", button.Button, cg.Component)
+NukiLockRequestCalibrationButton = nuki_lock_ns.class_("NukiLockRequestCalibrationButton", button.Button, cg.Component)
 
 # Switches
 NukiLockPairingModeSwitch = nuki_lock_ns.class_("NukiLockPairingModeSwitch", switch.Switch, cg.Component)
+NukiLockPairingEnabledSwitch = nuki_lock_ns.class_("NukiLockPairingEnabledSwitch", switch.Switch, cg.Component)
 NukiLockAutoUnlatchEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoUnlatchEnabledSwitch", switch.Switch, cg.Component)
 NukiLockButtonEnabledSwitch = nuki_lock_ns.class_("NukiLockButtonEnabledSwitch", switch.Switch, cg.Component)
 NukiLockLedEnabledSwitch = nuki_lock_ns.class_("NukiLockLedEnabledSwitch", switch.Switch, cg.Component)
@@ -195,11 +209,18 @@ NukiLockSingleLockEnabledSwitch = nuki_lock_ns.class_("NukiLockSingleLockEnabled
 NukiLockDstModeEnabledSwitch = nuki_lock_ns.class_("NukiLockDstModeEnabledSwitch", switch.Switch, cg.Component)
 NukiLockAutoBatteryTypeDetectionEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoBatteryTypeDetectionEnabledSwitch", switch.Switch, cg.Component)
 NukiLockSlowSpeedDuringNightModeEnabledSwitch = nuki_lock_ns.class_("NukiLockSlowSpeedDuringNightModeEnabledSwitch", switch.Switch, cg.Component)
+NukiLockDetachedCylinderEnabledSwitch = nuki_lock_ns.class_("NukiLockDetachedCylinderEnabledSwitch", switch.Switch, cg.Component)
 
 # Number Inputs
 NukiLockLedBrightnessNumber = nuki_lock_ns.class_("NukiLockLedBrightnessNumber", number.Number, cg.Component)
 NukiLockTimeZoneOffsetNumber = nuki_lock_ns.class_("NukiLockTimeZoneOffsetNumber", number.Number, cg.Component)
 NukiLockLockNGoTimeoutNumber = nuki_lock_ns.class_("NukiLockLockNGoTimeoutNumber", number.Number, cg.Component)
+NukiLockAutoLockTimeoutNumber = nuki_lock_ns.class_("NukiLockAutoLockTimeoutNumber", number.Number, cg.Component)
+NukiLockUnlatchDurationNumber = nuki_lock_ns.class_("NukiLockUnlatchDurationNumber", number.Number, cg.Component)
+NukiLockUnlockedPositionOffsetDegreesNumber = nuki_lock_ns.class_("NukiLockUnlockedPositionOffsetDegreesNumber", number.Number, cg.Component)
+NukiLockLockedPositionOffsetDegreesNumber = nuki_lock_ns.class_("NukiLockLockedPositionOffsetDegreesNumber", number.Number, cg.Component)
+NukiLockSingleLockedPositionOffsetDegreesNumber = nuki_lock_ns.class_("NukiLockSingleLockedPositionOffsetDegreesNumber", number.Number, cg.Component)
+NukiLockUnlockedToLockedTransitionOffsetDegreesNumber = nuki_lock_ns.class_("NukiLockUnlockedToLockedTransitionOffsetDegreesNumber", number.Number, cg.Component)
 
 # Selects
 NukiLockSingleButtonPressActionSelect = nuki_lock_ns.class_("NukiLockSingleButtonPressActionSelect", select.Select, cg.Component)
@@ -215,6 +236,10 @@ NukiLockMotorSpeedSelect = nuki_lock_ns.class_("NukiLockMotorSpeedSelect", selec
 # Actions
 NukiLockUnpairAction = nuki_lock_ns.class_(
     "NukiLockUnpairAction", automation.Action, cg.Parented.template(NukiLockComponent)
+)
+
+NukiLockRequestCalibrationAction = nuki_lock_ns.class_(
+    "NukiLockRequestCalibrationAction", automation.Action, cg.Parented.template(NukiLockComponent)
 )
 
 NukiLockPairingModeAction = nuki_lock_ns.class_(
@@ -302,8 +327,20 @@ CONFIG_SCHEMA = cv.All(
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:link-off",
             ),
+            cv.Optional(CONF_REQUEST_CALIBRATION_BUTTON): button.button_schema(
+                NukiLockRequestCalibrationButton,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:progress-wrench",
+            ),
             cv.Optional(CONF_PAIRING_MODE_SWITCH): switch.switch_schema(
                 NukiLockPairingModeSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:bluetooth"
+            ),
+            cv.Optional(CONF_PAIRING_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockPairingEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:bluetooth"
             ),
@@ -397,6 +434,12 @@ CONFIG_SCHEMA = cv.All(
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:speedometer-slow",
             ),
+            cv.Optional(CONF_DETACHED_CYLINDER_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockDetachedCylinderEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:rotate-orbit",
+            ),
             cv.Optional(CONF_LED_BRIGHTNESS_NUMBER): number.number_schema(
                 NukiLockLedBrightnessNumber,
                 entity_category=ENTITY_CATEGORY_CONFIG,
@@ -404,13 +447,51 @@ CONFIG_SCHEMA = cv.All(
             ),
             cv.Optional(CONF_TIMEZONE_OFFSET_NUMBER): number.number_schema(
                 NukiLockTimeZoneOffsetNumber,
+                unit_of_measurement=UNIT_MINUTE,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:clock-end",
             ),
             cv.Optional(CONF_LOCK_N_GO_TIMEOUT_NUMBER): number.number_schema(
                 NukiLockLockNGoTimeoutNumber,
+                unit_of_measurement=UNIT_SECOND,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:clock-end",
+            ),
+            cv.Optional(CONF_AUTO_LOCK_TIMEOUT_NUMBER): number.number_schema(
+                NukiLockAutoLockTimeoutNumber,
+                unit_of_measurement=UNIT_SECOND,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:clock-end",
+            ),
+            cv.Optional(CONF_UNLATCH_DURATION_NUMBER): number.number_schema(
+                NukiLockUnlatchDurationNumber,
+                unit_of_measurement=UNIT_SECOND,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:clock-end",
+            ),
+            cv.Optional(CONF_UNLOCKED_POSITION_OFFSET_NUMBER): number.number_schema(
+                NukiLockUnlockedPositionOffsetDegreesNumber,
+                unit_of_measurement=UNIT_DEGREES,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:horizontal-rotate-clockwise",
+            ),
+            cv.Optional(CONF_LOCKED_POSITION_OFFSET_NUMBER): number.number_schema(
+                NukiLockLockedPositionOffsetDegreesNumber,
+                unit_of_measurement=UNIT_DEGREES,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:horizontal-rotate-clockwise",
+            ),
+            cv.Optional(CONF_SINGLE_LOCKED_POSITION_OFFSET_NUMBER): number.number_schema(
+                NukiLockSingleLockedPositionOffsetDegreesNumber,
+                unit_of_measurement=UNIT_DEGREES,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:horizontal-rotate-clockwise",
+            ),
+            cv.Optional(CONF_UNLOCKED_TO_LOCKED_TRANSITION_OFFSET_NUMBER): number.number_schema(
+                NukiLockUnlockedToLockedTransitionOffsetDegreesNumber,
+                unit_of_measurement=UNIT_DEGREES,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:horizontal-rotate-clockwise",
             ),
             cv.Optional(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT): select.select_schema(
                 NukiLockSingleButtonPressActionSelect,
@@ -457,7 +538,7 @@ CONFIG_SCHEMA = cv.All(
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:speedometer-medium",
             ),
-            cv.Optional(CONF_PAIRING_AS_APP, default="false"): cv.boolean,
+            cv.Optional(CONF_PAIRING_AS_APP, default="false"): cv.templatable(cv.boolean),
             cv.Optional(CONF_PAIRING_MODE_TIMEOUT, default="300s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_EVENT, default="none"): cv.string,
             cv.Optional(CONF_SECURITY_PIN, default="0"): cv.templatable(cv.uint32_t),
@@ -487,7 +568,6 @@ CONFIG_SCHEMA = cv.All(
             ),
         }
     )
-    .extend(cv.polling_component_schema("500ms")),
 )
 
 
@@ -507,7 +587,8 @@ async def to_code(config):
         cg.add(var.set_security_pin_config(pin_template))
         
     if CONF_PAIRING_AS_APP in config:
-        cg.add(var.set_pairing_as_app(config[CONF_PAIRING_AS_APP]))
+        pairing_as_app_template = await cg.templatable(config[CONF_PAIRING_AS_APP], [], cg.bool_)
+        cg.add(var.set_pairing_as_app(pairing_as_app_template))
 
     if CONF_QUERY_INTERVAL_CONFIG in config:
         cg.add(var.set_query_interval_config(config[CONF_QUERY_INTERVAL_CONFIG]))
@@ -574,6 +655,11 @@ async def to_code(config):
         await cg.register_parented(b, config[CONF_ID])
         cg.add(var.set_unpair_button(b))
 
+    if request_calibration := config.get(CONF_REQUEST_CALIBRATION_BUTTON):
+        b = await button.new_button(request_calibration)
+        await cg.register_parented(b, config[CONF_ID])
+        cg.add(var.set_request_calibration_button(b))
+
     # Number
     if led_brightness := config.get(CONF_LED_BRIGHTNESS_NUMBER):
         n = await number.new_number(
@@ -596,11 +682,58 @@ async def to_code(config):
         await cg.register_parented(n, config[CONF_ID])
         cg.add(var.set_lock_n_go_timeout_number(n))
 
+    if auto_lock_timeout := config.get(CONF_AUTO_LOCK_TIMEOUT_NUMBER):
+        n = await number.new_number(
+            auto_lock_timeout, min_value=5, max_value=60, step=1
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_auto_lock_timeout_number(n))
+
+    if unlatch_duration := config.get(CONF_UNLATCH_DURATION_NUMBER):
+        n = await number.new_number(
+            unlatch_duration, min_value=5, max_value=60, step=1
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_unlatch_duration_number(n))
+
+    if unlocked_position_offset := config.get(CONF_UNLOCKED_POSITION_OFFSET_NUMBER):
+        n = await number.new_number(
+            unlocked_position_offset, min_value=-90, max_value=180, step=1
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_unlocked_position_offset_number(n))
+
+    if locked_position_offset := config.get(CONF_LOCKED_POSITION_OFFSET_NUMBER):
+        n = await number.new_number(
+            locked_position_offset, min_value=-180, max_value=90, step=1
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_locked_position_offset_number(n))
+
+    if single_locked_position_offset := config.get(CONF_SINGLE_LOCKED_POSITION_OFFSET_NUMBER):
+        n = await number.new_number(
+            single_locked_position_offset, min_value=-180, max_value=180, step=1
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_single_locked_position_offset_number(n))
+
+    if unlocked_to_locked_transition_offset := config.get(CONF_UNLOCKED_TO_LOCKED_TRANSITION_OFFSET_NUMBER):
+        n = await number.new_number(
+            unlocked_to_locked_transition_offset, min_value=-180, max_value=180, step=1
+        )
+        await cg.register_parented(n, config[CONF_ID])
+        cg.add(var.set_unlocked_to_locked_transition_offset_number(n))
+
     # Switch
     if pairing_mode := config.get(CONF_PAIRING_MODE_SWITCH):
         s = await switch.new_switch(pairing_mode)
         await cg.register_parented(s, config[CONF_ID])
         cg.add(var.set_pairing_mode_switch(s))
+
+    if pairing_enabled := config.get(CONF_PAIRING_ENABLED_SWITCH):
+        s = await switch.new_switch(pairing_enabled)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_pairing_enabled_switch(s))
 
     if button_enabled := config.get(CONF_BUTTON_ENABLED_SWITCH):
         s = await switch.new_switch(button_enabled)
@@ -676,6 +809,11 @@ async def to_code(config):
         s = await switch.new_switch(slow_speed_during_night_mode)
         await cg.register_parented(s, config[CONF_ID])
         cg.add(var.set_slow_speed_during_night_mode_enabled_switch(s))
+
+    if detached_cylinder := config.get(CONF_DETACHED_CYLINDER_ENABLED_SWITCH):
+        s = await switch.new_switch(detached_cylinder)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_detached_cylinder_enabled_switch(s))
 
     # Select
     if single_button_press_action := config.get(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT):
@@ -769,6 +907,24 @@ async def to_code(config):
 
     # Libraries
     add_idf_component(
+        name="espressif/libsodium",
+        ref="^1.0.20~2",
+    )
+    add_idf_component(
+        name="crc16",
+        repo="https://github.com/AzonInc/Crc16.git",
+    )
+    add_idf_component(
+        name="ble-scanner",
+        repo="https://github.com/AzonInc/ble-scanner.git",
+        ref="2.1.0",
+    )
+    add_idf_component(
+        name="esp-nimble-cpp",
+        repo="https://github.com/h2zero/esp-nimble-cpp.git",
+        ref="2.3.3",
+    )
+    add_idf_component(
         name="NukiBleEsp32",
         repo="https://github.com/AzonInc/NukiBleEsp32.git",
         ref="idf",
@@ -820,24 +976,18 @@ def _final_validate(config):
         
         # Check for PSRAM support
         if "psram" in full_config:
-            if CORE.using_esp_idf:
-                add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL", True)
-                add_idf_sdkconfig_option("CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL", 50768)
-                add_idf_sdkconfig_option("CONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST", True)
-                add_idf_sdkconfig_option("CONFIG_BT_BLE_DYNAMIC_ENV_MEMORY", True)
-            else:
-                cg.add_build_flag(f"-DCONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL=1")
-                cg.add_build_flag(f"-DCONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL=50768")
-                cg.add_build_flag(f"-DCONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST=1")
-                cg.add_build_flag(f"-DCONFIG_BT_BLE_DYNAMIC_ENV_MEMORY=1")
+            add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL", True)
+            add_idf_sdkconfig_option("CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL", 50768)
+            add_idf_sdkconfig_option("CONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST", True)
+            add_idf_sdkconfig_option("CONFIG_BT_BLE_DYNAMIC_ENV_MEMORY", True)
         else:
-            LOGGER.warning("Consider enabling PSRAM support if it's available for the NimBLE Stack.")
+            LOGGER.warning("Consider enabling PSRAM if available for the NimBLE Stack.")
 
         # Check API configuration
         if "api" in full_config:
             api_conf = full_config.get("api", {})
             if api_conf.get("encryption"):
-                LOGGER.warning("You may need to disable API encryption to successfully pair with the Nuki Smart Lock, as it consumes quite a bit of memory.")
+                LOGGER.warning("Consider disabling API encryption to successfully pair with the Nuki Smart Lock (it consumes quite a bit of memory and might lead to crashes).")
             
             if not api_conf.get("custom_services", False):
                 LOGGER.warning("Enable custom_services to use API services like 'lock_n_go', 'add_keypad_entry', etc.")
@@ -851,16 +1001,25 @@ FINAL_VALIDATE_SCHEMA = _final_validate
 
 
 # Actions
-NUKI_LOCK_UNPAIR_SCHEMA = automation.maybe_simple_id(
+NUKI_LOCK_ACTION_SCHEMA = automation.maybe_simple_id(
     {
         cv.GenerateID(): cv.use_id(NukiLockComponent)
     }
 )
 
 @automation.register_action(
-    "nuki_lock.unpair", NukiLockUnpairAction, NUKI_LOCK_UNPAIR_SCHEMA
+    "nuki_lock.unpair", NukiLockUnpairAction, NUKI_LOCK_ACTION_SCHEMA
 )
 async def nuki_lock_unpair_to_code(config, action_id, template_arg, args):
+    var = cg.new_Pvariable(action_id, template_arg)
+    await cg.register_parented(var, config[CONF_ID])
+    return var
+
+
+@automation.register_action(
+    "nuki_lock.request_calibration", NukiLockRequestCalibrationAction, NUKI_LOCK_ACTION_SCHEMA
+)
+async def nuki_lock_request_calibration_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)
     await cg.register_parented(var, config[CONF_ID])
     return var
