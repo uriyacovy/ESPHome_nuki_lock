@@ -43,7 +43,7 @@ bool NukiLockComponent::nuki_doorsensor_to_binary(Nuki::DoorSensorState nuki_doo
 
 NukiLock::ButtonPressAction NukiLockComponent::button_press_action_to_enum(const char* str)
 {
-    if (strcmp(str, "No Action") == 0) {
+    if (strcmp(str, "No action") == 0) {
         return NukiLock::ButtonPressAction::NoAction;
     } else if (strcmp(str, "Intelligent") == 0) {
         return NukiLock::ButtonPressAction::Intelligent;
@@ -51,11 +51,11 @@ NukiLock::ButtonPressAction NukiLockComponent::button_press_action_to_enum(const
         return NukiLock::ButtonPressAction::Unlock;
     } else if (strcmp(str, "Lock") == 0) {
         return NukiLock::ButtonPressAction::Lock;
-    } else if (strcmp(str, "Unlatch") == 0) {
+    } else if (strcmp(str, "Open door") == 0) {
         return NukiLock::ButtonPressAction::Unlatch;
-    } else if (strcmp(str, "Lock n Go") == 0) {
+    } else if (strcmp(str, "Lock 'n' Go") == 0) {
         return NukiLock::ButtonPressAction::LockNgo;
-    } else if (strcmp(str, "Show Status") == 0) {
+    } else if (strcmp(str, "Show state") == 0) {
         return NukiLock::ButtonPressAction::ShowStatus;
     }
     return NukiLock::ButtonPressAction::NoAction;
@@ -64,7 +64,7 @@ NukiLock::ButtonPressAction NukiLockComponent::button_press_action_to_enum(const
 void NukiLockComponent::button_press_action_to_string(const NukiLock::ButtonPressAction action, char* str) {
     switch (action) {
         case NukiLock::ButtonPressAction::NoAction:
-            strcpy(str, "No Action");
+            strcpy(str, "No action");
             break;
         case NukiLock::ButtonPressAction::Intelligent:
             strcpy(str, "Intelligent");
@@ -76,16 +76,16 @@ void NukiLockComponent::button_press_action_to_string(const NukiLock::ButtonPres
             strcpy(str, "Lock");
             break;
         case NukiLock::ButtonPressAction::Unlatch:
-            strcpy(str, "Unlatch");
+            strcpy(str, "Open door");
             break;
         case NukiLock::ButtonPressAction::LockNgo:
-            strcpy(str, "Lock n Go");
+            strcpy(str, "Lock 'n' Go");
             break;
         case NukiLock::ButtonPressAction::ShowStatus:
-            strcpy(str, "Show Status");
+            strcpy(str, "Show state");
             break;
         default:
-            strcpy(str, "No Action");
+            strcpy(str, "No action");
             break;
     }
 }
@@ -167,13 +167,13 @@ NukiLock::MotorSpeed NukiLockComponent::motor_speed_to_enum(const char* str) {
 }
 
 uint8_t NukiLockComponent::fob_action_to_int(const char *str) {
-    if(strcmp(str, "No Action") == 0) {
+    if(strcmp(str, "No action") == 0) {
         return 0;
     } else if(strcmp(str, "Unlock") == 0) {
         return 1;
     } else if(strcmp(str, "Lock") == 0) {
         return 2;
-    } else if(strcmp(str, "Lock n Go") == 0) {
+    } else if(strcmp(str, "Lock 'n' Go") == 0) {
         return 3;
     } else if(strcmp(str, "Intelligent") == 0) {
         return 4;
@@ -184,7 +184,7 @@ uint8_t NukiLockComponent::fob_action_to_int(const char *str) {
 void NukiLockComponent::fob_action_to_string(const int action, char* str) {
     switch (action) {
         case 0:
-            strcpy(str, "No Action");
+            strcpy(str, "No action");
             break;
         case 1:
             strcpy(str, "Unlock");
@@ -193,13 +193,13 @@ void NukiLockComponent::fob_action_to_string(const int action, char* str) {
             strcpy(str, "Lock");
             break;
         case 3:
-            strcpy(str, "Lock n Go");
+            strcpy(str, "Lock 'n' Go");
             break;
         case 4:
             strcpy(str, "Intelligent");
             break;
         default:
-            strcpy(str, "No Action");
+            strcpy(str, "No action");
             break;
     }
 }
@@ -657,6 +657,10 @@ void NukiLockComponent::update_config() {
         keypad_paired_ = config.hasKeypad || config.hasKeypadV2;
 
         #ifdef USE_SWITCH
+        if (this->pairing_enabled_switch_ != nullptr) {
+            this->pairing_enabled_switch_->publish_state(config.pairingEnabled);
+        }
+
         if (this->auto_unlatch_enabled_switch_ != nullptr) {
             this->auto_unlatch_enabled_switch_->publish_state(config.autoUnlatch);
         }
@@ -793,11 +797,33 @@ void NukiLockComponent::update_advanced_config() {
         if (this->nuki_lock_.isLockUltra() && this->slow_speed_during_night_mode_enabled_switch_ != nullptr) {
             this->slow_speed_during_night_mode_enabled_switch_->publish_state(advanced_config.enableSlowSpeedDuringNightMode);
         }
+
+        if (this->detached_cylinder_enabled_switch_ != nullptr) {
+            this->detached_cylinder_enabled_switch_->publish_state(advanced_config.detachedCylinder);
+        }
         #endif
 
         #ifdef USE_NUMBER
         if (this->lock_n_go_timeout_number_ != nullptr) {
             this->lock_n_go_timeout_number_->publish_state(advanced_config.lockNgoTimeout);
+        }
+        if (this->auto_lock_timeout_number_ != nullptr) {
+            this->auto_lock_timeout_number_->publish_state(advanced_config.autoLockTimeOut);
+        }
+        if (this->unlatch_duration_number_ != nullptr) {
+            this->unlatch_duration_number_->publish_state(advanced_config.unlatchDuration);
+        }
+        if (this->unlocked_position_offset_number_ != nullptr) {
+            this->unlocked_position_offset_number_->publish_state(advanced_config.unlockedPositionOffsetDegrees);
+        }
+        if (this->locked_position_offset_number_ != nullptr) {
+            this->locked_position_offset_number_->publish_state(advanced_config.lockedPositionOffsetDegrees);
+        }
+        if (this->single_locked_position_offset_number_ != nullptr) {
+            this->single_locked_position_offset_number_->publish_state(advanced_config.singleLockedPositionOffsetDegrees);
+        }
+        if (this->unlocked_to_locked_transition_offset_number_ != nullptr) {
+            this->unlocked_to_locked_transition_offset_number_->publish_state(advanced_config.unlockedToLockedTransitionOffsetDegrees);
         }
         #endif
 
@@ -1080,6 +1106,11 @@ const char* NukiLockComponent::get_auth_name(uint32_t authId) const {
 }
 
 bool NukiLockComponent::execute_lock_action(NukiLock::LockAction lock_action) {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot execute lock action");
+        return false;
+    }
+
     // Publish the assumed transitional lock state
     switch (lock_action) {
         case NukiLock::LockAction::Unlatch:
@@ -1283,7 +1314,7 @@ void NukiLockComponent::setup() {
         }
     }
 
-    this->nuki_lock_.setDebugConnect(false);
+    this->nuki_lock_.setDebugConnect(true);
     this->nuki_lock_.setDebugCommunication(false);
     this->nuki_lock_.setDebugReadableData(false);
     this->nuki_lock_.setDebugHexData(false);
@@ -1310,7 +1341,7 @@ void NukiLockComponent::setup() {
             this->event_log_update_ = true;
         }
 
-        const char* pairing_type = this->pairing_as_app_ ? "App" : "Bridge";
+        const char* pairing_type = this->pairing_as_app_.value_or(false) ? "App" : "Bridge";
         const char* lock_type = this->nuki_lock_.isLockUltra() ? "Ultra / Go / 5th Gen" : "1st - 4th Gen";
         ESP_LOGI(TAG, "This component is already paired as %s with a %s smart lock!", pairing_type, lock_type);
 
@@ -1340,7 +1371,7 @@ void NukiLockComponent::setup() {
     this->publish_state(lock::LOCK_STATE_NONE);
 
     #ifdef USE_API
-        #ifdef USE_API_SERVICES
+        #ifdef USE_API_CUSTOM_SERVICES
         this->register_service(&NukiLockComponent::lock_n_go, "lock_n_go");
         this->register_service(&NukiLockComponent::print_keypad_entries, "print_keypad_entries");
         this->register_service(&NukiLockComponent::add_keypad_entry, "add_keypad_entry", {"name", "code"});
@@ -1502,30 +1533,16 @@ void NukiLockComponent::update() {
         // Pairing Mode is active
         if (this->pairing_mode_) {
             // Pair Nuki
-            Nuki::AuthorizationIdType type = this->pairing_as_app_ ? Nuki::AuthorizationIdType::App : Nuki::AuthorizationIdType::Bridge;
+            Nuki::AuthorizationIdType type = this->pairing_as_app_.value_or(false) ? Nuki::AuthorizationIdType::App : Nuki::AuthorizationIdType::Bridge;
             
             App.feed_wdt();
-            
-            if (this->security_pin_ != 0) {
-                ESP_LOGW(TAG, "Note: Using security pin override to pair, not yaml config pin!");
-            } else if(this->security_pin_config_.value_or(0) != 0) {
-                ESP_LOGD(TAG, "Using security pin from yaml config to pair.");
-            } else {
-                ESP_LOGW(TAG, "Note: The security pin is crucial to pair a Smart Lock Ultra but is currently not set.");
-            }
-
-            ESP_LOGD(TAG, "NVS pin value (gen 1-4): %d", this->nuki_lock_.getSecurityPincode());
-            ESP_LOGD(TAG, "NVS pin value (ultra/go/gen5): %d", this->nuki_lock_.getUltraPincode());
-
-            ESP_LOGD(TAG, "ESPHome pin value (gen 1-4): %d", this->security_pin_);
-            ESP_LOGD(TAG, "ESPHome pin value (ultra/go/gen5): %d", this->security_pin_config_.value_or(0));
 
             bool paired = this->nuki_lock_.pairNuki(type) == Nuki::PairingResult::Success;
 
             App.feed_wdt();
 
             if (paired) {
-                const char* pairing_type = this->pairing_as_app_ ? "App" : "Bridge";
+                const char* pairing_type = this->pairing_as_app_.value_or(false) ? "App" : "Bridge";
                 const char* lock_type = this->nuki_lock_.isLockUltra() ? "Ultra / Go / 5th Gen" : "1st - 4th Gen";
                 ESP_LOGI(TAG, "Successfully paired as %s with a %s smart lock!", pairing_type, lock_type);
 
@@ -1586,6 +1603,10 @@ void NukiLockComponent::update() {
  * @brief Add a new lock action that will be executed on the next update() call.
  */
 void NukiLockComponent::control(const lock::LockCall &call) {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot execute lock action");
+        return;
+    }
 
     lock::LockState state = *call.get_state();
 
@@ -1653,6 +1674,11 @@ bool NukiLockComponent::valid_keypad_code(int32_t code) {
 }
 
 void NukiLockComponent::add_keypad_entry(std::string name, int32_t code) {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot add keypad entry");
+        return;
+    }
+
     if (!keypad_paired_) {
         ESP_LOGE(TAG, "Keypad is not paired to Nuki");
         return;
@@ -1682,6 +1708,11 @@ void NukiLockComponent::add_keypad_entry(std::string name, int32_t code) {
 }
 
 void NukiLockComponent::update_keypad_entry(int32_t id, std::string name, int32_t code, bool enabled) {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot update keypad entry");
+        return;
+    }
+
     if (!keypad_paired_) {
         ESP_LOGE(TAG, "keypad is not paired to Nuki");
         return;
@@ -1713,6 +1744,11 @@ void NukiLockComponent::update_keypad_entry(int32_t id, std::string name, int32_
 }
 
 void NukiLockComponent::delete_keypad_entry(int32_t id) {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot retrieve delete entry");
+        return;
+    }
+
     if (!keypad_paired_) {
         ESP_LOGE(TAG, "keypad is not paired to Nuki");
         return;
@@ -1737,6 +1773,11 @@ void NukiLockComponent::delete_keypad_entry(int32_t id) {
 }
 
 void NukiLockComponent::print_keypad_entries() {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot retrieve keypad entries");
+        return;
+    }
+
     if (!keypad_paired_) {
         ESP_LOGE(TAG, "Keypad is not paired to Nuki");
         return;
@@ -1773,13 +1814,13 @@ void NukiLockComponent::dump_config() {
     if (strcmp(this->event_, "esphome.none") != 0) {
         ESP_LOGCONFIG(TAG, "  Event: %s", this->event_);
     } else {
-        ESP_LOGCONFIG(TAG, "  Event: Disabled");
+        ESP_LOGCONFIG(TAG, "  Event: Disabled (event name set to none)");
     }
     #else
-    ESP_LOGCONFIG(TAG, "  Event: Disabled");
+    ESP_LOGCONFIG(TAG, "  Event: Disabled (Home Assistant services not enabled)");
     #endif
 
-    ESP_LOGCONFIG(TAG, "  Pairing Identity: %s",this->pairing_as_app_ ? "App" : "Bridge");
+    ESP_LOGCONFIG(TAG, "  Pairing Identity: %s", this->pairing_as_app_.value_or(false) ? "App" : "Bridge");
     ESP_LOGCONFIG(TAG, "  Is Paired: %s", YESNO(this->is_paired()));
 
     ESP_LOGCONFIG(TAG, "  Pairing mode timeout: %us", this->pairing_mode_timeout_);
@@ -1810,8 +1851,13 @@ void NukiLockComponent::dump_config() {
     LOG_SENSOR(TAG, "Battery Level", this->battery_level_sensor_);
     LOG_SENSOR(TAG, "Bluetooth Signal", this->bt_signal_sensor_);
     #endif
+    #ifdef USE_BUTTON
+    LOG_BUTTON(TAG, "Unpair", this->unpair_button_);
+    LOG_BUTTON(TAG, "Request Calibration", this->request_calibration_button_);
+    #endif
     #ifdef USE_SWITCH
     LOG_SWITCH(TAG, "Pairing Mode", this->pairing_mode_switch_);
+    LOG_SWITCH(TAG, "Pairing Enabled", this->pairing_enabled_switch_);
     LOG_SWITCH(TAG, "Auto Unlatch Enabled", this->auto_unlatch_enabled_switch_);
     LOG_SWITCH(TAG, "Button Enabled", this->button_enabled_switch_);
     LOG_SWITCH(TAG, "LED Enabled", this->led_enabled_switch_);
@@ -1826,11 +1872,18 @@ void NukiLockComponent::dump_config() {
     LOG_SWITCH(TAG, "Single Lock Enabled", this->single_lock_enabled_switch_);
     LOG_SWITCH(TAG, "DST Mode Enabled", this->dst_mode_enabled_switch_);
     LOG_SWITCH(TAG, "Slow Speed During Night Mode Enabled", this->slow_speed_during_night_mode_enabled_switch_);
+    LOG_SWITCH(TAG, "Detached Cylinder Enabled", this->detached_cylinder_enabled_switch_);
     #endif
     #ifdef USE_NUMBER
     LOG_NUMBER(TAG, "LED Brightness", this->led_brightness_number_);
     LOG_NUMBER(TAG, "Timezone Offset", this->timezone_offset_number_);
     LOG_NUMBER(TAG, "LockNGo Timeout", this->lock_n_go_timeout_number_);
+    LOG_NUMBER(TAG, "Auto Lock Timeout", this->auto_lock_timeout_number_);
+    LOG_NUMBER(TAG, "Unlatch Duration", this->unlatch_duration_number_);
+    LOG_NUMBER(TAG, "Unlocked Position Offset Degrees", this->unlocked_position_offset_number_);
+    LOG_NUMBER(TAG, "Locked Position Offset Degrees", this->locked_position_offset_number_);
+    LOG_NUMBER(TAG, "Single Locked Position Offset Degrees", this->single_locked_position_offset_number_);
+    LOG_NUMBER(TAG, "Unlocked To Locked Transition Offset Degrees", this->unlocked_to_locked_transition_offset_number_);
     #endif
     #ifdef USE_SELECT
     LOG_SELECT(TAG, "Single Button Press Action", this->single_button_press_action_select_);
@@ -1853,9 +1906,19 @@ void NukiLockComponent::notify(Nuki::EventType event_type) {
         ESP_LOGD(TAG, "KeyTurnerStatusReset");
     } else if (event_type == Nuki::EventType::ERROR_BAD_PIN) {
         // Invalid Pin
-        ESP_LOGW(TAG, "Nuki reported invalid security pin");
-        ESP_LOGD(TAG, "NVS pin value (gen 1-4): %d", this->nuki_lock_.getSecurityPincode());
-        ESP_LOGD(TAG, "NVS pin value (ultra/go/gen5): %d", this->nuki_lock_.getUltraPincode());
+        ESP_LOGW(TAG, "Nuki reported an invalid security PIN");
+
+        ESP_LOGD(TAG, "NVS PIN (Gen 1-4): %d", this->nuki_lock_.getSecurityPincode());
+        ESP_LOGD(TAG, "NVS PIN (Ultra/Go/Pro/Gen 5): %d", this->nuki_lock_.getUltraPincode());
+        ESP_LOGD(TAG, "ESPHome PIN (override): %d", this->security_pin_);
+        ESP_LOGD(TAG, "ESPHome PIN (YAML): %d", this->security_pin_config_.value_or(0));
+
+        const uint32_t saved_pin = this->nuki_lock_.isLockUltra() ? this->nuki_lock_.getUltraPincode() : this->nuki_lock_.getSecurityPincode();
+        const uint32_t actual_pin = this->security_pin_ != 0 ? this->security_pin_ : this->security_pin_config_.value_or(0);
+
+        if(saved_pin != actual_pin) {
+            ESP_LOGW(TAG, "The PIN stored in NVS does not match your configured PIN. Please remove leading zeros if any.");
+        }
 
         this->pin_state_ = PinState::Invalid;
         this->save_settings();
@@ -1863,13 +1926,8 @@ void NukiLockComponent::notify(Nuki::EventType event_type) {
     } else if(event_type == Nuki::EventType::KeyTurnerStatusUpdated) {
         ESP_LOGD(TAG, "KeyTurnerStatusUpdated");
 
-        // Request status update
+        // Request status update (incl. event log request)
         this->status_update_ = true;
-    
-        // Request event logs
-        if (this->send_events_) {
-            this->event_log_update_ = true;
-        }
     } else if(event_type == Nuki::EventType::BLE_ERROR_ON_DISCONNECT) {
         ESP_LOGE(TAG, "Failed to disconnect from Nuki. Restarting ESP...");
         delay(100);  // NOLINT
@@ -1878,29 +1936,44 @@ void NukiLockComponent::notify(Nuki::EventType event_type) {
 }
 
 void NukiLockComponent::unpair() {
-    if (this->nuki_lock_.isPairedWithLock()) {
-        this->nuki_lock_.unPairNuki();
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot unpair");
+        return;
+    }
 
-        this->connected_ = false;
+    this->nuki_lock_.unPairNuki();
 
-        this->publish_state(lock::LOCK_STATE_NONE);
+    this->connected_ = false;
 
-        // Reset pin (override)
-        this->security_pin_ = 0;
-        if(this->security_pin_ == 0 && this->security_pin_config_.value_or(0) == 0) {
-            this->pin_state_ = PinState::NotSet;
-            ESP_LOGD(TAG, "The security pin is now unset!");
-        } else {
-            this->pin_state_ = PinState::Set;
-        }
-        this->publish_pin_state();
-        this->save_settings();
+    this->publish_state(lock::LOCK_STATE_NONE);
 
-        this->setup_intervals(false);
-
-        ESP_LOGI(TAG, "Unpaired Nuki! Turn on Pairing Mode to pair a new Nuki.");
+    // Reset pin (override)
+    this->security_pin_ = 0;
+    if(this->security_pin_ == 0 && this->security_pin_config_.value_or(0) == 0) {
+        this->pin_state_ = PinState::NotSet;
+        ESP_LOGD(TAG, "The security pin is now unset!");
     } else {
-        ESP_LOGE(TAG, "Unpair action called for unpaired Nuki");
+        this->pin_state_ = PinState::Set;
+    }
+    this->publish_pin_state();
+    this->save_settings();
+
+    this->setup_intervals(false);
+
+    ESP_LOGI(TAG, "Unpaired Nuki! Turn on Pairing Mode to pair a new Nuki.");
+}
+
+void NukiLockComponent::request_calibration() {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot request calibration");
+        return;
+    }
+
+    Nuki::CmdResult result = this->nuki_lock_.requestCalibration();
+    if (result == Nuki::CmdResult::Success) {
+        ESP_LOGI(TAG, "Calibration requested successfully");
+    } else {
+        ESP_LOGE(TAG, "Failed to request calibration (result %d)", result);
     }
 }
 
@@ -1919,6 +1992,19 @@ void NukiLockComponent::set_pairing_mode(bool enabled) {
         ESP_LOGI(TAG, "Pairing Mode turned on for %d seconds", this->pairing_mode_timeout_);
         this->pairing_mode_on_callback_.call();
 
+        if (this->security_pin_ != 0) {
+            ESP_LOGW(TAG, "Note: Using security pin override to pair, not yaml config pin!");
+        } else if(this->security_pin_config_.value_or(0) != 0) {
+            ESP_LOGD(TAG, "Using security pin from yaml config to pair.");
+        } else {
+            ESP_LOGW(TAG, "Note: The security pin is crucial to pair a Smart Lock Ultra but is currently not set.");
+        }
+
+        ESP_LOGD(TAG, "NVS PIN (Gen 1-4): %d", this->nuki_lock_.getSecurityPincode());
+        ESP_LOGD(TAG, "NVS PIN (Ultra/Go/Pro/Gen 5): %d", this->nuki_lock_.getUltraPincode());
+        ESP_LOGD(TAG, "ESPHome PIN (override): %d", this->security_pin_);
+        ESP_LOGD(TAG, "ESPHome PIN (YAML): %d", this->security_pin_config_.value_or(0));
+
         ESP_LOGI(TAG, "Waiting for Nuki to enter pairing mode...");
 
         this->set_timeout("pairing_mode_timeout", this->pairing_mode_timeout_ * 1000, [this]()
@@ -1934,6 +2020,10 @@ void NukiLockComponent::set_pairing_mode(bool enabled) {
 
 #ifdef USE_SELECT
 void NukiLockComponent::set_config_select(const char* config, const char* value) {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot change setting %s", config);
+        return;
+    }
 
     Nuki::CmdResult cmd_result = (Nuki::CmdResult)-1;
     bool is_advanced = false;
@@ -2009,12 +2099,18 @@ void NukiLockComponent::set_config_select(const char* config, const char* value)
 
 #ifdef USE_SWITCH
 void NukiLockComponent::set_config_switch(const char* config, bool value) {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot change setting %s", config);
+        return;
+    }
 
     Nuki::CmdResult cmd_result = (Nuki::CmdResult)-1;
     bool is_advanced = false;
 
     // Update Config
-    if (strcmp(config, "auto_unlatch_enabled") == 0) {
+    if (strcmp(config, "pairing_enabled") == 0) {
+        cmd_result = this->nuki_lock_.enablePairing(value);
+    } else if (strcmp(config, "auto_unlatch_enabled") == 0) {
         cmd_result = this->nuki_lock_.enableAutoUnlatch(value);
     } else if (strcmp(config, "button_enabled") == 0) {
         cmd_result = this->nuki_lock_.enableButton(value);
@@ -2052,11 +2148,15 @@ void NukiLockComponent::set_config_switch(const char* config, bool value) {
         cmd_result = this->nuki_lock_.enableAutoBatteryTypeDetection(value);
     } else if (this->nuki_lock_.isLockUltra() && strcmp(config, "slow_speed_during_night_mode_enabled") == 0) {
         cmd_result = this->nuki_lock_.enableSlowSpeedDuringNightMode(value);
+    } else if (strcmp(config, "detached_cylinder_enabled") == 0) {
+        cmd_result = this->nuki_lock_.enableDetachedCylinder(value);
     }
 
     if (cmd_result == Nuki::CmdResult::Success)
     {
-        if (strcmp(config, "auto_unlatch_enabled") == 0 && this->auto_unlatch_enabled_switch_ != nullptr) {
+        if (strcmp(config, "pairing_enabled") == 0 && this->pairing_enabled_switch_ != nullptr) {
+            this->pairing_enabled_switch_->publish_state(value);
+        } else if (strcmp(config, "auto_unlatch_enabled") == 0 && this->auto_unlatch_enabled_switch_ != nullptr) {
             this->auto_unlatch_enabled_switch_->publish_state(value);
         } else if (strcmp(config, "button_enabled") == 0 && this->button_enabled_switch_ != nullptr) {
             this->button_enabled_switch_->publish_state(value);
@@ -2086,6 +2186,8 @@ void NukiLockComponent::set_config_switch(const char* config, bool value) {
             this->auto_battery_type_detection_enabled_switch_->publish_state(value);
         } else if (this->nuki_lock_.isLockUltra() && strcmp(config, "slow_speed_during_night_mode_enabled") == 0 && this->slow_speed_during_night_mode_enabled_switch_ != nullptr) {
             this->slow_speed_during_night_mode_enabled_switch_->publish_state(value);
+        } else if (strcmp(config, "detached_cylinder_enabled") == 0 && this->detached_cylinder_enabled_switch_ != nullptr) {
+            this->detached_cylinder_enabled_switch_->publish_state(value);
         }
 
         this->config_update_ = !is_advanced;
@@ -2097,6 +2199,10 @@ void NukiLockComponent::set_config_switch(const char* config, bool value) {
 #endif
 #ifdef USE_NUMBER
 void NukiLockComponent::set_config_number(const char* config, float value) {
+    if (!this->nuki_lock_.isPairedWithLock()) {
+        ESP_LOGE(TAG, "Lock is not paired, cannot change setting %s", config);
+        return;
+    }
 
     Nuki::CmdResult cmd_result = (Nuki::CmdResult)-1;
     bool is_advanced = false;
@@ -2113,6 +2219,36 @@ void NukiLockComponent::set_config_number(const char* config, float value) {
             cmd_result = this->nuki_lock_.setLockNgoTimeout(value);
             is_advanced = true;
         }
+    } else if (strcmp(config, "auto_lock_timeout") == 0) {
+        if (value >= 30 && value <= 1800) {
+            cmd_result = this->nuki_lock_.setAutoLockTimeOut(value);
+            is_advanced = true;
+        }
+    } else if (strcmp(config, "unlatch_duration") == 0) {
+        if (value >= 1 && value <= 30) {
+            cmd_result = this->nuki_lock_.setUnlatchDuration(value);
+            is_advanced = true;
+        }
+    } else if (strcmp(config, "unlocked_position_offset") == 0) {
+        if (value >= -90 && value <= 180) {
+            cmd_result = this->nuki_lock_.setUnlockedPositionOffsetDegrees(value);
+            is_advanced = true;
+        }
+    } else if (strcmp(config, "locked_position_offset") == 0) {
+        if (value >= -180 && value <= 90) {
+            cmd_result = this->nuki_lock_.setLockedPositionOffsetDegrees(value);
+            is_advanced = true;
+        }
+    } else if (strcmp(config, "single_locked_position_offset") == 0) {
+        if (value >= -180 && value <= 180) {
+            cmd_result = this->nuki_lock_.setSingleLockedPositionOffsetDegrees(value);
+            is_advanced = true;
+        }
+    } else if (strcmp(config, "unlocked_to_locked_transition_offset") == 0) {
+        if (value >= -180 && value <= 180) {
+            cmd_result = this->nuki_lock_.setUnlockedToLockedTransitionOffsetDegrees(value);
+            is_advanced = true;
+        }
     }
 
     if (cmd_result == Nuki::CmdResult::Success) {
@@ -2122,6 +2258,18 @@ void NukiLockComponent::set_config_number(const char* config, float value) {
             this->timezone_offset_number_->publish_state(value);
         } else if (strcmp(config, "lock_n_go_timeout") == 0 && this->lock_n_go_timeout_number_ != nullptr) {
             this->lock_n_go_timeout_number_->publish_state(value);
+        } else if (strcmp(config, "auto_lock_timeout") == 0 && this->auto_lock_timeout_number_ != nullptr) {
+            this->auto_lock_timeout_number_->publish_state(value);
+        } else if (strcmp(config, "unlatch_duration") == 0 && this->unlatch_duration_number_ != nullptr) {
+            this->unlatch_duration_number_->publish_state(value);
+        } else if (strcmp(config, "unlocked_position_offset") == 0 && this->unlocked_position_offset_number_ != nullptr) {
+            this->unlocked_position_offset_number_->publish_state(value);
+        } else if (strcmp(config, "locked_position_offset") == 0 && this->locked_position_offset_number_ != nullptr) {
+            this->locked_position_offset_number_->publish_state(value);
+        } else if (strcmp(config, "single_locked_position_offset") == 0 && this->single_locked_position_offset_number_ != nullptr) {
+            this->single_locked_position_offset_number_->publish_state(value);
+        } else if (strcmp(config, "unlocked_to_locked_transition_offset") == 0 && this->unlocked_to_locked_transition_offset_number_ != nullptr) {
+            this->unlocked_to_locked_transition_offset_number_->publish_state(value);
         }
         
         this->config_update_ = !is_advanced;
@@ -2135,6 +2283,10 @@ void NukiLockComponent::set_config_number(const char* config, float value) {
 #ifdef USE_BUTTON
 void NukiLockUnpairButton::press_action() {
     this->parent_->unpair();
+}
+
+void NukiLockRequestCalibrationButton::press_action() {
+    this->parent_->request_calibration();
 }
 #endif
 #ifdef USE_SELECT
@@ -2177,6 +2329,10 @@ void NukiLockMotorSpeedSelect::control(const std::string &mode) {
 #ifdef USE_SWITCH
 void NukiLockPairingModeSwitch::write_state(bool state) {
     this->parent_->set_pairing_mode(state);
+}
+
+void NukiLockPairingEnabledSwitch::write_state(bool state) {
+    this->parent_->set_config_switch("pairing_enabled", state);
 }
 
 void NukiLockAutoUnlatchEnabledSwitch::write_state(bool state) {
@@ -2238,6 +2394,9 @@ void NukiLockAutoBatteryTypeDetectionEnabledSwitch::write_state(bool state) {
 void NukiLockSlowSpeedDuringNightModeEnabledSwitch::write_state(bool state) {
     this->parent_->set_config_switch("slow_speed_during_night_mode_enabled", state);
 }
+void NukiLockDetachedCylinderEnabledSwitch::write_state(bool state) {
+    this->parent_->set_config_switch("detached_cylinder_enabled", state);
+}
 #endif
 #ifdef USE_NUMBER
 void NukiLockLedBrightnessNumber::control(float value) {
@@ -2248,6 +2407,24 @@ void NukiLockTimeZoneOffsetNumber::control(float value) {
 }
 void NukiLockLockNGoTimeoutNumber::control(float value) {
     this->parent_->set_config_number("lock_n_go_timeout", value);
+}
+void NukiLockAutoLockTimeoutNumber::control(float value) {
+    this->parent_->set_config_number("auto_lock_timeout", value);
+}
+void NukiLockUnlatchDurationNumber::control(float value) {
+    this->parent_->set_config_number("unlatch_duration", value);
+}
+void NukiLockUnlockedPositionOffsetDegreesNumber::control(float value) {
+    this->parent_->set_config_number("unlocked_position_offset", value);
+}
+void NukiLockLockedPositionOffsetDegreesNumber::control(float value) {
+    this->parent_->set_config_number("locked_position_offset", value);
+}
+void NukiLockSingleLockedPositionOffsetDegreesNumber::control(float value) {
+    this->parent_->set_config_number("single_locked_position_offset", value);
+}
+void NukiLockUnlockedToLockedTransitionOffsetDegreesNumber::control(float value) {
+    this->parent_->set_config_number("unlocked_to_locked_transition_offset", value);
 }
 #endif
 

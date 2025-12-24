@@ -107,6 +107,12 @@ class NukiLockComponent :
     SUB_NUMBER(led_brightness)
     SUB_NUMBER(timezone_offset)
     SUB_NUMBER(lock_n_go_timeout)
+    SUB_NUMBER(auto_lock_timeout)
+    SUB_NUMBER(unlatch_duration)
+    SUB_NUMBER(unlocked_position_offset)
+    SUB_NUMBER(locked_position_offset)
+    SUB_NUMBER(single_locked_position_offset)
+    SUB_NUMBER(unlocked_to_locked_transition_offset)
     #endif
     #ifdef USE_SELECT
     SUB_SELECT(single_button_press_action)
@@ -121,9 +127,11 @@ class NukiLockComponent :
     #endif
     #ifdef USE_BUTTON
     SUB_BUTTON(unpair)
+    SUB_BUTTON(request_calibration)
     #endif
     #ifdef USE_SWITCH
     SUB_SWITCH(pairing_mode)
+    SUB_SWITCH(pairing_enabled)
     SUB_SWITCH(button_enabled)
     SUB_SWITCH(auto_unlatch_enabled)
     SUB_SWITCH(led_enabled)
@@ -139,6 +147,7 @@ class NukiLockComponent :
     SUB_SWITCH(dst_mode_enabled)
     SUB_SWITCH(auto_battery_type_detection_enabled)
     SUB_SWITCH(slow_speed_during_night_mode_enabled)
+    SUB_SWITCH(detached_cylinder_enabled)
     #endif
 
     public:
@@ -157,9 +166,8 @@ class NukiLockComponent :
         void update() override;
         void dump_config() override;
         void notify(Nuki::EventType event_type) override;
-        float get_setup_priority() const override { return setup_priority::HARDWARE - 1.0f; }
+        float get_setup_priority() const override { return setup_priority::HARDWARE; }
 
-        void set_pairing_as_app(bool pairing_as_app) { this->pairing_as_app_ = pairing_as_app; }
         void set_pairing_mode_timeout(uint32_t pairing_mode_timeout) { this->pairing_mode_timeout_ = pairing_mode_timeout; }
         void set_query_interval_config(uint32_t query_interval_config) { this->query_interval_config_ = query_interval_config; }
         void set_query_interval_auth_data(uint32_t query_interval_auth_data) { this->query_interval_auth_data_ = query_interval_auth_data; }
@@ -173,6 +181,7 @@ class NukiLockComponent :
         }
 
         template<typename T> void set_security_pin_config(T security_pin_config) { this->security_pin_config_ = security_pin_config; }
+        template<typename T> void set_pairing_as_app(T pairing_as_app) { this->pairing_as_app_ = pairing_as_app; }
 
         void add_pairing_mode_on_callback(std::function<void()> &&callback);
         void add_pairing_mode_off_callback(std::function<void()> &&callback);
@@ -213,6 +222,8 @@ class NukiLockComponent :
         void unpair();
         void set_pairing_mode(bool enabled);
         void save_settings();
+
+        void request_calibration();
 
         bool is_connected() {
             return this->connected_;
@@ -275,12 +286,12 @@ class NukiLockComponent :
         bool event_log_update_;
         bool open_latch_;
         bool lock_n_go_;
-
-        bool pairing_as_app_ = false;
-
+        
         PinState pin_state_ = PinState::NotSet;
         uint32_t security_pin_ = 0;
         TemplatableValue<uint32_t> security_pin_config_{};
+
+        TemplatableValue<bool> pairing_as_app_{};
 
         bool connected_ = false;
 
@@ -321,6 +332,13 @@ class NukiLockComponent :
 class NukiLockUnpairButton : public button::Button, public Parented<NukiLockComponent> {
     public:
         NukiLockUnpairButton() = default;
+    protected:
+        void press_action() override;
+};
+
+class NukiLockRequestCalibrationButton : public button::Button, public Parented<NukiLockComponent> {
+    public:
+        NukiLockRequestCalibrationButton() = default;
     protected:
         void press_action() override;
 };
@@ -395,6 +413,13 @@ class NukiLockMotorSpeedSelect : public select::Select, public Parented<NukiLock
 class NukiLockPairingModeSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
     public:
         NukiLockPairingModeSwitch() = default;
+    protected:
+        void write_state(bool state) override;
+};
+
+class NukiLockPairingEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockPairingEnabledSwitch() = default;
     protected:
         void write_state(bool state) override;
 };
@@ -518,6 +543,14 @@ class NukiLockSlowSpeedDuringNightModeEnabledSwitch : public switch_::Switch, pu
     protected:
         void write_state(bool state) override;
 };
+
+class NukiLockDetachedCylinderEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockDetachedCylinderEnabledSwitch() = default;
+
+    protected:
+        void write_state(bool state) override;
+};
 #endif
 
 #ifdef USE_NUMBER
@@ -538,6 +571,53 @@ class NukiLockTimeZoneOffsetNumber : public number::Number, public Parented<Nuki
 class NukiLockLockNGoTimeoutNumber : public number::Number, public Parented<NukiLockComponent> {
     public:
         NukiLockLockNGoTimeoutNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+class NukiLockAutoLockTimeoutNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockAutoLockTimeoutNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+
+class NukiLockUnlatchDurationNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockUnlatchDurationNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+
+class NukiLockUnlockedPositionOffsetDegreesNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockUnlockedPositionOffsetDegreesNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+
+class NukiLockLockedPositionOffsetDegreesNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockLockedPositionOffsetDegreesNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+
+class NukiLockSingleLockedPositionOffsetDegreesNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockSingleLockedPositionOffsetDegreesNumber() = default;
+
+    protected:
+        void control(float value) override;
+};
+
+class NukiLockUnlockedToLockedTransitionOffsetDegreesNumber : public number::Number, public Parented<NukiLockComponent> {
+    public:
+        NukiLockUnlockedToLockedTransitionOffsetDegreesNumber() = default;
 
     protected:
         void control(float value) override;

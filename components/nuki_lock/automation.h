@@ -15,6 +15,12 @@ class NukiLockUnpairAction : public Action<Ts...>, public Parented<NukiLockCompo
 };
 
 template<typename... Ts>
+class NukiLockRequestCalibrationAction : public Action<Ts...>, public Parented<NukiLockComponent> {
+    public:
+        void play(const Ts&... x) override { this->parent_->request_calibration(); }
+};
+
+template<typename... Ts>
 class NukiLockPairingModeAction : public Action<Ts...>, public Parented<NukiLockComponent> {
     TEMPLATABLE_VALUE(bool, pairing_mode)
 

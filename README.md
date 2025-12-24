@@ -1,6 +1,6 @@
 # ESPHome Nuki Lock Component (ESP32) [![Build Component](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml/badge.svg)](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml)
 
-Seamlessly integrate Nuki Smart Locks (1st–5th Gen, Ultra, Go) with ESPHome, enabling a full-featured Home Assistant lock platform with [many available entities](#-entities).
+Seamlessly integrate Nuki Smart Locks (1st–5th Gen, Ultra, Go, Pro) with ESPHome, enabling a full-featured Home Assistant lock platform with [many available entities](#-entities).
 The lock state is always up-to-date thanks to Nuki's BLE advertisement mechanism—whether controlled through the Nuki app, Home Assistant, or physically at the door.
 
 ![some dashboard entites](./docs/nuki_dashboard.png)
@@ -64,7 +64,7 @@ lock:
     event: "none"
     
   # Needed to change most of the lock settings
-  # Needed to pair with Smart Lock Ultra/5th Gen/Go (6 digit pin)
+  # Needed to pair with Smart Lock Ultra/5th Gen/Go/Pro (6 digit pin)
   # Supports templating
     security_pin: 1234
 
@@ -102,7 +102,7 @@ lock:
     battery_level:
       name: "Nuki Battery Level"
     bt_signal_strength:
-      name: "Bluetooth Signal Strength"
+      name: "Nuki Bluetooth Signal Strength"
 
   # Optional: Text Sensors
     door_sensor_state:
@@ -118,19 +118,34 @@ lock:
 
   # Optional: Number Inputs
     led_brightness:
-      name: "Nuki LED Brightness"
+      name: "Nuki LED: Brightness"
     timezone_offset:
       name: "Nuki Timezone: Offset"
     lock_n_go_timeout:
-      name: "Nuki LockNGo Timeout"
+      name: "Nuki Lock 'n' Go Timeout"
+    auto_lock_timeout:
+      name: "Nuki Auto Lock Timeout"
+    unlatch_duration:
+      name: "Nuki Unlatch Duration"
+    # Advanced Calibration
+    unlocked_position_offset:
+      name: "Nuki Unlocked Position Offset Degrees"
+    locked_position_offset:
+      name: "Nuki Locked Position Offset Degrees"
+    single_locked_position_offset:
+      name: "Nuki Single Locked Position Offset Degrees"
+    unlocked_to_locked_transition_offset:
+      name: "Nuki Unlocked to Locked Transition Offset Degrees"
 
   # Optional: Switches
+    pairing_enabled:
+      name: "Nuki Button: Bluetooth Pairing"
     auto_unlatch:
       name: "Nuki Auto unlatch"
     button_enabled:
       name: "Nuki Button: Locking operations"
     led_enabled:
-      name: "Nuki LED Signal"
+      name: "Nuki LED: Signal"
     night_mode_enabled:
       name: "Nuki Night Mode"
     night_mode_auto_lock_enabled:
@@ -155,6 +170,8 @@ lock:
       name: "Nuki Automatic Battery Type Detection"
     slow_speed_during_night_mode_enabled:
       name: "Nuki Slow Speed During Night Mode"
+    detached_cylinder_enabled:
+      name: "Nuki Detached Cylinder"
 
   # Optional: Select Inputs
     single_buton_press_action:
@@ -200,7 +217,7 @@ Then continue with the pairing instructions below.
 
 # 🔐 Pairing Your Nuki Lock
 
-## Pairing with Nuki Lock (1st–4th Gen)
+## Pairing with Nuki Smart Lock (1st – 4th Gen)
 
 1. In the official Nuki App, make sure **Bluetooth pairing** is enabled:  
    **Settings → Features & Configuration → Button and LED**.  
@@ -214,15 +231,14 @@ Then continue with the pairing instructions below.
 > [!NOTE]  
 > The ESPHome bridge *can* run alongside an official Nuki Bridge, but this is not recommended (except in hybrid mode). Running both may increase battery drain and cause missed updates. If you need both, set `pairing_as_app: true` **before pairing**. Otherwise, pairing with the ESPHome bridge will unregister the official Bridge.
 
-## Pairing with Nuki Lock Ultra / Nuki Lock Go / Nuki Lock 5th Gen Pro
+## Pairing with Nuki Smart Lock Ultra / 5th Gen / Go / Pro
 
 1. In the official Nuki App, ensure **Bluetooth pairing** is enabled:  
    **Settings → Features & Configuration → Button and LED**.
 
 2. Before activating pairing mode on the lock, configure ESPHome with:
 
-   * `pairing_as_app: true`
-   * `security_pin: 123456`: your 6-digit PIN for the Ultra/Go/5th Gen lock
+   * `security_pin: 123456`: your 6-digit PIN for the Nuki Smart Lock Ultra/5th Gen/Go/Pro
 
 > [!IMPORTANT]
 > If your PIN starts with zeros, remove them (e.g., 000548 → 548). Pairing will fail if you include leading zeros.
@@ -242,10 +258,10 @@ The following configuration options allow you to customize the behavior of the N
 
 | Option                     | Description                                   | Default |
 | -------------------------- | --------------------------------------------- | ------- |
-| `security_pin`             | Required for event logs & advanced operations (mandatory for Ultra/Go/5th Gen pairing - remove leading zeros: 000548 → 548) | —       |
+| `security_pin`             | Required for event logs & advanced operations (mandatory for Ultra/5th Gen/Go/Pro pairing - remove leading zeros: 000548 → 548) | —       |
 | `pairing_mode_timeout`     | Auto-timeout for pairing mode                 | `300s`  |
 | `event`                    | Event log event name (`none` disables logs)   | `none`  |
-| `pairing_as_app`           | Pair as app (required for Ultra/Go/5th Gen)   | `false` |
+| `pairing_as_app`           | Pair as app                                   | `false` |
 | `query_interval_config`    | Config refresh interval                       | `3600s` |
 | `query_interval_auth_data` | Auth data refresh interval                    | `7200s` |
 | `ble_general_timeout`      | General BLE timeout                           | `3s`    |
@@ -336,6 +352,13 @@ To unpair your Nuki Smart Lock, use the following action:
 ```yaml
 on_...:
   - nuki_lock.unpair:
+```
+
+## Action: Request Calibration
+To request a calibration of your Nuki Smart Lock, use the following action:
+```yaml
+on_...:
+  - nuki_lock.request_calibration:
 ```
 
 ## Action: Security Pin
@@ -480,8 +503,9 @@ context:
 - Last Lock Action Trigger
 
 **Switch:**  
-- Button Enabled
-- LED Enabled
+- Button: Bluetooth Pairing
+- Button: Locking operations
+- LED Signal
 - Night Mode
 - Night Mode: Auto Lock
 - Night Mode: Reject Auto Unlock
@@ -494,6 +518,10 @@ context:
 - Automatic Updates
 - Automatic Battery Type Detection (Smart Lock Gen 1-4)
 - Slow Speed During Night Mode (Smart Lock Ultra)
+- Detached Cylinder
+
+**Button:**  
+- Request Calibration
 
 **Select Input:**  
 - Single Button Press Action
@@ -507,8 +535,15 @@ context:
 - Motor Speed (Smart Lock Ultra)
 
 **Number Input:**  
-- LED Brightness
+- LED: Brightness
 - Timezone Offset
+- Lock 'n' Go Timeout
+- Auto Lock Timeout
+- Unlatch Duration
+- Unlocked Position Offset Degrees
+- Locked Position Offset Degrees
+- Single Locked Position Offset Degrees
+- Unlocked to Locked Transition Offset Degrees
 
 ---
 
