@@ -168,7 +168,7 @@ lock:
       name: "Nuki Daylight Saving Time"
     auto_battery_type_detection_enabled:
       name: "Nuki Automatic Battery Type Detection"
-    slow_speed_during_night_mode_enabled:
+    slow_speed_during_night_mode:
       name: "Nuki Slow Speed During Night Mode"
     detached_cylinder_enabled:
       name: "Nuki Detached Cylinder"
