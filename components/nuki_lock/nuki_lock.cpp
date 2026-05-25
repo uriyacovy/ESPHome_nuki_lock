@@ -1564,6 +1564,7 @@ void NukiLockRequestCalibrationButton::press_action() {
     this->parent_->request_calibration();
 }
 #endif
+
 #ifdef USE_SELECT
 void NukiLockSingleButtonPressActionSelect::control(const std::string &value) {
     NukiLock::ButtonPressAction action = nuki_lock::button_press_action_to_enum(value.c_str());
@@ -1645,6 +1646,7 @@ void NukiLockMotorSpeedSelect::control(const std::string &value) {
     }
 }
 #endif
+
 #ifdef USE_SWITCH
 void NukiLockPairingModeSwitch::write_state(bool state) {
     this->parent_->set_pairing_mode(state);
@@ -1776,6 +1778,7 @@ void NukiLockDetachedCylinderEnabledSwitch::write_state(bool state) {
     }
 }
 #endif
+
 #ifdef USE_NUMBER
 void NukiLockLedBrightnessNumber::control(float value) {
     if(this->parent_->get_nuki_lock()->setLedBrightness(value)) {
@@ -1848,23 +1851,5 @@ void NukiLockUnlockedToLockedTransitionOffsetDegreesNumber::control(float value)
     }
 }
 #endif
-
-// Callbacks
-void NukiLockComponent::add_pairing_mode_on_callback(std::function<void()> &&callback) {
-    this->pairing_mode_on_callback_.add(std::move(callback));
-}
-
-void NukiLockComponent::add_pairing_mode_off_callback(std::function<void()> &&callback) {
-    this->pairing_mode_off_callback_.add(std::move(callback));
-}
-
-void NukiLockComponent::add_paired_callback(std::function<void()> &&callback) {
-    this->paired_callback_.add(std::move(callback));
-}
-
-void NukiLockComponent::add_event_log_received_callback(std::function<void(NukiLock::LogEntry)> &&callback)
-{
-    this->event_log_received_callback_.add(std::move(callback));
-}
 
 }

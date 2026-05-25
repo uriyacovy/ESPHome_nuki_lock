@@ -176,15 +176,25 @@ class NukiLockComponent :
         template<typename T> void set_pairing_as_app(T pairing_as_app) { this->pairing_as_app_ = pairing_as_app; }
 
         // Callback registration & managers
-        void add_pairing_mode_on_callback(std::function<void()> &&callback);
-        void add_pairing_mode_off_callback(std::function<void()> &&callback);
-        void add_paired_callback(std::function<void()> &&callback);
-        void add_event_log_received_callback(std::function<void(NukiLock::LogEntry)> &&callback);
-        CallbackManager<void()> pairing_mode_on_callback_{};
-        CallbackManager<void()> pairing_mode_off_callback_{};
-        CallbackManager<void()> paired_callback_{};
-        CallbackManager<void(NukiLock::LogEntry)> event_log_received_callback_{};
+        template<typename F> void add_pairing_mode_on_callback(F &&callback)
+        {
+            this->pairing_mode_on_callback_.add(std::forward<F>(callback));
+        }
 
+        template<typename F> void add_pairing_mode_off_callback(F &&callback)
+        {
+            this->pairing_mode_off_callback_.add(std::forward<F>(callback));
+        }
+
+        template<typename F> void add_paired_callback(F &&callback)
+        {
+            this->paired_callback_.add(std::forward<F>(callback));
+        }
+
+        template<typename F> void add_event_log_received_callback(F &&callback)
+        {
+            this->event_log_received_callback_.add(std::forward<F>(callback));
+        }
 
         void unpair();
         void save_settings();
@@ -205,6 +215,11 @@ class NukiLockComponent :
         NukiLock::AdvancedConfig* get_nuki_lock_advanced_config() { return &this->nuki_lock_advanced_config_; }
 
     protected:
+        CallbackManager<void()> pairing_mode_on_callback_;
+        CallbackManager<void()> pairing_mode_off_callback_;
+        CallbackManager<void()> paired_callback_;
+        CallbackManager<void(NukiLock::LogEntry)> event_log_received_callback_;
+
         void control(const lock::LockCall &call) override;
         void open_latch() override { this->open_latch_ = true; unlock();}
 
@@ -280,6 +295,10 @@ class NukiLockComponent :
         bool open_latch_{false};
         bool lock_n_go_{false};
 
+        // Error tracking & counters
+        uint8_t action_attempts_ = 0;
+        uint32_t status_update_consecutive_errors_ = 0;
+
         // Timing & Intervals
         uint32_t last_command_executed_time_ = 0;
         uint32_t command_cooldown_millis = 0;
@@ -289,14 +308,10 @@ class NukiLockComponent :
         uint32_t ble_command_timeout_ = 0;
         uint32_t pairing_mode_timeout_ = 0;
 
-        // Error tracking & counters
-        uint8_t action_attempts_ = 0;
-        uint32_t status_update_consecutive_errors_ = 0;
-
         // Event Logs
-        const char* event_;
         uint32_t last_rolling_log_id = 0;
         uint32_t event_log_ready_time_ = 0;
+        const char* event_;
 };
 
 // Entities

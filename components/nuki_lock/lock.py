@@ -1008,7 +1008,10 @@ NUKI_LOCK_ACTION_SCHEMA = automation.maybe_simple_id(
 )
 
 @automation.register_action(
-    "nuki_lock.unpair", NukiLockUnpairAction, NUKI_LOCK_ACTION_SCHEMA
+    "nuki_lock.unpair",
+    NukiLockUnpairAction,
+    NUKI_LOCK_ACTION_SCHEMA,
+    synchronous=True
 )
 async def nuki_lock_unpair_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)
@@ -1017,7 +1020,10 @@ async def nuki_lock_unpair_to_code(config, action_id, template_arg, args):
 
 
 @automation.register_action(
-    "nuki_lock.request_calibration", NukiLockRequestCalibrationAction, NUKI_LOCK_ACTION_SCHEMA
+    "nuki_lock.request_calibration",
+    NukiLockRequestCalibrationAction,
+    NUKI_LOCK_ACTION_SCHEMA,
+    synchronous=True
 )
 async def nuki_lock_request_calibration_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)
@@ -1033,7 +1039,10 @@ NUKI_LOCK_SET_PAIRING_MODE_SCHEMA = automation.maybe_simple_id(
 )
 
 @automation.register_action(
-    "nuki_lock.set_pairing_mode", NukiLockPairingModeAction, NUKI_LOCK_SET_PAIRING_MODE_SCHEMA
+    "nuki_lock.set_pairing_mode",
+    NukiLockPairingModeAction,
+    NUKI_LOCK_SET_PAIRING_MODE_SCHEMA,
+    synchronous=True
 )
 async def nuki_lock_set_pairing_mode_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)
@@ -1051,7 +1060,10 @@ NUKI_LOCK_SET_SECURITY_PIN_SCHEMA = automation.maybe_simple_id(
 )
 
 @automation.register_action(
-    "nuki_lock.set_security_pin", NukiLockSecurityPinAction, NUKI_LOCK_SET_SECURITY_PIN_SCHEMA
+    "nuki_lock.set_security_pin",
+    NukiLockSecurityPinAction,
+    NUKI_LOCK_SET_SECURITY_PIN_SCHEMA,
+    synchronous=True
 )
 async def nuki_lock_set_security_pin_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)
