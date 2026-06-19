@@ -937,6 +937,11 @@ async def to_code(config):
     add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ROLE_PERIPHERAL", True)
     add_idf_sdkconfig_option("CONFIG_BTDM_BLE_SCAN_DUPL", True)
 
+    # libsodium's HMAC-SHA256 can return wrong results when backed by hardware SHA
+    # acceleration via mbedTLS (likely related to esphome/esphome#12707, #13021, #13234).
+    # Force libsodium to use its own SHA implementation instead.
+    add_idf_sdkconfig_option("CONFIG_LIBSODIUM_USE_MBEDTLS_SHA", False)
+
     # Reduce NimBLE log level to save memory
     add_idf_sdkconfig_option("CONFIG_NIMBLE_CPP_LOG_LEVEL", 0)
     add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL", 0)

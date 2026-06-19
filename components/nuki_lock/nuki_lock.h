@@ -2,6 +2,7 @@
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <freertos/semphr.h>
 
 #include "esphome/core/component.h"
 #include "esphome/components/lock/lock.h"
@@ -68,6 +69,24 @@ struct NukiLockSettings
 {
     uint32_t security_pin;
     PinState pin_state;
+};
+
+// Serializes access to the underlying NukiBle/NimBLE objects, which are not safe to call
+// concurrently from the nuki_task and from entity callbacks (switch/number/select/button/services)
+// running on the main loop. Recursive so that automations triggered from within a guarded call
+// (e.g. on_paired_action, on_..._state) can re-enter from the same task without deadlocking.
+class NukiBleLockGuard {
+    public:
+        explicit NukiBleLockGuard(SemaphoreHandle_t mutex) : mutex_(mutex) {
+            xSemaphoreTakeRecursive(this->mutex_, portMAX_DELAY);
+        }
+        ~NukiBleLockGuard() {
+            xSemaphoreGiveRecursive(this->mutex_);
+        }
+        NukiBleLockGuard(const NukiBleLockGuard &) = delete;
+        NukiBleLockGuard &operator=(const NukiBleLockGuard &) = delete;
+    private:
+        SemaphoreHandle_t mutex_;
 };
 
 class NukiLockComponent :
@@ -213,6 +232,7 @@ class NukiLockComponent :
         NukiLock::NukiLock* get_nuki_lock() { return &this->nuki_lock_; }
         NukiLock::Config* get_nuki_lock_config() { return &this->nuki_lock_config_; }
         NukiLock::AdvancedConfig* get_nuki_lock_advanced_config() { return &this->nuki_lock_advanced_config_; }
+        SemaphoreHandle_t get_nuki_mutex() { return this->nuki_mutex_; }
 
     protected:
         CallbackManager<void()> pairing_mode_on_callback_;
@@ -228,6 +248,7 @@ class NukiLockComponent :
         static void nuki_task_fn(void *arg);
         void nuki_task_loop();
         TaskHandle_t nuki_task_handle_{nullptr};
+        SemaphoreHandle_t nuki_mutex_{nullptr};
 
         // Core components
         ESPPreferenceObject pref_;

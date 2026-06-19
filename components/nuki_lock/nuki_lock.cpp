@@ -655,6 +655,8 @@ bool NukiLockComponent::execute_lock_action(NukiLock::LockAction lock_action) {
 }
 
 void NukiLockComponent::set_security_pin(uint32_t new_pin) {
+    NukiBleLockGuard guard(this->nuki_mutex_);
+
     ESP_LOGI(TAG, "Setting security pin: %u", new_pin);
 
     if (new_pin > 999999) {
@@ -745,6 +747,10 @@ void NukiLockComponent::nuki_task_loop()
             continue;
         }
         last_loop_time = current_time;
+
+        // Held for the rest of this iteration to keep entity callbacks (switches/numbers/
+        // selects/buttons/services) on the main loop from touching the BLE stack concurrently.
+        NukiBleLockGuard nuki_guard(this->nuki_mutex_);
 
         // Check for new advertisements
         this->scanner_.update();
@@ -918,6 +924,13 @@ void NukiLockComponent::nuki_task_loop()
 
 void NukiLockComponent::setup() {
     ESP_LOGCONFIG(TAG, "Running setup");
+
+    this->nuki_mutex_ = xSemaphoreCreateRecursiveMutex();
+    if (this->nuki_mutex_ == nullptr) {
+        ESP_LOGE(TAG, "Failed to create Nuki mutex");
+        this->mark_failed();
+        return;
+    }
 
     // Restore settings from flash
     this->pref_ = global_preferences->make_preference<NukiLockSettings>(global_nuki_lock_id);
@@ -1206,6 +1219,8 @@ bool NukiLockComponent::valid_keypad_code(int32_t code) {
 }
 
 void NukiLockComponent::add_keypad_entry(std::string name, int32_t code) {
+    NukiBleLockGuard guard(this->nuki_mutex_);
+
     if (!this->nuki_lock_.isPairedWithLock()) {
         ESP_LOGE(TAG, "Lock is not paired, cannot add keypad entry");
         return;
@@ -1241,6 +1256,8 @@ void NukiLockComponent::add_keypad_entry(std::string name, int32_t code) {
 }
 
 void NukiLockComponent::update_keypad_entry(int32_t id, std::string name, int32_t code, bool enabled) {
+    NukiBleLockGuard guard(this->nuki_mutex_);
+
     if (!this->nuki_lock_.isPairedWithLock()) {
         ESP_LOGE(TAG, "Lock is not paired, cannot update keypad entry");
         return;
@@ -1278,6 +1295,8 @@ void NukiLockComponent::update_keypad_entry(int32_t id, std::string name, int32_
 }
 
 void NukiLockComponent::delete_keypad_entry(int32_t id) {
+    NukiBleLockGuard guard(this->nuki_mutex_);
+
     if (!this->nuki_lock_.isPairedWithLock()) {
         ESP_LOGE(TAG, "Lock is not paired, cannot retrieve delete entry");
         return;
@@ -1307,6 +1326,8 @@ void NukiLockComponent::delete_keypad_entry(int32_t id) {
 }
 
 void NukiLockComponent::print_keypad_entries() {
+    NukiBleLockGuard guard(this->nuki_mutex_);
+
     if (!this->nuki_lock_.isPairedWithLock()) {
         ESP_LOGE(TAG, "Lock is not paired, cannot retrieve keypad entries");
         return;
@@ -1472,6 +1493,8 @@ void NukiLockComponent::notify(Nuki::EventType event_type) {
 }
 
 void NukiLockComponent::unpair() {
+    NukiBleLockGuard guard(this->nuki_mutex_);
+
     if (!this->nuki_lock_.isPairedWithLock()) {
         ESP_LOGE(TAG, "Lock is not paired, cannot unpair");
         return;
@@ -1501,6 +1524,8 @@ void NukiLockComponent::unpair() {
 }
 
 void NukiLockComponent::request_calibration() {
+    NukiBleLockGuard guard(this->nuki_mutex_);
+
     if (!this->nuki_lock_.isPairedWithLock()) {
         ESP_LOGE(TAG, "Lock is not paired, cannot request calibration");
         return;
@@ -1567,6 +1592,7 @@ void NukiLockRequestCalibrationButton::press_action() {
 
 #ifdef USE_SELECT
 void NukiLockSingleButtonPressActionSelect::control(const std::string &value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     NukiLock::ButtonPressAction action = nuki_lock::button_press_action_to_enum(value.c_str());
     if(this->parent_->get_nuki_lock()->setSingleButtonPressAction(action)) {
         this->parent_->get_nuki_lock_advanced_config()->singleButtonPressAction = action;
@@ -1575,6 +1601,7 @@ void NukiLockSingleButtonPressActionSelect::control(const std::string &value) {
 }
 
 void NukiLockDoubleButtonPressActionSelect::control(const std::string &value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     NukiLock::ButtonPressAction action = nuki_lock::button_press_action_to_enum(value.c_str());
     if(this->parent_->get_nuki_lock()->setDoubleButtonPressAction(action)) {
         this->parent_->get_nuki_lock_advanced_config()->doubleButtonPressAction = action;
@@ -1583,6 +1610,7 @@ void NukiLockDoubleButtonPressActionSelect::control(const std::string &value) {
 }
 
 void NukiLockFobAction1Select::control(const std::string &value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     const uint8_t action = nuki_lock::fob_action_to_int(value.c_str());
     if (action != 99 && this->parent_->get_nuki_lock()->setFobAction(1, action)) {
         this->parent_->get_nuki_lock_config()->fobAction1 = action;
@@ -1591,6 +1619,7 @@ void NukiLockFobAction1Select::control(const std::string &value) {
 }
 
 void NukiLockFobAction2Select::control(const std::string &value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     const uint8_t action = nuki_lock::fob_action_to_int(value.c_str());
     if (action != 99 && this->parent_->get_nuki_lock()->setFobAction(2, action)) {
         this->parent_->get_nuki_lock_config()->fobAction2 = action;
@@ -1599,6 +1628,7 @@ void NukiLockFobAction2Select::control(const std::string &value) {
 }
 
 void NukiLockFobAction3Select::control(const std::string &value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     const uint8_t action = nuki_lock::fob_action_to_int(value.c_str());
     if (action != 99 && this->parent_->get_nuki_lock()->setFobAction(3, action)) {
         this->parent_->get_nuki_lock_config()->fobAction3 = action;
@@ -1607,6 +1637,7 @@ void NukiLockFobAction3Select::control(const std::string &value) {
 }
 
 void NukiLockTimeZoneSelect::control(const std::string &value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     Nuki::TimeZoneId tzid = nuki_lock::timezone_to_enum(value.c_str());
     if(this->parent_->get_nuki_lock()->setTimeZoneId(tzid)) {
         this->parent_->get_nuki_lock_config()->timeZoneId = tzid;
@@ -1615,6 +1646,7 @@ void NukiLockTimeZoneSelect::control(const std::string &value) {
 }
 
 void NukiLockAdvertisingModeSelect::control(const std::string &value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     Nuki::AdvertisingMode mode = nuki_lock::advertising_mode_to_enum(value.c_str());
     if(this->parent_->get_nuki_lock()->setAdvertisingMode(mode)) {
         this->parent_->get_nuki_lock_config()->advertisingMode = mode;
@@ -1623,6 +1655,7 @@ void NukiLockAdvertisingModeSelect::control(const std::string &value) {
 }
 
 void NukiLockBatteryTypeSelect::control(const std::string &value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(!this->parent_->get_nuki_lock()->isLockUltra()) {
         Nuki::BatteryType type = nuki_lock::battery_type_to_enum(value.c_str());
         if(this->parent_->get_nuki_lock()->setBatteryType(type)) {
@@ -1635,6 +1668,7 @@ void NukiLockBatteryTypeSelect::control(const std::string &value) {
 }
 
 void NukiLockMotorSpeedSelect::control(const std::string &value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->isLockUltra()) {
         NukiLock::MotorSpeed speed = nuki_lock::motor_speed_to_enum(value.c_str());
         if(this->parent_->get_nuki_lock()->setMotorSpeed(speed)) {
@@ -1653,6 +1687,7 @@ void NukiLockPairingModeSwitch::write_state(bool state) {
 }
 
 void NukiLockPairingEnabledSwitch::write_state(bool state) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->enablePairing(state)) {
         this->parent_->get_nuki_lock_config()->pairingEnabled = state;
         this->publish_state(state);
@@ -1660,6 +1695,7 @@ void NukiLockPairingEnabledSwitch::write_state(bool state) {
 }
 
 void NukiLockAutoUnlatchEnabledSwitch::write_state(bool state) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->enableAutoUnlatch(state)) {
         this->parent_->get_nuki_lock_config()->autoUnlatch = state;
         this->publish_state(state);
@@ -1667,6 +1703,7 @@ void NukiLockAutoUnlatchEnabledSwitch::write_state(bool state) {
 }
 
 void NukiLockButtonEnabledSwitch::write_state(bool state) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->enableButton(state)) {
         this->parent_->get_nuki_lock_config()->buttonEnabled = state;
         this->publish_state(state);
@@ -1674,6 +1711,7 @@ void NukiLockButtonEnabledSwitch::write_state(bool state) {
 }
 
 void NukiLockLedEnabledSwitch::write_state(bool state) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->enableLedFlash(state)) {
         this->parent_->get_nuki_lock_config()->ledEnabled = state;
         this->publish_state(state);
@@ -1681,6 +1719,7 @@ void NukiLockLedEnabledSwitch::write_state(bool state) {
 }
 
 void NukiLockNightModeEnabledSwitch::write_state(bool state) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->enableNightMode(state)) {
         this->parent_->get_nuki_lock_advanced_config()->nightModeEnabled = state;
         this->publish_state(state);
@@ -1688,6 +1727,7 @@ void NukiLockNightModeEnabledSwitch::write_state(bool state) {
 }
 
 void NukiLockNightModeAutoLockEnabledSwitch::write_state(bool state) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->enableNightModeAutoLock(state)) {
         this->parent_->get_nuki_lock_advanced_config()->nightModeAutoLockEnabled = state;
         this->publish_state(state);
@@ -1695,6 +1735,7 @@ void NukiLockNightModeAutoLockEnabledSwitch::write_state(bool state) {
 }
 
 void NukiLockNightModeAutoUnlockDisabledSwitch::write_state(bool state) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->disableNightModeAutoUnlock(state)) {
         this->parent_->get_nuki_lock_advanced_config()->nightModeAutoUnlockDisabled = state;
         this->publish_state(state);
@@ -1702,6 +1743,7 @@ void NukiLockNightModeAutoUnlockDisabledSwitch::write_state(bool state) {
 }
 
 void NukiLockNightModeImmediateLockOnStartEnabledSwitch::write_state(bool state) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->enableNightModeImmediateLockOnStart(state)) {
         this->parent_->get_nuki_lock_advanced_config()->nightModeImmediateLockOnStart = state;
         this->publish_state(state);
@@ -1709,6 +1751,7 @@ void NukiLockNightModeImmediateLockOnStartEnabledSwitch::write_state(bool state)
 }
 
 void NukiLockAutoLockEnabledSwitch::write_state(bool state) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->enableAutoLock(state)) {
         this->parent_->get_nuki_lock_advanced_config()->autoLockEnabled = state;
         this->publish_state(state);
@@ -1716,6 +1759,7 @@ void NukiLockAutoLockEnabledSwitch::write_state(bool state) {
 }
 
 void NukiLockAutoUnlockDisabledSwitch::write_state(bool state) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->disableAutoUnlock(state)) {
         this->parent_->get_nuki_lock_advanced_config()->autoUnLockDisabled = state;
         this->publish_state(state);
@@ -1723,6 +1767,7 @@ void NukiLockAutoUnlockDisabledSwitch::write_state(bool state) {
 }
 
 void NukiLockImmediateAutoLockEnabledSwitch::write_state(bool state) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->enableImmediateAutoLock(state)) {
         this->parent_->get_nuki_lock_advanced_config()->immediateAutoLockEnabled = state;
         this->publish_state(state);
@@ -1730,6 +1775,7 @@ void NukiLockImmediateAutoLockEnabledSwitch::write_state(bool state) {
 }
 
 void NukiLockAutoUpdateEnabledSwitch::write_state(bool state) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->enableAutoUpdate(state)) {
         this->parent_->get_nuki_lock_advanced_config()->autoUpdateEnabled = state;
         this->publish_state(state);
@@ -1737,6 +1783,7 @@ void NukiLockAutoUpdateEnabledSwitch::write_state(bool state) {
 }
 
 void NukiLockSingleLockEnabledSwitch::write_state(bool state) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->enableSingleLock(state)) {
         this->parent_->get_nuki_lock_config()->singleLock = state;
         this->publish_state(state);
@@ -1744,6 +1791,7 @@ void NukiLockSingleLockEnabledSwitch::write_state(bool state) {
 }
 
 void NukiLockDstModeEnabledSwitch::write_state(bool state) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->enableDst(state)) {
         this->parent_->get_nuki_lock_config()->dstMode = state;
         this->publish_state(state);
@@ -1751,6 +1799,7 @@ void NukiLockDstModeEnabledSwitch::write_state(bool state) {
 }
 
 void NukiLockAutoBatteryTypeDetectionEnabledSwitch::write_state(bool state) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(!this->parent_->get_nuki_lock()->isLockUltra()) {
         if(this->parent_->get_nuki_lock()->enableAutoBatteryTypeDetection(state)) {
             this->parent_->get_nuki_lock_advanced_config()->automaticBatteryTypeDetection = state;
@@ -1762,6 +1811,7 @@ void NukiLockAutoBatteryTypeDetectionEnabledSwitch::write_state(bool state) {
 }
 
 void NukiLockSlowSpeedDuringNightModeEnabledSwitch::write_state(bool state) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->isLockUltra()) {
         if(this->parent_->get_nuki_lock()->enableSlowSpeedDuringNightMode(state)) {
             this->parent_->get_nuki_lock_advanced_config()->enableSlowSpeedDuringNightMode = state;
@@ -1772,6 +1822,7 @@ void NukiLockSlowSpeedDuringNightModeEnabledSwitch::write_state(bool state) {
     }
 }
 void NukiLockDetachedCylinderEnabledSwitch::write_state(bool state) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->enableDetachedCylinder(state)) {
         this->parent_->get_nuki_lock_advanced_config()->detachedCylinder = state;
         this->publish_state(state);
@@ -1781,12 +1832,14 @@ void NukiLockDetachedCylinderEnabledSwitch::write_state(bool state) {
 
 #ifdef USE_NUMBER
 void NukiLockLedBrightnessNumber::control(float value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if(this->parent_->get_nuki_lock()->setLedBrightness(value)) {
         this->parent_->get_nuki_lock_config()->ledBrightness = value;
         this->publish_state(value);
     }
 }
 void NukiLockTimeZoneOffsetNumber::control(float value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if (value >= -60 && value <= 60) {
         if(this->parent_->get_nuki_lock()->setTimeZoneOffset(value)) {
             this->parent_->get_nuki_lock_config()->timeZoneOffset = value;
@@ -1795,6 +1848,7 @@ void NukiLockTimeZoneOffsetNumber::control(float value) {
     }
 }
 void NukiLockLockNGoTimeoutNumber::control(float value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if (value >= 5 && value <= 60) {
         if(this->parent_->get_nuki_lock()->setLockNgoTimeout(value)) {
             this->parent_->get_nuki_lock_advanced_config()->lockNgoTimeout = value;
@@ -1803,6 +1857,7 @@ void NukiLockLockNGoTimeoutNumber::control(float value) {
     }
 }
 void NukiLockAutoLockTimeoutNumber::control(float value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if (value >= 30 && value <= 1800) {
         if(this->parent_->get_nuki_lock()->setAutoLockTimeOut(value)) {
             this->parent_->get_nuki_lock_advanced_config()->autoLockTimeOut = value;
@@ -1811,6 +1866,7 @@ void NukiLockAutoLockTimeoutNumber::control(float value) {
     }
 }
 void NukiLockUnlatchDurationNumber::control(float value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if (value >= 1 && value <= 30) {
         if(this->parent_->get_nuki_lock()->setUnlatchDuration(value)) {
             this->parent_->get_nuki_lock_advanced_config()->unlatchDuration = value;
@@ -1819,6 +1875,7 @@ void NukiLockUnlatchDurationNumber::control(float value) {
     }
 }
 void NukiLockUnlockedPositionOffsetDegreesNumber::control(float value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if (value >= -90 && value <= 180) {
         if(this->parent_->get_nuki_lock()->setUnlockedPositionOffsetDegrees(value)) {
             this->parent_->get_nuki_lock_advanced_config()->unlockedPositionOffsetDegrees = value;
@@ -1827,6 +1884,7 @@ void NukiLockUnlockedPositionOffsetDegreesNumber::control(float value) {
     }
 }
 void NukiLockLockedPositionOffsetDegreesNumber::control(float value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if (value >= -180 && value <= 90) {
         if(this->parent_->get_nuki_lock()->setLockedPositionOffsetDegrees(value)) {
             this->parent_->get_nuki_lock_advanced_config()->lockedPositionOffsetDegrees = value;
@@ -1835,6 +1893,7 @@ void NukiLockLockedPositionOffsetDegreesNumber::control(float value) {
     }
 }
 void NukiLockSingleLockedPositionOffsetDegreesNumber::control(float value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if (value >= -180 && value <= 180) {
         if(this->parent_->get_nuki_lock()->setSingleLockedPositionOffsetDegrees(value)) {
             this->parent_->get_nuki_lock_advanced_config()->singleLockedPositionOffsetDegrees = value;
@@ -1843,6 +1902,7 @@ void NukiLockSingleLockedPositionOffsetDegreesNumber::control(float value) {
     }
 }
 void NukiLockUnlockedToLockedTransitionOffsetDegreesNumber::control(float value) {
+    NukiBleLockGuard guard(this->parent_->get_nuki_mutex());
     if (value >= -180 && value <= 180) {
         if(this->parent_->get_nuki_lock()->setUnlockedToLockedTransitionOffsetDegrees(value)) {
             this->parent_->get_nuki_lock_advanced_config()->unlockedToLockedTransitionOffsetDegrees = value;
