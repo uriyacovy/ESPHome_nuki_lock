@@ -915,20 +915,13 @@ async def to_code(config):
         repo="https://github.com/AzonInc/Crc16.git",
     )
     add_idf_component(
-        name="ble-scanner",
-        repo="https://github.com/AzonInc/ble-scanner.git",
-        ref="2.1.0",
-    )
-    add_idf_component(
         name="esp-nimble-cpp",
         repo="https://github.com/h2zero/esp-nimble-cpp.git",
         ref="2.3.3",
     )
-    add_idf_component(
-        name="NukiBleEsp32",
-        repo="https://github.com/AzonInc/NukiBleEsp32.git",
-        ref="idf",
-    )
+    # NukiBleEsp32 (lock-only subset, Opener files excluded) and ble-scanner are
+    # vendored directly as component sources instead of fetched IDF components,
+    # see NukiBle.cpp/.h, NukiLock.cpp/.h, BleScanner.cpp/.h etc. in this directory.
 
     # General settings
     add_idf_sdkconfig_option("CONFIG_BT_ENABLED", True)
