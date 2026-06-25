@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @file NukiConstants.h
+ * @file nuki_lock_protocol_constants.h
  * Definitions of constants and data types based on Nuki smart lock api
  *
  * Created: 2022
@@ -12,33 +12,33 @@
  *
  */
 
-#include "NimBLEUUID.h"
-#include "NukiConstants.h"
+#include "esphome/components/esp32_ble_tracker/esp32_ble_tracker.h"
+#include "nuki_ble_constants.h"
 
-#include <list>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <string>
 
-
-namespace NukiLock {
-
-using namespace Nuki;
+namespace esphome::nuki_lock {
 
 //Keyturner Pairing Service
-const NimBLEUUID keyturnerPairingServiceUUID  = NimBLEUUID("a92ee100-5501-11e4-916c-0800200c9a66");
+const esphome::esp32_ble_tracker::ESPBTUUID keyturnerPairingServiceUUID  = esphome::esp32_ble_tracker::ESPBTUUID::from_raw("a92ee100-5501-11e4-916c-0800200c9a66");
 //Keyturner Pairing Service SmartLock Ultra
-const NimBLEUUID keyturnerPairingServiceUltraUUID  = NimBLEUUID("a92ee300-5501-11e4-916c-0800200c9a66");
+const esphome::esp32_ble_tracker::ESPBTUUID keyturnerPairingServiceUltraUUID  = esphome::esp32_ble_tracker::ESPBTUUID::from_raw("a92ee300-5501-11e4-916c-0800200c9a66");
 //Keyturner Service
-const NimBLEUUID keyturnerServiceUUID  = NimBLEUUID("a92ee200-5501-11e4-916c-0800200c9a66");
+const esphome::esp32_ble_tracker::ESPBTUUID keyturnerServiceUUID  = esphome::esp32_ble_tracker::ESPBTUUID::from_raw("a92ee200-5501-11e4-916c-0800200c9a66");
 //Keyturner pairing Data Input Output characteristic
-const NimBLEUUID keyturnerGdioUUID  = NimBLEUUID("a92ee101-5501-11e4-916c-0800200c9a66");
+const esphome::esp32_ble_tracker::ESPBTUUID keyturnerGdioUUID  = esphome::esp32_ble_tracker::ESPBTUUID::from_raw("a92ee101-5501-11e4-916c-0800200c9a66");
 //Keyturner pairing Data Input Output characteristic Ultra
-const NimBLEUUID keyturnerGdioUltraUUID  = NimBLEUUID("a92ee301-5501-11e4-916c-0800200c9a66");
+const esphome::esp32_ble_tracker::ESPBTUUID keyturnerGdioUltraUUID  = esphome::esp32_ble_tracker::ESPBTUUID::from_raw("a92ee301-5501-11e4-916c-0800200c9a66");
 //User-Specific Data Input Output characteristic
-const NimBLEUUID keyturnerUserDataUUID  = NimBLEUUID("a92ee202-5501-11e4-916c-0800200c9a66");
+const esphome::esp32_ble_tracker::ESPBTUUID keyturnerUserDataUUID  = esphome::esp32_ble_tracker::ESPBTUUID::from_raw("a92ee202-5501-11e4-916c-0800200c9a66");
 
-struct Action {
+// Named NukiAction (not just Action) to avoid shadowing esphome::Action<Ts...>, the automation
+// framework's action base class, once this namespace is flattened directly into esphome::nuki_lock
+// (automation.h's NukiLockUnpairAction etc. extend the latter via plain `Action<Ts...>`).
+struct NukiAction {
   CommandType cmdType;
   Command command;
   unsigned char payload[100] {0};
@@ -106,7 +106,7 @@ enum class LockState : uint8_t {
   Undefined       = 0xFF
 };
 
-enum class Trigger : uint8_t {
+enum class NukiTrigger : uint8_t {
   System          = 0x00,
   Manual          = 0x01,
   Button          = 0x02,
@@ -184,7 +184,7 @@ enum class CompletionStatus : uint8_t {
 struct __attribute__((packed)) KeyTurnerState {
   State nukiState = State::Uninitialized;
   LockState lockState = LockState::Undefined;
-  Trigger trigger;
+  NukiTrigger trigger;
   uint16_t currentTimeYear;
   uint8_t currentTimeMonth;
   uint8_t currentTimeDay;
@@ -196,7 +196,7 @@ struct __attribute__((packed)) KeyTurnerState {
   uint8_t configUpdateCount = 255;
   uint8_t lockNgoTimer = 255;
   LockAction lastLockAction = LockAction::Undefined;
-  Trigger lastLockActionTrigger = Trigger::Undefined;
+  NukiTrigger lastLockActionTrigger = NukiTrigger::Undefined;
   CompletionStatus lastLockActionCompletionStatus = CompletionStatus::Unknown;
   DoorSensorState doorSensorState = DoorSensorState::Unavailable;
   uint8_t nightModeActive = 255;
@@ -215,7 +215,7 @@ struct __attribute__((packed)) Config {
   float latitude;
   float longitude;
   uint8_t autoUnlatch;
-  uint8_t pairingEnabled;
+  uint8_t pairing_enabled;
   uint8_t buttonEnabled;
   uint8_t ledEnabled;
   uint8_t ledBrightness;
@@ -250,7 +250,7 @@ struct __attribute__((packed)) NewConfig {
   float latitude;
   float longitude;
   uint8_t autoUnlatch;
-  uint8_t pairingEnabled;
+  uint8_t pairing_enabled;
   uint8_t buttonEnabled;
   uint8_t ledEnabled;
   uint8_t ledBrightness;
@@ -289,7 +289,7 @@ struct __attribute__((packed)) AdvancedConfig {
   uint8_t immediateAutoLockEnabled = 255;
   uint8_t autoUpdateEnabled = 255;
   MotorSpeed motorSpeed = MotorSpeed::Unknown;
-  uint8_t enableSlowSpeedDuringNightMode = 255;
+  uint8_t enable_slow_speed_during_night_mode = 255;
 };
 
 struct __attribute__((packed)) NewAdvancedConfig {
@@ -316,14 +316,14 @@ struct __attribute__((packed)) NewAdvancedConfig {
   uint8_t immediateAutoLockEnabled;
   uint8_t autoUpdateEnabled;
   MotorSpeed motorSpeed;
-  uint8_t enableSlowSpeedDuringNightMode;
+  uint8_t enable_slow_speed_during_night_mode;
 };
 
 struct __attribute__((packed)) BatteryReport {
   uint16_t batteryDrain;
   uint16_t batteryVoltage;
   uint8_t criticalBatteryState;
-  LockAction lockAction;
+  LockAction lock_action;
   uint16_t startVoltage;
   uint16_t lowestVoltage;
   uint16_t lockDistance;
@@ -339,14 +339,14 @@ struct __attribute__((packed)) TimeControlEntry {
   uint8_t weekdays;
   uint8_t timeHour;
   uint8_t timeMin;
-  LockAction lockAction;
+  LockAction lock_action;
 };
 
 struct __attribute__((packed)) NewTimeControlEntry {
   uint8_t weekdays;
   uint8_t timeHour;
   uint8_t timeMin;
-  LockAction lockAction;
+  LockAction lock_action;
 };
 
 enum class LoggingType : uint8_t {
@@ -386,7 +386,7 @@ struct __attribute__((packed)) LogEntry {
   uint8_t data[5];
 };
 
-inline void lockactionToString(const LockAction action, char* str) {
+inline void lock_action_to_string(const LockAction action, char* str) {
   switch (action) {
     case LockAction::Unlock:
       strcpy(str, "Unlock");
@@ -422,12 +422,12 @@ inline void lockactionToString(const LockAction action, char* str) {
       strcpy(str, "FobAction3");
       break;
     default:
-      strcpy(str, "Unknown");
+      sprintf(str, "%u", static_cast<unsigned>(action));
       break;
   }
 }
 
-inline void lockstateToString(const LockState state, char* str) {
+inline void lock_state_to_string(const LockState state, char* str) {
   switch (state) {
     case LockState::Uncalibrated:
       strcpy(str, "uncalibrated");
@@ -463,41 +463,41 @@ inline void lockstateToString(const LockState state, char* str) {
       strcpy(str, "motorBlocked");
       break;
     default:
-      strcpy(str, "undefined");
+      sprintf(str, "%u", static_cast<unsigned>(state));
       break;
   }
 }
 
-inline void triggerToString(const Trigger trigger, char* str) {
+inline void trigger_to_string(const NukiTrigger trigger, char* str) {
   switch (trigger) {
-    case Trigger::AutoLock:
+    case NukiTrigger::AutoLock:
       strcpy(str, "autoLock");
       break;
-    case Trigger::Automatic:
+    case NukiTrigger::Automatic:
       strcpy(str, "automatic");
       break;
-    case Trigger::Button:
+    case NukiTrigger::Button:
       strcpy(str, "button");
       break;
-    case Trigger::Manual:
+    case NukiTrigger::Manual:
       strcpy(str, "manual");
       break;
-    case Trigger::System:
+    case NukiTrigger::System:
       strcpy(str, "system");
       break;
-    case Trigger::HomeKit:
+    case NukiTrigger::HomeKit:
       strcpy(str, "homekit");
       break;
-    case Trigger::MQTT:
+    case NukiTrigger::MQTT:
       strcpy(str, "mqtt");
       break;
     default:
-      strcpy(str, "undefined");
+      sprintf(str, "%u", static_cast<unsigned>(trigger));
       break;
   }
 }
 
-inline void completionStatusToString(const CompletionStatus status, char* str) {
+inline void completion_status_to_string(const CompletionStatus status, char* str) {
   switch (status) {
     case CompletionStatus::Success:
       strcpy(str, "success");
@@ -539,13 +539,13 @@ inline void completionStatusToString(const CompletionStatus status, char* str) {
       strcpy(str, "unknown");
       break;
     default:
-      strcpy(str, "undefined");
+      sprintf(str, "%u", static_cast<unsigned>(status));
       break;
 
   }
 }
 
-inline void doorSensorStateToString(const DoorSensorState state, char* str) {
+inline void door_sensor_state_to_string(const DoorSensorState state, char* str) {
   switch (state) {
     case DoorSensorState::Unavailable:
       strcpy(str, "unavailable");
@@ -575,12 +575,12 @@ inline void doorSensorStateToString(const DoorSensorState state, char* str) {
       strcpy(str, "unknown");
       break;
     default:
-      strcpy(str, "undefined");
+      sprintf(str, "%u", static_cast<unsigned>(state));
       break;
   }
 }
 
-inline void loggingTypeToString(const LoggingType state, char* str) {
+inline void logging_type_to_string(const LoggingType state, char* str) {
   switch (state) {
     case LoggingType::LoggingEnabled:
       strcpy(str, "LoggingEnabled");
@@ -604,9 +604,9 @@ inline void loggingTypeToString(const LoggingType state, char* str) {
       strcpy(str, "DoorSensorLoggingEnabled");
       break;
     default:
-      strcpy(str, "Unknown");
+      sprintf(str, "%u", static_cast<unsigned>(state));
       break;
   }
 }
 
-} // namespace Nuki
+}  // namespace esphome::nuki_lock

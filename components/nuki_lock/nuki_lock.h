@@ -1,12 +1,11 @@
 #pragma once
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <freertos/semphr.h>
+#include <functional>
 
 #include "esphome/core/component.h"
 #include "esphome/components/lock/lock.h"
 #include "esphome/core/preferences.h"
+#include "esphome/core/helpers.h"
 
 #ifdef USE_API
 #include "esphome/components/api/custom_api_device.h"
@@ -34,22 +33,18 @@
 #include "esphome/components/select/select.h"
 #endif
 
-#include "NukiLock.h"
-#include "NukiConstants.h"
-#include "BleScanner.h"
+#include "nuki_lock_protocol.h"
+#include "nuki_ble_constants.h"
 
-#include "utils.h"
+#include "nuki_lock_utils.h"
 
 namespace esphome::nuki_lock {
-
-static const char *TAG = "nuki_lock.lock";
 
 static const uint8_t BLE_CONNECT_TIMEOUT_SEC = 2;
 static const uint8_t BLE_CONNECT_RETRIES = 5;
 
 static const uint16_t BLE_DISCONNECT_TIMEOUT = 2000;
 
-static const uint8_t MAX_ACTION_ATTEMPTS = 5;
 static const uint8_t MAX_TOLERATED_UPDATES_ERRORS = 5;
 
 static const uint32_t COOLDOWN_COMMANDS_MILLIS = 1000;
@@ -71,28 +66,10 @@ struct NukiLockSettings
     PinState pin_state;
 };
 
-// Serializes access to the underlying NukiBle/NimBLE objects, which are not safe to call
-// concurrently from the nuki_task and from entity callbacks (switch/number/select/button/services)
-// running on the main loop. Recursive so that automations triggered from within a guarded call
-// (e.g. on_paired_action, on_..._state) can re-enter from the same task without deadlocking.
-class NukiBleLockGuard {
-    public:
-        explicit NukiBleLockGuard(SemaphoreHandle_t mutex) : mutex_(mutex) {
-            xSemaphoreTakeRecursive(this->mutex_, portMAX_DELAY);
-        }
-        ~NukiBleLockGuard() {
-            xSemaphoreGiveRecursive(this->mutex_);
-        }
-        NukiBleLockGuard(const NukiBleLockGuard &) = delete;
-        NukiBleLockGuard &operator=(const NukiBleLockGuard &) = delete;
-    private:
-        SemaphoreHandle_t mutex_;
-};
-
 class NukiLockComponent :
     public lock::Lock,
     public Component,
-    public Nuki::SmartlockEventHandler
+    public SmartlockEventHandler
 #ifdef USE_API
     , public api::CustomAPIDevice
 #endif
@@ -101,11 +78,19 @@ class NukiLockComponent :
     SUB_BINARY_SENSOR(connected)
     SUB_BINARY_SENSOR(paired)
     SUB_BINARY_SENSOR(battery_critical)
+    SUB_BINARY_SENSOR(battery_charging)
+    SUB_BINARY_SENSOR(keypad_battery_critical)
+    SUB_BINARY_SENSOR(door_sensor_battery_critical)
     SUB_BINARY_SENSOR(door_sensor)
+    SUB_BINARY_SENSOR(remote_access_connected)
     #endif
     #ifdef USE_SENSOR
     SUB_SENSOR(battery_level)
+    SUB_SENSOR(battery_voltage)
+    SUB_SENSOR(battery_drain)
+    SUB_SENSOR(motor_current)
     SUB_SENSOR(bt_signal)
+    SUB_SENSOR(wifi_connection_strength)
     #endif
     #ifdef USE_TEXT_SENSOR
     SUB_TEXT_SENSOR(door_sensor_state)
@@ -113,6 +98,9 @@ class NukiLockComponent :
     SUB_TEXT_SENSOR(last_lock_action)
     SUB_TEXT_SENSOR(last_lock_action_trigger)
     SUB_TEXT_SENSOR(pin_state)
+    SUB_TEXT_SENSOR(wifi_connection_status)
+    SUB_TEXT_SENSOR(mqtt_connection_status)
+    SUB_TEXT_SENSOR(thread_connection_status)
     #endif
     #ifdef USE_NUMBER
     SUB_NUMBER(led_brightness)
@@ -159,28 +147,40 @@ class NukiLockComponent :
     SUB_SWITCH(auto_battery_type_detection_enabled)
     SUB_SWITCH(slow_speed_during_night_mode_enabled)
     SUB_SWITCH(detached_cylinder_enabled)
+    SUB_SWITCH(logging_enabled)
     #endif
 
     public:
-        const uint32_t deviceId_ = 2020002;
-        const std::string deviceName_ = "Nuki ESPHome";
-
-        explicit NukiLockComponent() : Lock(), nuki_lock_(deviceName_, deviceId_) {}
+        // device_name identifies this ESP32 to the lock during pairing (shown in the Nuki
+        // app's authorization list) and seeds the BLE credential and settings storage keys.
+        // It must be unique per instance - callers pass the YAML id, which ESPHome already
+        // guarantees is unique - so multiple nuki_lock: blocks on one device don't clobber
+        // each other's pairing credentials/PIN settings in flash.
+        explicit NukiLockComponent(const std::string &device_name)
+            : Lock(), device_name_(device_name), nuki_lock_(device_name, esphome::fnv1_hash(device_name)) {}
 
         // ESPHome overrides
         void setup() override;
+        void loop() override;
         void dump_config() override;
         float get_setup_priority() const override { return setup_priority::HARDWARE; }
 
         // NukiBLE overrides
-        void notify(Nuki::EventType event_type) override;
+        void notify(EventType event_type) override;
 
         // Configuration setters
         void set_pairing_mode_timeout(uint32_t pairing_mode_timeout) { this->pairing_mode_timeout_ = pairing_mode_timeout; }
         void set_query_interval_config(uint32_t query_interval_config) { this->query_interval_config_ = query_interval_config; }
         void set_query_interval_auth_data(uint32_t query_interval_auth_data) { this->query_interval_auth_data_ = query_interval_auth_data; }
+        void set_query_interval_battery_report(uint32_t query_interval_battery_report) { this->query_interval_battery_report_ = query_interval_battery_report; }
         void set_ble_general_timeout(uint32_t ble_general_timeout) { this->ble_general_timeout_ = ble_general_timeout; }
         void set_ble_command_timeout(uint32_t ble_command_timeout) { this->ble_command_timeout_ = ble_command_timeout; }
+        // Applies to lock actions (lock/unlock/...) and queued commands (switches, numbers,
+        // selects, keypad management) alike - see execute_lock_action_step()/
+        // process_pending_nuki_command() in nuki_lock.cpp.
+        void set_command_retries(uint8_t command_retries) { this->command_retries_ = command_retries; }
+        void set_command_retry_delay(uint32_t command_retry_delay_millis) { this->command_retry_delay_millis_ = command_retry_delay_millis; }
+        void set_config_cache_ttl(uint32_t config_cache_ttl) { this->config_cache_ttl_ = config_cache_ttl; }
         void set_event(const char *event) {
             this->event_ = event;
             if(strcmp(event, "esphome.none") != 0) {
@@ -221,7 +221,7 @@ class NukiLockComponent :
         void setup_lock(bool new_pairing = false);
 
         bool is_connected() { return this->connected_; }
-        bool is_paired() { return this->nuki_lock_.isPairedWithLock(); }
+        bool is_paired() { return this->nuki_lock_.is_paired_with_lock(); }
 
         void lock_n_go();
         void print_keypad_entries();
@@ -229,46 +229,91 @@ class NukiLockComponent :
         void update_keypad_entry(int32_t id, std::string name, int32_t code, bool enabled);
         void delete_keypad_entry(int32_t id);
 
-        NukiLock::NukiLock* get_nuki_lock() { return &this->nuki_lock_; }
-        NukiLock::Config* get_nuki_lock_config() { return &this->nuki_lock_config_; }
-        NukiLock::AdvancedConfig* get_nuki_lock_advanced_config() { return &this->nuki_lock_advanced_config_; }
-        SemaphoreHandle_t get_nuki_mutex() { return this->nuki_mutex_; }
+        // Sets one-shot modifiers applied to the *next* lock/unlock/unlatch action only (then
+        // reset to defaults) - see Lock Action's Flags (Force/Auto Unlock) and Name suffix in
+        // the Nuki Smart Lock API. force bypasses checks like the "too recent" cooldown;
+        // auto_unlock marks the action as an automatic/auto-unlock trigger in the Nuki app's
+        // history; name_suffix (max 19 characters) is appended to that history entry.
+        void set_lock_action_options(bool force, bool auto_unlock, std::string name_suffix);
+
+        NukiLock* get_nuki_lock() { return &this->nuki_lock_; }
+        Config* get_nuki_lock_config() { return &this->nuki_lock_config_; }
+        AdvancedConfig* get_nuki_lock_advanced_config() { return &this->nuki_lock_advanced_config_; }
+
+        // Queues a Nuki command (typically a `nuki_lock_.setXxx(...)` call) to run on the
+        // single in-flight Nuki BLE command slot. `command` is called repeatedly, once per
+        // loop() tick, until it returns something other than CmdResult::Working; a non-
+        // Success result is retried (up to command_retries_ times, command_retry_delay_millis_
+        // apart) before giving up. `on_done` is then called once with the terminal result.
+        // Only one queued command (and at most one other Nuki operation: a lock action,
+        // status/config poll, etc.) can be in flight at a time - see nuki_op_active_ in loop().
+        void queue_nuki_command(std::function<CmdResult()> command, std::function<void(CmdResult)> on_done);
 
     protected:
         CallbackManager<void()> pairing_mode_on_callback_;
         CallbackManager<void()> pairing_mode_off_callback_;
         CallbackManager<void()> paired_callback_;
-        CallbackManager<void(NukiLock::LogEntry)> event_log_received_callback_;
+        CallbackManager<void(LogEntry)> event_log_received_callback_;
 
         void control(const lock::LockCall &call) override;
         void open_latch() override { this->open_latch_ = true; unlock();}
 
     private:
-        // Task management
-        static void nuki_task_fn(void *arg);
-        void nuki_task_loop();
-        TaskHandle_t nuki_task_handle_{nullptr};
-        SemaphoreHandle_t nuki_mutex_{nullptr};
+        // Loop timing: loop() throttles itself to run its main body at most every 500ms
+        // instead of blocking, since it is called by ESPHome's scheduler on every
+        // Application::loop() iteration.
+        uint32_t last_loop_time_{0};
+
+        // Only one Nuki BLE command can be in flight at a time (the underlying NukiBle
+        // command state machine has a single nuki_command_state_). nuki_op_active_/
+        // nuki_op_step_ guard against starting a *different* operation while one is
+        // already mid-flight, which would corrupt that shared state: once a tick starts
+        // an operation (a lock action, a status/config/auth-data/event-log poll, or a
+        // queued command), the same step function is re-invoked on every following tick
+        // until it reaches a terminal CmdResult, regardless of which other flags become
+        // true in the meantime.
+        bool nuki_op_active_{false};
+        std::function<void()> nuki_op_step_;
+
+        std::function<CmdResult()> pending_nuki_command_;
+        std::function<void(CmdResult)> pending_nuki_command_done_;
+        void process_pending_nuki_command();
 
         // Core components
         ESPPreferenceObject pref_;
-        BleScanner::Scanner scanner_;
-        NukiLock::NukiLock nuki_lock_;
+        std::string device_name_;
+        NukiLock nuki_lock_;
 
         // Nuki state & configuration
-        NukiLock::KeyTurnerState retrieved_key_turner_state_;
-        NukiLock::LockAction lock_action_;
-        NukiLock::Config nuki_lock_config_;
-        NukiLock::AdvancedConfig nuki_lock_advanced_config_;
+        KeyTurnerState retrieved_key_turner_state_;
+        LockAction lock_action_;
+        Config nuki_lock_config_;
+        AdvancedConfig nuki_lock_advanced_config_;
+        BatteryReport battery_report_;
 
-        // Methods to retrieve or set data
+        // Methods to retrieve or set data. Each performs one step per call and is safe
+        // to call repeatedly (once per loop() tick) until it completes - see
+        // nuki_op_active_ above.
         void update_status();
         void update_config();
         void update_advanced_config();
         void update_event_logs();
         void update_auth_data();
+        void update_battery_report();
         void validate_pin();
-        bool execute_lock_action(NukiLock::LockAction lock_action);
+        void validate_pin_step();
+        void execute_lock_action_step();
+
+        // Set (along with action_attempts_) by control(); execute_lock_action_step()
+        // copies lock_action_ into executing_lock_action_ when it starts a fresh attempt
+        // so a *new* control() call received while an attempt is still mid-flight doesn't
+        // change which action the in-flight BLE command is for.
+        LockAction executing_lock_action_;
+        bool lock_action_in_flight_{false};
+        // Snapshots of force_/auto_unlock_/name_suffix_ taken at the same time as
+        // executing_lock_action_, for the same reason - see set_lock_action_options().
+        uint8_t executing_lock_action_flags_{0};
+        std::string executing_lock_action_name_suffix_;
 
         // Setup & utility methods
         void setup_intervals(bool setup = true);
@@ -311,13 +356,24 @@ class NukiLockComponent :
         bool advanced_config_update_{false};
         bool auth_data_update_{false};
         bool event_log_update_{false};
+        bool battery_report_update_{false};
 
         // Action flags
         bool open_latch_{false};
         bool lock_n_go_{false};
 
+        // One-shot Lock Action modifiers set via set_lock_action_options(), consumed and reset
+        // by execute_lock_action_step() the moment it snapshots a new attempt (see
+        // executing_lock_action_flags_/executing_lock_action_name_suffix_ below).
+        bool force_{false};
+        bool auto_unlock_{false};
+        std::string name_suffix_;
+
         // Error tracking & counters
         uint8_t action_attempts_ = 0;
+        // How many retries remain for the currently-pending queue_nuki_command() command -
+        // separate from action_attempts_, which tracks lock action retries instead.
+        uint8_t pending_command_retries_left_ = 0;
         uint32_t status_update_consecutive_errors_ = 0;
 
         // Timing & Intervals
@@ -325,9 +381,13 @@ class NukiLockComponent :
         uint32_t command_cooldown_millis = 0;
         uint32_t query_interval_auth_data_ = 0;
         uint32_t query_interval_config_ = 0;
+        uint32_t query_interval_battery_report_ = 0;
         uint32_t ble_general_timeout_ = 0;
         uint32_t ble_command_timeout_ = 0;
         uint32_t pairing_mode_timeout_ = 0;
+        uint8_t command_retries_ = 5;
+        uint32_t command_retry_delay_millis_ = 1000;
+        uint32_t config_cache_ttl_ = 60;
 
         // Event Logs
         uint32_t last_rolling_log_id = 0;
@@ -559,6 +619,14 @@ class NukiLockDetachedCylinderEnabledSwitch : public switch_::Switch, public Par
     protected:
         void write_state(bool state) override;
 };
+
+class NukiLockLoggingEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+    public:
+        NukiLockLoggingEnabledSwitch() = default;
+
+    protected:
+        void write_state(bool state) override;
+};
 #endif
 
 #ifdef USE_NUMBER
@@ -632,4 +700,4 @@ class NukiLockUnlockedToLockedTransitionOffsetDegreesNumber : public number::Num
 };
 #endif
 
-}
+}  // namespace esphome::nuki_lock

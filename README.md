@@ -17,8 +17,14 @@ The lock state is always up-to-date thanks to Nuki's BLE advertisement mechanism
 > Requires **ESPHome >= 2025.11.0**
 
 > [!IMPORTANT]  
-> This component uses NimBLE, which is incompatible with ESPHome's BLE stack.
-> Remove all BLE components (esp32_ble, esp32_improv, ...) from your configuration.
+> This component uses ESPHome's native BLE stack (`esp32_ble_tracker`/`esp32_ble_client`),
+> so it coexists with other BLE components (`esp32_ble`, `esp32_improv`, `bluetooth_proxy`, ...)
+> on the same device. `esp32_ble_tracker` is added automatically as a dependency.
+
+> [!NOTE]
+> This component overrides `esp32_ble_tracker`'s scan parameters to `interval: 40ms` /
+> `window: 40ms` (continuous active scanning, per Nuki's own BLE recommendation) for faster
+> pairing/connections. This applies to all BLE scanning on the device, not just Nuki.
 
 > [!TIP]  
 > If your ESP32 has PSRAM, add the `psram` component to improve BLE stability.
@@ -72,9 +78,12 @@ lock:
     pairing_as_app: false
     pairing_mode_timeout: 300s
     query_interval_config: 3600s
-    query_interval_auth_data: 7200s
+    query_interval_auth_data: 3600s
+    query_interval_battery_report: 3600s
     ble_general_timeout: 3s
-    ble_command_timeout: 3s
+    ble_command_timeout: 10s
+    command_retries: 5
+    command_retry_delay: 1s
 
   # Component Entities
   # Switches
@@ -94,12 +103,24 @@ lock:
   # Optional: Binary Sensors
     battery_critical:
       name: "Nuki Battery Critical"
+    battery_charging:
+      name: "Nuki Battery Charging"
+    keypad_battery_critical:
+      name: "Nuki Keypad Battery Critical"
+    door_sensor_battery_critical:
+      name: "Nuki Door Sensor Battery Critical"
     door_sensor:
       name: "Nuki Door Sensor"
 
   # Optional: Sensors
     battery_level:
       name: "Nuki Battery Level"
+    battery_voltage:
+      name: "Nuki Battery Voltage"
+    battery_drain:
+      name: "Nuki Battery Drain"
+    motor_current:
+      name: "Nuki Motor Current"
     bt_signal_strength:
       name: "Nuki Bluetooth Signal Strength"
 
@@ -262,9 +283,12 @@ The following configuration options allow you to customize the behavior of the N
 | `event`                    | Event log event name (`none` disables logs)   | `none`  |
 | `pairing_as_app`           | Pair as app                                   | `false` |
 | `query_interval_config`    | Config refresh interval                       | `3600s` |
-| `query_interval_auth_data` | Auth data refresh interval                    | `7200s` |
+| `query_interval_auth_data` | Auth data refresh interval                    | `3600s` |
+| `query_interval_battery_report` | Battery report (voltage/drain/motor current) refresh interval | `3600s` |
 | `ble_general_timeout`      | General BLE timeout                           | `3s`    |
-| `ble_command_timeout`      | Command BLE timeout                           | `3s`    |
+| `ble_command_timeout`      | Command BLE timeout                           | `10s`   |
+| `command_retries`          | Retries for a failed lock action or queued command (config/keypad/etc., not BLE connection errors) | `5` |
+| `command_retry_delay`      | Delay between retries                         | `1s`    |
 
 ---
 
@@ -489,10 +513,16 @@ context:
 
 **Binary Sensor:**  
 - Critical Battery 
+- Battery Charging
+- Keypad Battery Critical
+- Door Sensor Battery Critical
 - Door Sensor
 
 **Sensor:**
 - Battery Level
+- Battery Voltage
+- Battery Drain
+- Motor Current
 - Bluetooth Signal Strength
 
 **Text Sensor:**  

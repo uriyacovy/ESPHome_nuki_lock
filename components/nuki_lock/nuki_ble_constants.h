@@ -1,6 +1,6 @@
 #pragma once
 /**
- * @file NukiConstants.h
+ * @file nuki_ble_constants.h
  * Definitions of constants and data types based on Nuki smart lock api
  *
  * Created: 2022
@@ -13,9 +13,8 @@
  */
 
 #include <cstdint>
-#include "NimBLEUUID.h"
 
-namespace Nuki {
+namespace esphome::nuki_lock {
 
 const char BLE_ADDRESS_STORE_NAME[]      = "bleAddress";
 const char SECURITY_PINCODE_STORE_NAME[] = "securityPinCode";
@@ -215,79 +214,6 @@ enum class TimeZoneId : uint16_t {
   None = 65535,  //
 };
 
-
-struct __attribute__((packed)) NewKeypadEntry {
-  uint32_t code;  //needs to be 6 digits
-  uint8_t name[20];
-  uint8_t timeLimited;
-  uint16_t allowedFromYear;
-  uint8_t allowedFromMonth;
-  uint8_t allowedFromDay;
-  uint8_t allowedFromHour;
-  uint8_t allowedFromMin;
-  uint8_t allowedFromSec;
-  uint16_t allowedUntilYear;
-  uint8_t allowedUntilMonth;
-  uint8_t allowedUntilDay;
-  uint8_t allowedUntilHour;
-  uint8_t allowedUntilMin;
-  uint8_t allowedUntilSec;
-  // bit 7  6  5  4  3  2  1  0
-  //     -  M  T  W  T  F  S  S
-  uint8_t allowedWeekdays;
-  uint8_t allowedFromTimeHour;
-  uint8_t allowedFromTimeMin;
-  uint8_t allowedUntilTimeHour;
-  uint8_t allowedUntilTimeMin;
-};
-
-struct __attribute__((packed)) KeypadEntry {
-  uint16_t codeId;
-  uint32_t code;
-  uint8_t name[20];
-  uint8_t enabled;
-  uint16_t dateCreatedYear;
-  uint8_t dateCreatedMonth;
-  uint8_t dateCreatedDay;
-  uint8_t dateCreatedHour;
-  uint8_t dateCreatedMin;
-  uint8_t dateCreatedSec;
-  uint16_t dateLastActiveYear;
-  uint8_t dateLastActiveMonth;
-  uint8_t dateLastActiveDay;
-  uint8_t dateLastActiveHour;
-  uint8_t dateLastActiveMin;
-  uint8_t dateLastActiveSec;
-  uint16_t lockCount;
-  uint8_t timeLimited;
-  uint16_t allowedFromYear;
-  uint8_t allowedFromMonth;
-  uint8_t allowedFromDay;
-  uint8_t allowedFromHour;
-  uint8_t allowedFromMin;
-  uint8_t allowedFromSec;
-  uint16_t allowedUntilYear;
-  uint8_t allowedUntilMonth;
-  uint8_t allowedUntilDay;
-  uint8_t allowedUntilHour;
-  uint8_t allowedUntilMin;
-  uint8_t allowedUntilSec;
-
-  // bit 7  6  5  4  3  2  1  0
-  //     -  M  T  W  T  F  S  S
-  uint8_t allowedWeekdays;
-  uint8_t allowedFromTimeHour;
-  uint8_t allowedFromTimeMin;
-  uint8_t allowedUntilTimeHour;
-  uint8_t allowedUntilTimeMin;
-};
-
-struct __attribute__((packed)) FingerprintEntry {
-  uint8_t fingerprintId[32];
-  uint16_t keypadCodeId = 0;
-  uint8_t name[20];
-};
-
 struct __attribute__((packed)) DailyStatistics {
   uint16_t dateYear = 0;
   uint8_t dateMonth = 0;
@@ -363,23 +289,6 @@ struct __attribute__((packed)) MqttConfigForMigration {
   uint8_t passphrase[32];
 };
 
-struct __attribute__((packed)) AccessoryInfo {
-  uint16_t dateYear = 0;
-  uint8_t dateMonth = 0;
-  uint8_t dateDay = 0;
-  uint8_t dateHour = 0;
-  uint8_t dateMinute = 0;
-  uint8_t dateSecond = 0;
-  uint32_t accessoryNukiId = 0;
-  uint8_t accessoryType = 0;
-  unsigned char firmwareVersion[3] = {0, 0 , 0};
-  unsigned char hardwareRevision[2] = {0, 0};
-  uint8_t productVariantDifferentiator = 0;
-  uint16_t mostRecentBatteryVoltage = 0;
-  uint8_t mostRecentTemperature = 0;
-  //mostRecentEventData
-};
-
 struct __attribute__((packed)) WifiScanEntry {
   uint8_t ssid[32];
   uint8_t type = 0;
@@ -398,46 +307,11 @@ struct __attribute__((packed)) WifiConfigForMigration {
   uint8_t passphrase[32];
 };
 
-struct __attribute__((packed)) Keypad2Config {
-  uint8_t updatePending = 0;
-  uint8_t ledBrightness = 0;
-  uint8_t batteryType = 0;
-  uint8_t buttonMode = 0;
-  uint8_t lockAction = 0;
-};
-
 struct __attribute__((packed)) DoorSensorConfig {
   uint8_t enabled = 0;
   uint8_t doorAjarTimeout = 0;
   uint8_t doorAjarLoggingEnabled = 0;
   uint8_t doorStatusMismatchLoggingEnabled = 0;
-};
-
-struct __attribute__((packed)) UpdatedKeypadEntry {
-  uint16_t codeId;
-  uint32_t code;
-  uint8_t name[20];
-  uint8_t enabled;
-  uint8_t timeLimited;
-  uint16_t allowedFromYear;
-  uint8_t allowedFromMonth;
-  uint8_t allowedFromDay;
-  uint8_t allowedFromHour;
-  uint8_t allowedFromMin;
-  uint8_t allowedFromSec;
-  uint16_t allowedUntilYear;
-  uint8_t allowedUntilMonth;
-  uint8_t allowedUntilDay;
-  uint8_t allowedUntilHour;
-  uint8_t allowedUntilMin;
-  uint8_t allowedUntilSec;
-  // bit 7  6  5  4  3  2  1  0
-  //     -  M  T  W  T  F  S  S
-  uint8_t allowedWeekdays;
-  uint8_t allowedFromTimeHour;
-  uint8_t allowedFromTimeMin;
-  uint8_t allowedUntilTimeHour;
-  uint8_t allowedUntilTimeMin;
 };
 
 struct __attribute__((packed)) AuthorizationEntry {
@@ -538,4 +412,58 @@ struct __attribute__((packed)) TimeValue {
   uint8_t second;
 };
 
-} // namespace Nuki
+enum class EventType {
+  KeyTurnerStatusUpdated,
+  KeyTurnerStatusReset,
+  ERROR_BAD_PIN,
+  BLE_ERROR_ON_DISCONNECT
+};
+
+class SmartlockEventHandler {
+  public:
+    virtual ~SmartlockEventHandler() {};
+    virtual void notify(EventType eventType) = 0;
+};
+
+enum CmdResult : uint8_t {
+  Success   = 1,
+  Failed    = 2,
+  TimeOut   = 3,
+  Working   = 4,
+  NotPaired = 5,
+  Lock_Busy = 6,
+  Error     = 99
+};
+
+enum class PairingResult : uint8_t {
+  Pairing,
+  Success,
+  Timeout
+};
+
+enum class PairingState {
+  InitPairing       = 0,
+  ReqRemPubKey      = 1,
+  RecRemPubKey      = 2,
+  SendPubKey        = 3,
+  GenKeyPair        = 4,
+  CalculateAuth     = 5,
+  SendAuth          = 6,
+  SendAuthData      = 7,
+  SendAuthIdConf    = 8,
+  RecStatus         = 9,
+  Success           = 10,
+  Timeout           = 99
+};
+
+enum class CommandState {
+  Idle                  = 0,
+  CmdReceived           = 1,
+  ChallengeSent         = 2,
+  ChallengeRespReceived = 3,
+  CmdSent               = 4,
+  CmdAccepted           = 5,
+  TimeOut               = 6
+};
+
+}  // namespace esphome::nuki_lock

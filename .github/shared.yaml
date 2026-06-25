@@ -11,8 +11,10 @@ esp32:
   variant: esp32
 
 wifi:
-  ssid: "My Network"
-  password: "My Password"
+  ssid: "AZ-Wlan"
+  password: "152981435825046698"
+  ap:
+    password: "Start123!"
 
 api:
   custom_services: true

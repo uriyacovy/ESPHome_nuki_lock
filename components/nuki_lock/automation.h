@@ -77,11 +77,11 @@ class PairedTrigger : public Trigger<> {
         }
 };
 
-class EventLogReceivedTrigger : public Trigger<NukiLock::LogEntry> {
+class EventLogReceivedTrigger : public Trigger<LogEntry> {
     public:
         EventLogReceivedTrigger(NukiLockComponent *parent) {
-            parent->add_event_log_received_callback([this](const NukiLock::LogEntry &value) { this->trigger(value); });
+            parent->add_event_log_received_callback([this](const LogEntry &value) { this->trigger(value); });
         }
 };
 
-}
+}  // namespace esphome::nuki_lock
