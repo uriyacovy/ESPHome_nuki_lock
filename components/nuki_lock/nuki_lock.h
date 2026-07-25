@@ -261,6 +261,7 @@ class NukiLockComponent :
         void publish_pin_state();
 
         void validate_pin();
+        void validate_pin_attempt(uint8_t remaining_attempts);
 
         bool execute_lock_action(NukiLock::LockAction lock_action);
 

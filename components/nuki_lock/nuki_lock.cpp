@@ -1202,47 +1202,54 @@ void NukiLockComponent::validate_pin()
 {
     ESP_LOGD(TAG, "Check if pin is valid and save state");
 
-    cancel_retry("validate_pin");
+    cancel_timeout("validate_pin");
 
     if(this->pin_state_ == PinState::NotSet) {
         ESP_LOGD(TAG, "Pin is not set, no validation needed!");
         return;
     }
 
-    this->set_retry(
-        "validate_pin", 100, 4,
-        [this](const uint8_t remaining_attempts) {
+    // First attempt runs from the scheduler like the retries, so the BLE
+    // command stays off the caller's stack (same as the old set_retry did).
+    this->set_timeout("validate_pin", 0, [this]() {
+        this->validate_pin_attempt(3);
+    });
+}
 
-            ESP_LOGD(TAG, "verifySecurityPin attempts left: %d", remaining_attempts);
+void NukiLockComponent::validate_pin_attempt(uint8_t remaining_attempts)
+{
+    ESP_LOGD(TAG, "verifySecurityPin attempts left: %d", remaining_attempts);
 
-            Nuki::CmdResult pin_result = this->nuki_lock_.verifySecurityPin();
+    Nuki::CmdResult pin_result = this->nuki_lock_.verifySecurityPin();
 
-            App.feed_wdt();
+    App.feed_wdt();
 
-            if(pin_result == Nuki::CmdResult::Success) {
-                ESP_LOGI(TAG, "Nuki Lock PIN is valid");
+    if(pin_result == Nuki::CmdResult::Success) {
+        ESP_LOGI(TAG, "Nuki Lock PIN is valid");
 
-                if(this->pin_state_ != PinState::Valid) {
-                    this->pin_state_ = PinState::Valid;
-                    this->save_settings();
-                    this->publish_pin_state();
-                }
-                return RetryResult::DONE;
+        if(this->pin_state_ != PinState::Valid) {
+            this->pin_state_ = PinState::Valid;
+            this->save_settings();
+            this->publish_pin_state();
+        }
+        return;
+    }
 
-            } else if (remaining_attempts == 0) {
-                ESP_LOGD(TAG, "Nuki Lock PIN is invalid or not set");
+    if(remaining_attempts == 0) {
+        ESP_LOGD(TAG, "Nuki Lock PIN is invalid or not set");
 
-                if(this->pin_state_ != PinState::Invalid) {
-                    this->pin_state_ = PinState::Invalid;
-                    this->save_settings();
-                    this->publish_pin_state();
-                }
-            }
-            ESP_LOGW(TAG, "verifySecurityPin: result %d, retry...", pin_result);
-            return RetryResult::RETRY;
-        },
-        1.0f
-    );
+        if(this->pin_state_ != PinState::Invalid) {
+            this->pin_state_ = PinState::Invalid;
+            this->save_settings();
+            this->publish_pin_state();
+        }
+        return;
+    }
+
+    ESP_LOGW(TAG, "verifySecurityPin: result %d, retry...", pin_result);
+    this->set_timeout("validate_pin", 100, [this, remaining_attempts]() {
+        this->validate_pin_attempt(remaining_attempts - 1);
+    });
 }
 
 void NukiLockComponent::setup() {
