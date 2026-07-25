@@ -1,0 +1,11 @@
+packages:
+  common: !include shared.yaml
+
+esp32:
+  framework:
+    type: arduino
+
+# Throwaway key for build tests only, never use it in a real configuration.
+api:
+  encryption:
+    key: "rlEHYCEHzXqLQhBOZH8FZOJcYQPTZ2FaBnfjLLcQGiQ="
