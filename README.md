@@ -17,6 +17,11 @@ The lock state is always up-to-date thanks to Nuki's BLE advertisement mechanism
 > Requires **ESPHome >= 2025.11.0**
 
 > [!IMPORTANT]  
+> ESPHome 2026.7.0 switched the default esp32 toolchain from PlatformIO to ESP-IDF.
+> If you enable API encryption, you need at least this version of the component,
+> otherwise the build fails with a duplicate `libsodium` component error.
+
+> [!IMPORTANT]  
 > This component uses NimBLE, which is incompatible with ESPHome's BLE stack.
 > Remove all BLE components (esp32_ble, esp32_improv, ...) from your configuration.
 
