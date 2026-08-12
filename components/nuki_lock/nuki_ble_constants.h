@@ -144,6 +144,7 @@ enum class Command : uint16_t {
   MqttConfigForMigration        = 0x008F,
   AccessoryInfo                 = 0x0090,
   RequestAccessoryInfo          = 0x0091,
+  DoorSensorReport              = 0x0092,
   RequestFingerprintEntries     = 0x0098,
   FingerprintEntry              = 0x0099,
   GetKeypad2Config              = 0x009A,

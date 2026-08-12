@@ -103,6 +103,19 @@ CmdResult NukiLock::request_battery_report(BatteryReport* retrievedBatteryReport
   return result;
 }
 
+CmdResult NukiLock::report_door_sensor_state(const bool door_open) {
+  NukiAction action{};
+  // 0x0092 door-sensor state report: [deviceState=0x10 (sensor active)][0x00]
+  // [doorFlag: 0x00=closed, >=0x01=open][0x00]. The challenge state machine appends
+  // the 32-byte nonce after the payload and sends no PIN.
+  unsigned char payload[4] = {0x10, 0x00, static_cast<unsigned char>(door_open ? 0x01 : 0x00), 0x00};
+  action.cmdType = CommandType::CommandWithChallenge;
+  action.command = Command::DoorSensorReport;
+  memcpy(action.payload, payload, sizeof(payload));
+  action.payloadLen = sizeof(payload);
+  return this->execute_action(action);
+}
+
 CmdResult NukiLock::request_config(Config* retrievedConfig) {
   NukiAction action{};
   action.cmdType = CommandType::CommandWithChallenge;

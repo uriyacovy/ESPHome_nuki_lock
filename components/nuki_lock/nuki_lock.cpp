@@ -535,6 +535,23 @@ void NukiLockComponent::update_battery_report() {
     }
 }
 
+void NukiLockComponent::report_door_sensor_step() {
+    CmdResult result = this->nuki_lock_.report_door_sensor_state(this->door_sensor_report_open_);
+    if (result == CmdResult::Working) {
+        return;  // still in flight on the single Nuki command slot; retry next tick
+    }
+    this->door_sensor_report_pending_ = false;
+    this->nuki_op_active_ = false;
+
+    App.feed_wdt();
+
+    if (result == CmdResult::Success) {
+        ESP_LOGI(TAG, "Door sensor report: %s -> accepted", this->door_sensor_report_open_ ? "OPEN" : "CLOSED");
+    } else {
+        ESP_LOGW(TAG, "Door sensor report: %s -> failed (%d)", this->door_sensor_report_open_ ? "OPEN" : "CLOSED", result);
+    }
+}
+
 void NukiLockComponent::update_event_logs() {
     if(this->pin_state_ != PinState::Valid) {
         ESP_LOGW(TAG, "It seems like you did not set a valid pin!");
@@ -998,6 +1015,18 @@ void NukiLockComponent::loop()
     this->nuki_lock_.update_connection_state();
     App.feed_wdt();
 
+#ifdef USE_BINARY_SENSOR
+    // Door sensor report (0x0092): send whenever the configured door state sensor
+    // reports a state different from the last one pushed to the lock.
+    if (this->door_sensor_input_ != nullptr && !this->door_sensor_report_pending_) {
+        bool open = this->door_sensor_input_->state;
+        if (open != this->door_sensor_report_open_) {
+            this->door_sensor_report_open_ = open;
+            this->door_sensor_report_pending_ = true;
+        }
+    }
+#endif
+
     // Once a Nuki BLE operation is in flight (nuki_op_active_), it must keep being
     // re-driven every tick regardless of the cooldown below - the cooldown only applies
     // *between* completed operations, never while one is still working towards a result.
@@ -1032,6 +1061,12 @@ void NukiLockComponent::loop()
             this->nuki_op_step_();
             // command_cooldown_millis is set by process_pending_nuki_command() itself -
             // it differs between success, a retry-after-failure, and exhausted retries.
+        } else if (this->door_sensor_report_pending_) {
+            ESP_LOGD(TAG, "Reporting door sensor state...");
+            this->nuki_op_active_ = true;
+            this->nuki_op_step_ = [this] { this->report_door_sensor_step(); };
+            this->nuki_op_step_();
+            command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
         } else if (this->status_update_) {
             ESP_LOGD(TAG, "Requesting status...");
             this->nuki_op_active_ = true;
