@@ -14,7 +14,7 @@ The lock state is always up-to-date thanks to Nuki's BLE advertisement mechanism
 > Requires an ESP32
 
 > [!IMPORTANT]  
-> Requires **ESPHome >= 2025.11.0**
+> Requires **ESPHome >= 2026.7.0**
 
 > [!IMPORTANT]  
 > This component uses NimBLE, which is incompatible with ESPHome's BLE stack.
