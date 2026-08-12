@@ -1124,6 +1124,19 @@ async def to_code(config):
         await automation.build_automation(trigger, [(LogEntry, "x")], conf)
 
     # Libraries
+    if getattr(CORE, "using_toolchain_esp_idf", False):
+        # ESPHome 2026.7+ native ESP-IDF toolchain: ESPHome converts its
+        # PlatformIO libraries (noise-c and its libsodium subset, pulled in when
+        # `api` encryption is enabled) into ESP-IDF managed components. That
+        # copy of libsodium collides with espressif/libsodium below (also
+        # required by NukiBleEsp32 itself), and the IDF component manager
+        # aborts: both end up as "project_managed_components" named libsodium.
+        # Ignore ESPHome's subset build so espressif's full libsodium is the
+        # only one; noise-c links against it via the shared managed-components
+        # requirement. On the PlatformIO toolchain ESPHome's libsodium stays a
+        # plain PlatformIO library and never conflicts, so leave it alone.
+        cg.add_platformio_option("lib_ignore", ["libsodium"])
+        
     add_idf_component(
         name="espressif/libsodium",
         ref="^1.0.20~2",
