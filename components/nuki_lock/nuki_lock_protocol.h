@@ -61,6 +61,16 @@ class NukiLock : public NukiBle {
      */
     CmdResult request_battery_report(BatteryReport* retrievedBatteryReport);
 
+    /**
+     * @brief Reports the (emulated) door sensor state to the lock via BLE (0x0092).
+     *        Frame: [deviceState=0x10][0x00][doorFlag: 0x00=closed, >=0x01=open][0x00]
+     *        + challenge nonce (appended by the challenge state machine), no PIN.
+     *        The first successful send creates the lock's door-sensor accessory record.
+     * @param door_open true = open, false = closed
+     * @return CmdResult
+     */
+    CmdResult report_door_sensor_state(const bool door_open);
+
 
     /**
      * @brief Requests config from Lock via BLE

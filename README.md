@@ -60,6 +60,16 @@ api:
 external_components:
   - source: github://uriyacovy/ESPHome_nuki_lock
 
+# Optional: external door state input for the `door_sensor_report` feature below.
+# This binary_sensor reflects the physical door (false = closed, true = open) and
+# is pushed to the lock on every change. Use whatever platform matches your door
+# sensor (gpio, homeassistant, template, ...).
+binary_sensor:
+  - platform: gpio
+    pin: GPIO39
+    id: reed_switch
+    name: "Door Sensor"
+
 lock:
   # Required
   - platform: nuki_lock
@@ -111,6 +121,12 @@ lock:
       name: "Nuki Door Sensor Battery Critical"
     door_sensor:
       name: "Nuki Door Sensor"
+
+  # Optional: Emulate the Nuki Door Sensor.
+  # Point `door_sensor_input` at the binary_sensor defined above; its state is
+  # sent to the lock on every change.
+    door_sensor_report:
+      door_sensor_input: reed_switch
 
   # Optional: Sensors
     battery_level:
@@ -289,6 +305,35 @@ The following configuration options allow you to customize the behavior of the N
 | `ble_command_timeout`      | Command BLE timeout                           | `10s`   |
 | `command_retries`          | Retries for a failed lock action or queued command (config/keypad/etc., not BLE connection errors) | `5` |
 | `command_retry_delay`      | Delay between retries                         | `1s`    |
+
+---
+
+# 🚪 Door Sensor Emulation
+
+Report the state of an **external door sensor** (e.g. a reed switch) to the lock, emulating the Nuki Door Sensor. The lock can then take smart actions based on the door state (e.g., auto-locking when the door is closed).
+
+**How to use it:**
+
+1. Define a `binary_sensor` for the physical door (any platform — `gpio`, `homeassistant`,
+   `template`, ...). `false` = closed, `true` = open.
+2. Add `door_sensor_report` to the `lock:` block and point `door_sensor_input` at that sensor.
+
+```yaml
+binary_sensor:
+  - platform: gpio
+    pin: GPIO39
+    id: reed_switch
+    name: "Door Sensor"
+
+lock:
+  - platform: nuki_lock
+    name: Nuki Lock
+    door_sensor_report:                 # <---- add this
+      door_sensor_input: reed_switch    # <---- and this
+```
+
+The state is pushed to the lock **whenever it changes** (the lock must be paired). The first
+successful report also creates the lock's door-sensor accessory record.
 
 ---
 

@@ -197,6 +197,8 @@ CONF_QUERY_INTERVAL_BATTERY_REPORT = "query_interval_battery_report"
 CONF_COMMAND_RETRIES = "command_retries"
 CONF_COMMAND_RETRY_DELAY = "command_retry_delay"
 CONF_CONFIG_CACHE_TTL = "config_cache_ttl"
+CONF_DOOR_SENSOR_REPORT = "door_sensor_report"
+CONF_DOOR_SENSOR_INPUT = "door_sensor_input"
 CONF_BLE_GENERAL_TIMEOUT = "ble_general_timeout"
 CONF_BLE_COMMAND_TIMEOUT = "ble_command_timeout"
 CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
@@ -660,6 +662,11 @@ CONFIG_SCHEMA = cv.All(
             # of overwriting a change made elsewhere (Nuki app, another authorized device) in
             # that window. 0 always fetches fresh.
             cv.Optional(CONF_CONFIG_CACHE_TTL, default="1min"): cv.positive_time_period_seconds,
+            cv.Optional(CONF_DOOR_SENSOR_REPORT): cv.Schema(
+                {
+                    cv.Required(CONF_DOOR_SENSOR_INPUT): cv.use_id(binary_sensor.BinarySensor),
+                }
+            ),
             cv.Optional(CONF_ON_PAIRING_MODE_ON): automation.validate_automation(
                 {
                     cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairingModeOnTrigger),
@@ -770,6 +777,10 @@ async def to_code(config):
 
     if CONF_CONFIG_CACHE_TTL in config:
         cg.add(var.set_config_cache_ttl(config[CONF_CONFIG_CACHE_TTL]))
+
+    if door_sensor_report := config.get(CONF_DOOR_SENSOR_REPORT):
+        door_sensor_input = await cg.get_variable(door_sensor_report[CONF_DOOR_SENSOR_INPUT])
+        cg.add(var.set_door_sensor_input(door_sensor_input))
 
     # Binary Sensor
     if connected := config.get(CONF_CONNECTED_BINARY_SENSOR):

@@ -181,6 +181,10 @@ class NukiLockComponent :
         void set_command_retries(uint8_t command_retries) { this->command_retries_ = command_retries; }
         void set_command_retry_delay(uint32_t command_retry_delay_millis) { this->command_retry_delay_millis_ = command_retry_delay_millis; }
         void set_config_cache_ttl(uint32_t config_cache_ttl) { this->config_cache_ttl_ = config_cache_ttl; }
+        // Door sensor report (0x0092) configuration
+#ifdef USE_BINARY_SENSOR
+        void set_door_sensor_input(binary_sensor::BinarySensor* door_sensor_input) { this->door_sensor_input_ = door_sensor_input; }
+#endif
         void set_event(const char *event) {
             this->event_ = event;
             if(strcmp(event, "esphome.none") != 0) {
@@ -300,6 +304,7 @@ class NukiLockComponent :
         void update_event_logs();
         void update_auth_data();
         void update_battery_report();
+        void report_door_sensor_step();
         void validate_pin();
         void validate_pin_step();
         void execute_lock_action_step();
@@ -357,6 +362,13 @@ class NukiLockComponent :
         bool auth_data_update_{false};
         bool event_log_update_{false};
         bool battery_report_update_{false};
+
+        // Door sensor report (0x0092) state
+#ifdef USE_BINARY_SENSOR
+        binary_sensor::BinarySensor* door_sensor_input_{nullptr};
+#endif
+        bool door_sensor_report_pending_{false};
+        bool door_sensor_report_open_{false};
 
         // Action flags
         bool open_latch_{false};
