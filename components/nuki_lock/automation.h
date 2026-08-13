@@ -4,8 +4,7 @@
 #include "esphome/core/component.h"
 #include "nuki_lock.h"
 
-namespace esphome {
-namespace nuki_lock {
+namespace esphome::nuki_lock {
 
 // Actions
 template<typename... Ts>
@@ -59,31 +58,30 @@ class NukiLockPairedCondition : public Condition<Ts...>, public Parented<NukiLoc
 // Callbacks
 class PairingModeOnTrigger : public Trigger<> {
     public:
-        explicit PairingModeOnTrigger(NukiLockComponent *parent) {
+        PairingModeOnTrigger(NukiLockComponent *parent) {
             parent->add_pairing_mode_on_callback([this]() { this->trigger(); });
         }
 };
 
 class PairingModeOffTrigger : public Trigger<> {
     public:
-        explicit PairingModeOffTrigger(NukiLockComponent *parent) {
+        PairingModeOffTrigger(NukiLockComponent *parent) {
             parent->add_pairing_mode_off_callback([this]() { this->trigger(); });
         }
 };
 
 class PairedTrigger : public Trigger<> {
     public:
-        explicit PairedTrigger(NukiLockComponent *parent) {
+        PairedTrigger(NukiLockComponent *parent) {
             parent->add_paired_callback([this]() { this->trigger(); });
         }
 };
 
 class EventLogReceivedTrigger : public Trigger<NukiLock::LogEntry> {
     public:
-        explicit EventLogReceivedTrigger(NukiLockComponent *parent) {
+        EventLogReceivedTrigger(NukiLockComponent *parent) {
             parent->add_event_log_received_callback([this](const NukiLock::LogEntry &value) { this->trigger(value); });
         }
 };
 
-} //namespace nuki_lock
-} //namespace esphome
+}

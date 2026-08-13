@@ -14,7 +14,7 @@ The lock state is always up-to-date thanks to Nuki's BLE advertisement mechanism
 > Requires an ESP32
 
 > [!IMPORTANT]  
-> Requires **ESPHome >= 2025.11.0**
+> Requires **ESPHome >= 2026.7.0**
 
 > [!IMPORTANT]  
 > This component uses NimBLE, which is incompatible with ESPHome's BLE stack.
@@ -62,7 +62,7 @@ lock:
   # Component Settings
   # Change if you want to use event logs
     event: "none"
-    
+
   # Needed to change most of the lock settings
   # Needed to pair with Smart Lock Ultra/5th Gen/Go/Pro (6 digit pin)
   # Supports templating
@@ -75,7 +75,6 @@ lock:
     query_interval_auth_data: 7200s
     ble_general_timeout: 3s
     ble_command_timeout: 3s
-
 
   # Component Entities
   # Switches

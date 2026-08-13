@@ -170,13 +170,13 @@ CONF_BATTERY_TYPE_SELECT_OPTIONS = [
     "Lithium"
 ]
 
-CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_PAIRING_AS_APP = "pairing_as_app"
 CONF_SECURITY_PIN = "security_pin"
 CONF_QUERY_INTERVAL_CONFIG = "query_interval_config"
 CONF_QUERY_INTERVAL_AUTH_DATA = "query_interval_auth_data"
 CONF_BLE_GENERAL_TIMEOUT = "ble_general_timeout"
 CONF_BLE_COMMAND_TIMEOUT = "ble_command_timeout"
+CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_EVENT = "event"
 
 CONF_ON_PAIRING_MODE_ON = "on_pairing_mode_on_action"
@@ -568,7 +568,6 @@ CONFIG_SCHEMA = cv.All(
             ),
         }
     )
-    .extend(cv.polling_component_schema("500ms")),
 )
 
 
@@ -907,6 +906,19 @@ async def to_code(config):
         await automation.build_automation(trigger, [(LogEntry, "x")], conf)
 
     # Libraries
+    if getattr(CORE, "using_toolchain_esp_idf", False):
+        # ESPHome 2026.7+ native ESP-IDF toolchain: ESPHome converts its
+        # PlatformIO libraries (noise-c and its libsodium subset, pulled in when
+        # `api` encryption is enabled) into ESP-IDF managed components. That
+        # copy of libsodium collides with espressif/libsodium below (also
+        # required by NukiBleEsp32 itself), and the IDF component manager
+        # aborts: both end up as "project_managed_components" named libsodium.
+        # Ignore ESPHome's subset build so espressif's full libsodium is the
+        # only one; noise-c links against it via the shared managed-components
+        # requirement. On the PlatformIO toolchain ESPHome's libsodium stays a
+        # plain PlatformIO library and never conflicts, so leave it alone.
+        cg.add_platformio_option("lib_ignore", ["libsodium"])
+
     add_idf_component(
         name="espressif/libsodium",
         ref="^1.0.20~2",
@@ -937,6 +949,11 @@ async def to_code(config):
     add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ENABLED", True)
     add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ROLE_PERIPHERAL", True)
     add_idf_sdkconfig_option("CONFIG_BTDM_BLE_SCAN_DUPL", True)
+
+    # libsodium's HMAC-SHA256 can return wrong results when backed by hardware SHA
+    # acceleration via mbedTLS (likely related to esphome/esphome#12707, #13021, #13234).
+    # Force libsodium to use its own SHA implementation instead.
+    add_idf_sdkconfig_option("CONFIG_LIBSODIUM_USE_MBEDTLS_SHA", False)
 
     # Reduce NimBLE log level to save memory
     add_idf_sdkconfig_option("CONFIG_NIMBLE_CPP_LOG_LEVEL", 0)
@@ -1009,7 +1026,10 @@ NUKI_LOCK_ACTION_SCHEMA = automation.maybe_simple_id(
 )
 
 @automation.register_action(
-    "nuki_lock.unpair", NukiLockUnpairAction, NUKI_LOCK_ACTION_SCHEMA
+    "nuki_lock.unpair",
+    NukiLockUnpairAction,
+    NUKI_LOCK_ACTION_SCHEMA,
+    synchronous=True
 )
 async def nuki_lock_unpair_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)
@@ -1018,7 +1038,10 @@ async def nuki_lock_unpair_to_code(config, action_id, template_arg, args):
 
 
 @automation.register_action(
-    "nuki_lock.request_calibration", NukiLockRequestCalibrationAction, NUKI_LOCK_ACTION_SCHEMA
+    "nuki_lock.request_calibration",
+    NukiLockRequestCalibrationAction,
+    NUKI_LOCK_ACTION_SCHEMA,
+    synchronous=True
 )
 async def nuki_lock_request_calibration_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)
@@ -1034,7 +1057,10 @@ NUKI_LOCK_SET_PAIRING_MODE_SCHEMA = automation.maybe_simple_id(
 )
 
 @automation.register_action(
-    "nuki_lock.set_pairing_mode", NukiLockPairingModeAction, NUKI_LOCK_SET_PAIRING_MODE_SCHEMA
+    "nuki_lock.set_pairing_mode",
+    NukiLockPairingModeAction,
+    NUKI_LOCK_SET_PAIRING_MODE_SCHEMA,
+    synchronous=True
 )
 async def nuki_lock_set_pairing_mode_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)
@@ -1052,7 +1078,10 @@ NUKI_LOCK_SET_SECURITY_PIN_SCHEMA = automation.maybe_simple_id(
 )
 
 @automation.register_action(
-    "nuki_lock.set_security_pin", NukiLockSecurityPinAction, NUKI_LOCK_SET_SECURITY_PIN_SCHEMA
+    "nuki_lock.set_security_pin",
+    NukiLockSecurityPinAction,
+    NUKI_LOCK_SET_SECURITY_PIN_SCHEMA,
+    synchronous=True
 )
 async def nuki_lock_set_security_pin_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)
