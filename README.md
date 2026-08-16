@@ -312,6 +312,9 @@ The following configuration options allow you to customize the behavior of the N
 
 Report the state of an **external door sensor** (e.g. a reed switch) to the lock, emulating the Nuki Door Sensor. The lock can then take smart actions based on the door state (e.g., auto-locking when the door is closed).
 
+> [!NOTE]
+> It is not necessary to setup the door sensor via the Nuki App and the door sensor will not be visible or configurable via the App. The door sensor behavior is other equivalent to the Nuki Door Sensor.
+
 **How to use it:**
 
 1. Define a `binary_sensor` for the physical door (any platform — `gpio`, `homeassistant`,
