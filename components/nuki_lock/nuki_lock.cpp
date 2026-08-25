@@ -740,6 +740,8 @@ void NukiLockComponent::nuki_task_loop()
 
     while(true)
     {
+        esp_task_wdt_reset();
+
         // Only execute main logic every 500ms
         uint32_t current_time = millis();
         if (current_time - last_loop_time < 500) {
