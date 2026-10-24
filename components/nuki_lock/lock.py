@@ -1,9 +1,11 @@
 import logging
+from pathlib import Path
 from esphome.core import CORE
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import automation
-from esphome.components.esp32 import add_idf_component, add_idf_sdkconfig_option
+from esphome.components.esp32 import add_idf_component, add_idf_sdkconfig_option, arduino_bundles_libsodium
+from esphome.components.noise import LIBSODIUM_VERSION
 from esphome.components import esp32_ble, esp32_ble_tracker, lock, binary_sensor, text_sensor, sensor, switch, button, number, select
 from esphome.components.esp32_ble import BTLoggers
 from esphome.const import (
@@ -32,6 +34,9 @@ import esphome.final_validate as fv
 LOGGER = logging.getLogger(__name__)
 
 DEPENDENCIES = ["esp32_ble_tracker"]
+
+# ESP-IDF component compiling the libsodium modules ESPHome's port leaves out
+NUKI_SODIUM_DIR = Path(__file__).resolve().parent / "nuki_sodium"
 AUTO_LOAD = ["binary_sensor", "text_sensor", "sensor", "switch", "button", "number", "select", "esp32_ble_client"]
 
 CONF_CONNECTED_BINARY_SENSOR = "connected"
@@ -1135,23 +1140,34 @@ async def to_code(config):
         await automation.build_automation(trigger, [(LogEntry, "x")], conf)
 
     # Libraries
-    if getattr(CORE, "using_toolchain_esp_idf", False):
-        # ESPHome 2026.7+ native ESP-IDF toolchain: ESPHome converts its
-        # PlatformIO libraries (noise-c and its libsodium subset, pulled in when
-        # `api` encryption is enabled) into ESP-IDF managed components. That
-        # copy of libsodium collides with espressif/libsodium below (also
-        # required by NukiBleEsp32 itself), and the IDF component manager
-        # aborts: both end up as "project_managed_components" named libsodium.
-        # Ignore ESPHome's subset build so espressif's full libsodium is the
-        # only one; noise-c links against it via the shared managed-components
-        # requirement. On the PlatformIO toolchain ESPHome's libsodium stays a
-        # plain PlatformIO library and never conflicts, so leave it alone.
+    if arduino_bundles_libsodium():
+        # arduino-esp32 (below IDF 6.0) ships espressif/libsodium, and ESPHome's
+        # noise component then falls back to its PlatformIO libsodium library.
+        # Ignore that one so espressif's full libsodium is the only copy;
+        # noise-c links against it via the shared managed-components requirement.
         cg.add_platformio_option("lib_ignore", ["libsodium"])
-        
-    add_idf_component(
-        name="espressif/libsodium",
-        ref="^1.0.20~2",
-    )
+        add_idf_component(
+            name="espressif/libsodium",
+            ref="^1.0.20~2",
+        )
+        # libsodium's HMAC-SHA256 can return wrong results when backed by hardware SHA
+        # acceleration via mbedTLS (likely related to esphome/esphome#12707, #13021, #13234).
+        # Force libsodium to use its own SHA implementation instead.
+        add_idf_sdkconfig_option("CONFIG_LIBSODIUM_USE_MBEDTLS_SHA", False)
+    else:
+        # Everywhere else ESPHome's noise component (`api` encryption) adds its own
+        # esphome/libsodium as an ESP-IDF managed component, which can't coexist with
+        # espressif/libsodium. Always use ESPHome's port (same version as noise, so
+        # both requests dedupe) and compile the modules it leaves out in nuki_sodium.
+        add_idf_component(
+            name="esphome/libsodium",
+            ref=LIBSODIUM_VERSION,
+        )
+        add_idf_component(
+            name="nuki_sodium",
+            path=str(NUKI_SODIUM_DIR),
+        )
+
     add_idf_component(
         name="crc16",
         repo="https://github.com/AzonInc/Crc16.git",
@@ -1166,11 +1182,6 @@ async def to_code(config):
     # (a status bit inside the manufacturer data - see NukiBle::parse_device()), so
     # duplicate-advertisement filtering must stay off.
     add_idf_sdkconfig_option("CONFIG_BTDM_BLE_SCAN_DUPL", False)
-
-    # libsodium's HMAC-SHA256 can return wrong results when backed by hardware SHA
-    # acceleration via mbedTLS (likely related to esphome/esphome#12707, #13021, #13234).
-    # Force libsodium to use its own SHA implementation instead.
-    add_idf_sdkconfig_option("CONFIG_LIBSODIUM_USE_MBEDTLS_SHA", False)
 
     # Build flags
     cg.add_build_flag("-Wno-unused-result")
