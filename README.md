@@ -310,7 +310,10 @@ The following configuration options allow you to customize the behavior of the N
 
 # 🚪 Door Sensor Emulation
 
-Report the state of an **external door sensor** (e.g. a reed switch) to the lock, emulating the Nuki Door Sensor. The lock can then take smart actions based on the door state (e.g., auto-locking when the door is closed).
+Report the state of an **external door sensor** (e.g. a reed switch) to the lock, emulating the Nuki Door Sensor. The lock can then take smart actions based on the door state (e.g., auto-locking when the door is closed). The state is pushed to the lock **whenever it changes** (the lock must be paired).
+
+> [!NOTE]
+> The emulated door sensor is not visible or configurable via the Nuki App. To activate it, simply ensure that a `door_sensor_report` is defined in the ESPHome YAML configuration as shown below.
 
 **How to use it:**
 
@@ -331,9 +334,6 @@ lock:
     door_sensor_report:                 # <---- add this
       door_sensor_input: reed_switch    # <---- and this
 ```
-
-The state is pushed to the lock **whenever it changes** (the lock must be paired). The first
-successful report also creates the lock's door-sensor accessory record.
 
 ---
 
