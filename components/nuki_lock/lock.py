@@ -1048,7 +1048,7 @@ async def to_code(config):
     if single_button_press_action := config.get(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT):
         sel = await select.new_select(
             single_button_press_action,
-            options=[CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS],
+            options=CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_single_button_press_action_select(sel))
@@ -1056,7 +1056,7 @@ async def to_code(config):
     if double_button_press_action := config.get(CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT):
         sel = await select.new_select(
             double_button_press_action,
-            options=[CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS],
+            options=CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_double_button_press_action_select(sel))
@@ -1064,7 +1064,7 @@ async def to_code(config):
     if fob_action_1 := config.get(CONF_FOB_ACTION_1_SELECT):
         sel = await select.new_select(
             fob_action_1,
-            options=[CONF_FOB_ACTION_SELECT_OPTIONS],
+            options=CONF_FOB_ACTION_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_fob_action_1_select(sel))
@@ -1072,7 +1072,7 @@ async def to_code(config):
     if fob_action_2 := config.get(CONF_FOB_ACTION_2_SELECT):
         sel = await select.new_select(
             fob_action_2,
-            options=[CONF_FOB_ACTION_SELECT_OPTIONS],
+            options=CONF_FOB_ACTION_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_fob_action_2_select(sel))
@@ -1080,7 +1080,7 @@ async def to_code(config):
     if fob_action_3 := config.get(CONF_FOB_ACTION_3_SELECT):
         sel = await select.new_select(
             fob_action_3,
-            options=[CONF_FOB_ACTION_SELECT_OPTIONS],
+            options=CONF_FOB_ACTION_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_fob_action_3_select(sel))
@@ -1088,7 +1088,7 @@ async def to_code(config):
     if timezone := config.get(CONF_TIMEZONE_SELECT):
         sel = await select.new_select(
             timezone,
-            options=[CONF_TIMEZONE_SELECT_OPTIONS],
+            options=CONF_TIMEZONE_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_timezone_select(sel))
@@ -1096,7 +1096,7 @@ async def to_code(config):
     if advertising_mode := config.get(CONF_ADVERTISING_MODE_SELECT):
         sel = await select.new_select(
             advertising_mode,
-            options=[CONF_ADVERTISING_MODE_SELECT_OPTIONS],
+            options=CONF_ADVERTISING_MODE_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_advertising_mode_select(sel))
@@ -1104,7 +1104,7 @@ async def to_code(config):
     if battery_type := config.get(CONF_BATTERY_TYPE_SELECT):
         sel = await select.new_select(
             battery_type,
-            options=[CONF_BATTERY_TYPE_SELECT_OPTIONS],
+            options=CONF_BATTERY_TYPE_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_battery_type_select(sel))
@@ -1112,7 +1112,7 @@ async def to_code(config):
     if motor_speed := config.get(CONF_MOTOR_SPEED_SELECT):
         sel = await select.new_select(
             motor_speed,
-            options=[CONF_MOTOR_SPEED_SELECT_OPTIONS],
+            options=CONF_MOTOR_SPEED_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_motor_speed_select(sel))
