@@ -48,7 +48,6 @@ static const uint16_t BLE_DISCONNECT_TIMEOUT = 2000;
 static const uint8_t MAX_TOLERATED_UPDATES_ERRORS = 5;
 
 static const uint32_t COOLDOWN_COMMANDS_MILLIS = 1000;
-static const uint32_t COOLDOWN_COMMANDS_EXTENDED_MILLIS = 3000;
 
 static const uint8_t MAX_AUTH_DATA_ENTRIES = 10;
 static const uint8_t MAX_EVENT_LOG_ENTRIES = 3;

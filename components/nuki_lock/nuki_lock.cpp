@@ -834,9 +834,9 @@ void NukiLockComponent::execute_lock_action_step() {
     // Schedule a status update without waiting for the next advertisement for a faster feedback
     this->status_update_ = true;
 
-    // Give the lock extra time when successful in order to account for time to turn the key;
-    // on failure, wait the configurable retry delay before the next attempt.
-    this->command_cooldown_millis = is_execution_successful ? COOLDOWN_COMMANDS_EXTENDED_MILLIS : this->command_retry_delay_millis_;
+    // Success already confirms completion; read the actual state before BLE idles out.
+    // Failed attempts still use the configured retry delay.
+    this->command_cooldown_millis = is_execution_successful ? 0 : this->command_retry_delay_millis_;
 }
 
 void NukiLockComponent::set_security_pin(uint32_t new_pin) {
