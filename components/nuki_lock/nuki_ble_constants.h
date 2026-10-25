@@ -23,6 +23,12 @@ const char AUTH_ID_STORE_NAME[]          = "authorizationId";
 const char ULTRA_PINCODE_STORE_NAME[]    = "ultraPinCode";
 const char ULTRA_STORE_NAME[]            = "isUltra";
 
+// Releases before NukiBleEsp32 was vendored let the library store the pairing in its own
+// NVS namespace, named after the then fixed device name, using the store names above as keys.
+const char LEGACY_NVS_NAMESPACE[]        = "Nuki ESPHome";
+// Set in the legacy namespace once its pairing has been taken over, so it is migrated only once
+const char LEGACY_MIGRATED_KEY[]         = "migrated";
+
 enum class DoorSensorState : uint8_t {
   Unavailable       = 0x00,
   Deactivated       = 0x01,

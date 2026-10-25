@@ -334,6 +334,15 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
     void initialize();
 
     /**
+     * @brief Takes over the pairing stored by releases before NukiBleEsp32 was vendored
+     * (own NVS namespace) if no credentials are stored yet. Runs only once per device:
+     * the legacy namespace is flagged as migrated afterwards.
+     *
+     * @return true if credentials were migrated
+     */
+    bool migrate_legacy_credentials();
+
+    /**
     * @brief Returns the RSSI of the last received ble beacon broadcast
     *
     * @return RSSI value
