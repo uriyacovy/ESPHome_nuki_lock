@@ -18,6 +18,7 @@
 
 #include "esphome/core/log.h"
 #include "esp_timer.h"
+#include "esp_random.h"
 
 #include <algorithm>
 #include <atomic>
@@ -135,7 +136,10 @@ PairingResult NukiBle::pair_nuki(AuthorizationIdType idType) {
   }
 
   if (!this->pairing_keypair_generated_) {
-    crypto_box_keypair(this->my_public_key_, this->my_private_key_);
+    // ESPHome's libsodium port defaults to /dev/urandom, which ESP-IDF does not provide.
+    // BLE is connected here, so the hardware RNG has an active RF entropy source.
+    esp_fill_random(this->my_private_key_, sizeof(this->my_private_key_));
+    crypto_scalarmult_curve25519_base(this->my_public_key_, this->my_private_key_);
     this->pairing_keypair_generated_ = true;
   }
 
