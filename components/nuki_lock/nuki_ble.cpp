@@ -17,8 +17,9 @@
 #include <sodium.h>
 
 #include "esphome/core/log.h"
-#include "esp_timer.h"
 #include "esp_random.h"
+#include "esp_timer.h"
+#include "nvs.h"
 
 #include <algorithm>
 #include <atomic>
@@ -30,6 +31,21 @@
 namespace esphome::nuki_lock {
 
 static const char *const TAG = "NukiBle";
+
+// ESPHome's libsodium port (esphome/libsodium) defaults to the sysrandom implementation,
+// which reads /dev/urandom. That doesn't exist on ESP-IDF, so the first randombytes call
+// (crypto_box_keypair() during pairing) aborts via sodium_misuse(). Plug in the ESP32
+// hardware RNG instead, as espressif/libsodium does by default.
+static const char *randombytes_esp32_implementation_name() { return "esp32"; }
+
+static const randombytes_implementation randombytes_esp32_implementation = {
+  randombytes_esp32_implementation_name,  // implementation_name
+  esp_random,                             // random
+  nullptr,                                // stir
+  nullptr,                                // uniform (libsodium falls back to random)
+  esp_fill_random,                        // buf
+  nullptr,                                // close
+};
 
 NukiBle::NukiBle(const std::string& device_name,
                  const uint32_t device_id,
@@ -76,6 +92,9 @@ NukiBle::~NukiBle() {
 }
 
 void NukiBle::initialize() {
+  // Must happen before libsodium's first randombytes call, see randombytes_esp32_implementation
+  randombytes_set_implementation(&randombytes_esp32_implementation);
+
   this->ble_address_pref_ = make_credential_pref<uint8_t[6]>(BLE_ADDRESS_STORE_NAME);
   this->secret_key_pref_ = make_credential_pref<uint8_t[32]>(SECRET_KEY_STORE_NAME);
   this->auth_id_pref_ = make_credential_pref<uint8_t[4]>(AUTH_ID_STORE_NAME);
@@ -136,10 +155,7 @@ PairingResult NukiBle::pair_nuki(AuthorizationIdType idType) {
   }
 
   if (!this->pairing_keypair_generated_) {
-    // ESPHome's libsodium port defaults to /dev/urandom, which ESP-IDF does not provide.
-    // BLE is connected here, so the hardware RNG has an active RF entropy source.
-    esp_fill_random(this->my_private_key_, sizeof(this->my_private_key_));
-    crypto_scalarmult_curve25519_base(this->my_public_key_, this->my_private_key_);
+    crypto_box_keypair(this->my_public_key_, this->my_private_key_);
     this->pairing_keypair_generated_ = true;
   }
 
@@ -756,6 +772,70 @@ void NukiBle::get_mac_address(char* macAddress) {
   if (this->ble_address_pref_.load(&buf)) {
     esphome::format_mac_addr_upper(buf, macAddress);
   }
+}
+
+bool NukiBle::migrate_legacy_credentials() {
+  auto secret_key_pref = make_credential_pref<uint8_t[32]>(SECRET_KEY_STORE_NAME);
+  auto auth_id_pref = make_credential_pref<uint8_t[4]>(AUTH_ID_STORE_NAME);
+
+  unsigned char secretKeyK[32] = {0};
+  unsigned char authorizationId[4] = {0};
+  if (secret_key_pref.load(&secretKeyK) && auth_id_pref.load(&authorizationId)) {
+    // Already has (or had) its own pairing, never overwrite it
+    return false;
+  }
+
+  nvs_handle_t handle;
+  if (nvs_open(LEGACY_NVS_NAMESPACE, NVS_READONLY, &handle) != ESP_OK) {
+    return false;
+  }
+
+  auto get_blob = [handle](const char* key, void* buf, size_t size) {
+    return nvs_get_blob(handle, key, buf, &size) == ESP_OK;
+  };
+
+  uint8_t migrated = 0;
+  unsigned char bleAddress[6] = {0};
+  uint16_t pinCode = 0;
+  uint32_t ultraPinCode = 0;
+  uint8_t isUltra = 0;
+  bool found = nvs_get_u8(handle, LEGACY_MIGRATED_KEY, &migrated) != ESP_OK
+    && get_blob(BLE_ADDRESS_STORE_NAME, bleAddress, sizeof(bleAddress))
+    && get_blob(SECRET_KEY_STORE_NAME, secretKeyK, sizeof(secretKeyK))
+    && get_blob(AUTH_ID_STORE_NAME, authorizationId, sizeof(authorizationId));
+  if (found) {
+    // Optional, absent if never set
+    get_blob(SECURITY_PINCODE_STORE_NAME, &pinCode, sizeof(pinCode));
+    get_blob(ULTRA_PINCODE_STORE_NAME, &ultraPinCode, sizeof(ultraPinCode));
+    nvs_get_u8(handle, ULTRA_STORE_NAME, &isUltra);
+  }
+  nvs_close(handle);
+
+  if (!found || is_char_array_empty(secretKeyK, sizeof(secretKeyK))
+      || is_char_array_empty(authorizationId, sizeof(authorizationId))) {
+    return false;
+  }
+
+  bool isUltraLock = isUltra != 0;
+  if (!(make_credential_pref<uint8_t[6]>(BLE_ADDRESS_STORE_NAME).save(&bleAddress)
+        && secret_key_pref.save(&secretKeyK)
+        && auth_id_pref.save(&authorizationId)
+        && make_credential_pref<uint16_t>(SECURITY_PINCODE_STORE_NAME).save(&pinCode)
+        && make_credential_pref<uint32_t>(ULTRA_PINCODE_STORE_NAME).save(&ultraPinCode)
+        && make_credential_pref<bool>(ULTRA_STORE_NAME).save(&isUltraLock)
+        && esphome::global_preferences->sync())) {
+    ESP_LOGE(TAG, "[%s] Failed to migrate legacy credentials", this->device_name_.c_str());
+    return false;
+  }
+
+  if (nvs_open(LEGACY_NVS_NAMESPACE, NVS_READWRITE, &handle) == ESP_OK) {
+    nvs_set_u8(handle, LEGACY_MIGRATED_KEY, 1);
+    nvs_commit(handle);
+    nvs_close(handle);
+  }
+
+  ESP_LOGI(TAG, "[%s] Migrated pairing credentials from legacy storage", this->device_name_.c_str());
+  return true;
 }
 
 bool NukiBle::retrieve_credentials() {

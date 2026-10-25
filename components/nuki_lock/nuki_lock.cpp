@@ -17,6 +17,9 @@ namespace esphome::nuki_lock {
 
 static const char *const TAG = "nuki_lock.lock";
 
+// Preference key of NukiLockSettings in releases before NukiBleEsp32 was vendored
+static const uint32_t LEGACY_SETTINGS_KEY = 1912044075UL;
+
 void NukiLockComponent::save_settings() {
     NukiLockSettings settings {
         this->security_pin_,
@@ -1159,6 +1162,9 @@ void NukiLockComponent::loop()
 void NukiLockComponent::setup() {
     ESP_LOGCONFIG(TAG, "Running setup");
 
+    // Take over the pairing of releases before NukiBleEsp32 was vendored, once per device
+    bool migrated = this->nuki_lock_.migrate_legacy_credentials();
+
     // Restore settings from flash. Keyed off device_name_ (unique per instance, see the
     // NukiLockComponent constructor) so multiple nuki_lock: instances on one device don't
     // clobber each other's stored PIN settings.
@@ -1167,7 +1173,13 @@ void NukiLockComponent::setup() {
 
     NukiLockSettings recovered;
     if (!this->pref_.load(&recovered)) {
-        recovered = {0};
+        // Settings of those releases belong to the migrated pairing, they used a fixed key
+        auto legacy_pref = global_preferences->make_preference<NukiLockSettings>(LEGACY_SETTINGS_KEY);
+        if (migrated && legacy_pref.load(&recovered)) {
+            this->pref_.save(&recovered);
+        } else {
+            recovered = {0};
+        }
     }
 
     this->pin_state_ = recovered.pin_state;
