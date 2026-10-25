@@ -1018,7 +1018,7 @@ CmdResult NukiBle::cmd_chall_acc_state_machine(const TDeviceAction action) {
         this->nuki_command_state_ = CommandState::Idle;
         this->last_msg_code_received_ = Command::Empty;
         return CmdResult::Lock_Busy;
-      } else if ((CommandStatus)this->last_msg_code_received_ == CommandStatus::Complete) {
+      } else if (this->last_msg_code_received_ == Command::Status && (CommandStatus)this->received_status_ == CommandStatus::Complete) {
         if (this->debug_nuki_communication_) {
           ESP_LOGD(HPP_TAG, "Command success");
         }
