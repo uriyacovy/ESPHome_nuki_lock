@@ -724,7 +724,7 @@ CmdResult NukiBle::cmd_state_machine(const TDeviceAction action) {
         this->disconnect();
         this->nuki_command_state_ = CommandState::Idle;
         this->last_msg_code_received_ = Command::Empty;
-        return CmdResult::Failed;
+        return CmdResult::Error;
       }
       break;
     }
@@ -797,7 +797,7 @@ CmdResult NukiBle::cmd_chall_state_machine(const TDeviceAction action, const boo
         this->disconnect();
         this->nuki_command_state_ = CommandState::Idle;
         this->last_msg_code_received_ = Command::Empty;
-        return CmdResult::Failed;
+        return CmdResult::Error;
       }
       break;
     }
@@ -858,7 +858,7 @@ CmdResult NukiBle::cmd_chall_state_machine(const TDeviceAction action, const boo
         this->disconnect();
         this->nuki_command_state_ = CommandState::Idle;
         this->last_msg_code_received_ = Command::Empty;
-        return CmdResult::Failed;
+        return CmdResult::Error;
       }
       break;
     }
@@ -932,7 +932,7 @@ CmdResult NukiBle::cmd_chall_acc_state_machine(const TDeviceAction action) {
         this->disconnect();
         this->nuki_command_state_ = CommandState::Idle;
         this->last_msg_code_received_ = Command::Empty;
-        return CmdResult::Failed;
+        return CmdResult::Error;
       }
       break;
     }
@@ -978,7 +978,7 @@ CmdResult NukiBle::cmd_chall_acc_state_machine(const TDeviceAction action) {
         this->disconnect();
         this->nuki_command_state_ = CommandState::Idle;
         this->last_msg_code_received_ = Command::Empty;
-        return CmdResult::Failed;
+        return CmdResult::Error;
       }
       break;
     }
