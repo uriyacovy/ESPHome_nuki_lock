@@ -83,7 +83,7 @@ CONF_AUTO_UPDATE_ENABLED_SWITCH = "auto_update_enabled"
 CONF_SINGLE_LOCK_ENABLED_SWITCH = "single_lock_enabled"
 CONF_DST_MODE_ENABLED_SWITCH = "dst_mode_enabled"
 CONF_AUTO_BATTERY_TYPE_DETECTION_ENABLED_SWITCH = "auto_battery_type_detection_enabled"
-CONF_SLOW_SPEED_DURING_NIGHT_MODE_ENABLED_SWITCH = "slow_speed_during_night_mode"
+CONF_SLOW_SPEED_DURING_NIGHT_MODE_ENABLED_SWITCH = "slow_speed_during_night_mode_enabled"
 CONF_DETACHED_CYLINDER_ENABLED_SWITCH = "detached_cylinder_enabled"
 CONF_LOGGING_ENABLED_SWITCH = "logging_enabled"
 
@@ -208,6 +208,14 @@ CONF_BLE_GENERAL_TIMEOUT = "ble_general_timeout"
 CONF_BLE_COMMAND_TIMEOUT = "ble_command_timeout"
 CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_EVENT = "event"
+
+CONF_HYBRID_MODE = "hybrid_mode"
+CONF_HYBRID_TOPIC_PREFIX = "topic_prefix"
+CONF_HYBRID_SEND_ACTIONS = "send_actions"
+CONF_HYBRID_BLE_FALLBACK = "ble_fallback"
+CONF_HYBRID_FALLBACK_TIMEOUT = "fallback_timeout"
+CONF_HYBRID_OFFLINE_UPDATE_INTERVAL = "offline_update_interval"
+CONF_HYBRID_CONNECTED_BINARY_SENSOR = "connected"
 
 CONF_ON_PAIRING_MODE_ON = "on_pairing_mode_on_action"
 CONF_ON_PAIRING_MODE_OFF = "on_pairing_mode_off_action"
@@ -672,6 +680,30 @@ CONFIG_SCHEMA = cv.All(
                     cv.Required(CONF_DOOR_SENSOR_INPUT): cv.use_id(binary_sensor.BinarySensor),
                 }
             ),
+            # Hybrid mode: receive state changes from the lock's own official MQTT topics
+            # (WiFi/Thread locks, MQTT enabled in the Nuki app on the same broker) - see
+            # nuki_hybrid.cpp. Requires pairing as app.
+            cv.Optional(CONF_HYBRID_MODE): cv.All(
+                cv.Schema(
+                    {
+                        # Defaults to "nuki/<Nuki ID in hex>", the lock's own topic path
+                        cv.Optional(CONF_HYBRID_TOPIC_PREFIX): cv.All(cv.string_strict, cv.Length(min=1, max=48)),
+                        # Send lock actions over MQTT too (needs "Allow locking" in the Nuki app)
+                        cv.Optional(CONF_HYBRID_SEND_ACTIONS, default=False): cv.boolean,
+                        # Retry a lock action over BLE if the lock doesn't confirm it in time
+                        cv.Optional(CONF_HYBRID_BLE_FALLBACK, default=True): cv.boolean,
+                        cv.Optional(CONF_HYBRID_FALLBACK_TIMEOUT, default="2s"): cv.positive_time_period_milliseconds,
+                        # Status polling over BLE while the lock's MQTT connection is offline, 0 disables
+                        cv.Optional(CONF_HYBRID_OFFLINE_UPDATE_INTERVAL, default="10min"): cv.positive_time_period_seconds,
+                        cv.Optional(CONF_HYBRID_CONNECTED_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
+                            device_class=DEVICE_CLASS_CONNECTIVITY,
+                            entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                            icon="mdi:lan-connect",
+                        ),
+                    }
+                ),
+                cv.requires_component("mqtt"),
+            ),
             cv.Optional(CONF_ON_PAIRING_MODE_ON): automation.validate_automation(
                 {
                     cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairingModeOnTrigger),
@@ -786,6 +818,18 @@ async def to_code(config):
     if door_sensor_report := config.get(CONF_DOOR_SENSOR_REPORT):
         door_sensor_input = await cg.get_variable(door_sensor_report[CONF_DOOR_SENSOR_INPUT])
         cg.add(var.set_door_sensor_input(door_sensor_input))
+
+    if hybrid_mode := config.get(CONF_HYBRID_MODE):
+        cg.add_define("USE_NUKI_LOCK_HYBRID")
+        if CONF_HYBRID_TOPIC_PREFIX in hybrid_mode:
+            cg.add(var.set_hybrid_topic_prefix(hybrid_mode[CONF_HYBRID_TOPIC_PREFIX].rstrip("/")))
+        cg.add(var.set_hybrid_send_actions(hybrid_mode[CONF_HYBRID_SEND_ACTIONS]))
+        cg.add(var.set_hybrid_ble_fallback(hybrid_mode[CONF_HYBRID_BLE_FALLBACK]))
+        cg.add(var.set_hybrid_fallback_timeout(hybrid_mode[CONF_HYBRID_FALLBACK_TIMEOUT]))
+        cg.add(var.set_hybrid_offline_update_interval(hybrid_mode[CONF_HYBRID_OFFLINE_UPDATE_INTERVAL]))
+        if hybrid_connected := hybrid_mode.get(CONF_HYBRID_CONNECTED_BINARY_SENSOR):
+            sens = await binary_sensor.new_binary_sensor(hybrid_connected)
+            cg.add(var.set_hybrid_connected_binary_sensor(sens))
 
     # Binary Sensor
     if connected := config.get(CONF_CONNECTED_BINARY_SENSOR):
@@ -1205,6 +1249,12 @@ def _final_validate(config):
 
             if not api_conf.get("homeassistant_services", False):
                 LOGGER.warning("Enable homeassistant_services to use nuki event logs.")
+
+        if CONF_HYBRID_MODE in config:
+            if config.get(CONF_PAIRING_AS_APP) is False:
+                LOGGER.warning("hybrid_mode needs pairing_as_app: true (re-pair the lock after changing it).")
+            if full_config.get("mqtt", {}).get("discovery", True) is not False and "api" in full_config:
+                LOGGER.warning("hybrid_mode: consider 'discovery: false' in mqtt: to not announce all entities over MQTT as well.")
 
     return config
 

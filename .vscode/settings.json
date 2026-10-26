@@ -85,5 +85,6 @@
         "iostream": "cpp",
         "numeric": "cpp",
         "variant": "cpp"
-    }
+    },
+    "cmake.sourceDirectory": "D:/Projekte/ESPHome_nuki_lock/components/nuki_lock/nuki_sodium"
 }

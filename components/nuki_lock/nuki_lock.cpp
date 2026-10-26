@@ -225,6 +225,10 @@ void NukiLockComponent::update_config() {
     if (conf_req_result == CmdResult::Success) {
         ESP_LOGD(TAG, "request_config has resulted in %s (%d)", str, conf_req_result);
 
+        #ifdef USE_NUKI_LOCK_HYBRID
+        this->hybrid_on_config();
+        #endif
+
         ESP_LOGD(TAG, "Device Type: %i", (this->nuki_lock_config_.deviceType == 255 ? 0 : this->nuki_lock_config_.deviceType));
         ESP_LOGD(TAG, "Product Variant: %i", (this->nuki_lock_config_.productVariant == 255 ? 0 : this->nuki_lock_config_.productVariant));
 
@@ -753,6 +757,24 @@ const char* NukiLockComponent::get_auth_name(uint32_t authId) const {
     return nullptr;
 }
 
+void NukiLockComponent::publish_assumed_lock_state(LockAction action) {
+    switch (action) {
+        case LockAction::Unlatch:
+        case LockAction::Unlock: {
+            this->publish_state(lock::LOCK_STATE_UNLOCKING);
+            break;
+        }
+        case LockAction::FullLock:
+        case LockAction::Lock:
+        case LockAction::LockNgo: {
+            this->publish_state(lock::LOCK_STATE_LOCKING);
+            break;
+        }
+        default:
+            break;
+    }
+}
+
 // Performs one step of the currently executing lock action attempt. Safe to call
 // repeatedly (once per loop() tick) until it completes - see nuki_op_active_ in nuki_lock.h.
 void NukiLockComponent::execute_lock_action_step() {
@@ -773,20 +795,7 @@ void NukiLockComponent::execute_lock_action_step() {
         lock_action_to_string(this->executing_lock_action_, currentlock_action_as_string);
         ESP_LOGD(TAG, "Executing lock action %s (%d)... (%d attempts left)", currentlock_action_as_string, this->executing_lock_action_, this->action_attempts_);
 
-        // Publish the assumed transitional lock state
-        switch (this->executing_lock_action_) {
-            case LockAction::Unlatch:
-            case LockAction::Unlock: {
-                this->publish_state(lock::LOCK_STATE_UNLOCKING);
-                break;
-            }
-            case LockAction::FullLock:
-            case LockAction::Lock:
-            case LockAction::LockNgo: {
-                this->publish_state(lock::LOCK_STATE_LOCKING);
-                break;
-            }
-        }
+        this->publish_assumed_lock_state(this->executing_lock_action_);
     }
 
     CmdResult result = this->nuki_lock_.lock_action(
@@ -1019,6 +1028,10 @@ void NukiLockComponent::loop()
     // Terminate stale Bluetooth connections
     this->nuki_lock_.update_connection_state();
     App.feed_wdt();
+
+#ifdef USE_NUKI_LOCK_HYBRID
+    this->hybrid_loop();
+#endif
 
 #ifdef USE_BINARY_SENSOR
     // Door sensor report (0x0092): send whenever the configured door state sensor
@@ -1429,6 +1442,13 @@ void NukiLockComponent::control(const lock::LockCall &call) {
     lock_action_to_string(this->lock_action_, lock_action_as_string);
     lock_action_as_string[sizeof(lock_action_as_string) - 1] = '\0';
     ESP_LOGI(TAG, "New lock action received: %s (%d)", lock_action_as_string, this->lock_action_);
+
+    #ifdef USE_NUKI_LOCK_HYBRID
+    if (this->hybrid_send_lock_action(this->lock_action_)) {
+        // Sent over the lock's official MQTT instead; hybrid_loop() retries it over BLE if needed
+        this->action_attempts_ = 0;
+    }
+    #endif
 }
 
 void NukiLockComponent::lock_n_go() {
@@ -1458,6 +1478,13 @@ void NukiLockComponent::dump_config() {
     ESP_LOGCONFIG(TAG, "  Pairing Identity: %s", this->pairing_as_app_.value_or(false) ? "App" : "Bridge");
     ESP_LOGCONFIG(TAG, "  Is Paired: %s", YESNO(this->is_paired()));
 
+    #ifdef USE_NUKI_LOCK_HYBRID
+    ESP_LOGCONFIG(TAG, "  Hybrid mode: %s", this->hybrid_topic_prefix_len_ == 0 ? "waiting for Nuki ID" : this->hybrid_topic_prefix_);
+    ESP_LOGCONFIG(TAG, "    Send actions: %s", YESNO(this->hybrid_send_actions_));
+    ESP_LOGCONFIG(TAG, "    BLE fallback: %s (after %ums)", YESNO(this->hybrid_ble_fallback_), this->hybrid_fallback_timeout_millis_);
+    ESP_LOGCONFIG(TAG, "    Offline update interval: %us", this->hybrid_offline_update_interval_);
+    #endif
+
     ESP_LOGCONFIG(TAG, "  Pairing mode timeout: %us", this->pairing_mode_timeout_);
     ESP_LOGCONFIG(TAG, "  Configuration query interval: %us", this->query_interval_config_);
     ESP_LOGCONFIG(TAG, "  Auth Data query interval: %us", this->query_interval_auth_data_);
@@ -1482,6 +1509,9 @@ void NukiLockComponent::dump_config() {
     LOG_BINARY_SENSOR(TAG, "Door Sensor Battery Critical", this->door_sensor_battery_critical_binary_sensor_);
     LOG_BINARY_SENSOR(TAG, "Door Sensor", this->door_sensor_binary_sensor_);
     LOG_BINARY_SENSOR(TAG, "Remote Access Connected", this->remote_access_connected_binary_sensor_);
+    #ifdef USE_NUKI_LOCK_HYBRID
+    LOG_BINARY_SENSOR(TAG, "Hybrid Connected", this->hybrid_connected_binary_sensor_);
+    #endif
     #endif
     #ifdef USE_TEXT_SENSOR
     LOG_TEXT_SENSOR(TAG, "Door Sensor State", this->door_sensor_state_text_sensor_);
@@ -1577,6 +1607,14 @@ void NukiLockComponent::notify(EventType event_type) {
     } else if(event_type == EventType::KeyTurnerStatusUpdated) {
         ESP_LOGD(TAG, "KeyTurnerStatusUpdated");
 
+        #ifdef USE_NUKI_LOCK_HYBRID
+        if (this->hybrid_connected_) {
+            // State changes already arrive over the lock's official MQTT, which also
+            // triggers the BLE status update - don't connect a second time for the beacon
+            return;
+        }
+        #endif
+
         // Request status update (incl. event log request)
         this->status_update_ = true;
     } else if(event_type == EventType::BLE_ERROR_ON_DISCONNECT) {
@@ -1640,7 +1678,20 @@ void NukiLockComponent::request_calibration() {
     });
 }
 
+NukiLockComponent *NukiLockComponent::first_instance_ = nullptr;
+
 void NukiLockComponent::set_pairing_mode(bool enabled) {
+    if (enabled) {
+        // Two blocks in pairing mode would both pick up the same lock
+        for (NukiLockComponent *other = first_instance_; other != nullptr; other = other->next_instance_) {
+            if (other != this && other->pairing_mode_) {
+                ESP_LOGW(TAG, "Turning off pairing mode of '%s': only one nuki_lock can be in pairing mode at a time",
+                    other->device_name_.c_str());
+                other->set_pairing_mode(false);
+            }
+        }
+    }
+
     this->pairing_mode_ = enabled;
     this->nuki_lock_.set_pairing_mode_active(enabled);
 

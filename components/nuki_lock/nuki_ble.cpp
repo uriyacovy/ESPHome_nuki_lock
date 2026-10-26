@@ -86,9 +86,29 @@ NukiBle::NukiBle(const std::string& device_name,
   #ifdef DEBUG_NUKI_COMMAND
   this->debug_nuki_command_ = true;
   #endif
+
+  this->next_instance_ = first_instance_;
+  first_instance_ = this;
 }
 
 NukiBle::~NukiBle() {
+  for (NukiBle **it = &first_instance_; *it != nullptr; it = &(*it)->next_instance_) {
+    if (*it == this) {
+      *it = this->next_instance_;
+      break;
+    }
+  }
+}
+
+NukiBle *NukiBle::first_instance_ = nullptr;
+
+bool NukiBle::is_paired_by_other_instance(uint64_t address) const {
+  for (const NukiBle *other = first_instance_; other != nullptr; other = other->next_instance_) {
+    if (other != this && other->is_paired_ && other->get_address() == address) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void NukiBle::initialize() {
@@ -343,6 +363,18 @@ bool NukiBle::parse_device(const esphome::esp32_ble_tracker::ESPBTDevice &device
     return ibeacon.has_value();
   } else {
     if (!this->pairing_mode_active_) {
+      return false;
+    }
+
+    // A lock in pairing mode that another nuki_lock: block is already paired with would end
+    // up with two authorizations for the same ESP32 - leave it alone
+    if (this->is_paired_by_other_instance(device.address_uint64())) {
+      if (this->last_ignored_pairing_address_ != device.address_uint64()) {
+        this->last_ignored_pairing_address_ = device.address_uint64();
+        char address[esphome::MAC_ADDRESS_PRETTY_BUFFER_SIZE];
+        ESP_LOGW(TAG, "[%s] Ignoring %s in pairing mode: already paired with another nuki_lock",
+          this->device_name_.c_str(), device.address_str_to(address));
+      }
       return false;
     }
 

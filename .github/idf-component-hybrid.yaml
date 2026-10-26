@@ -1,0 +1,59 @@
+esphome:
+  name: test-nuki-hybrid
+
+esp32:
+  variant: esp32
+  framework:
+    type: esp-idf
+
+# Throwaway credentials for build tests only
+wifi:
+  ssid: "test"
+  password: "test1234"
+
+api:
+  custom_services: true
+  homeassistant_services: true
+  reboot_timeout: 0s
+
+mqtt:
+  broker: 192.168.1.10
+  discovery: false
+
+logger:
+  level: DEBUG
+
+external_components:
+  - source:
+      type: local
+      path: "../components/"
+
+lock:
+  - platform: nuki_lock
+    name: Nuki Lock
+    pairing_as_app: true
+    security_pin: 1234
+
+    hybrid_mode:
+      topic_prefix: nuki/1A2B3C4D
+      send_actions: true
+      ble_fallback: true
+      fallback_timeout: 2s
+      offline_update_interval: 10min
+      connected:
+        name: "Nuki Hybrid Connected"
+
+    battery_critical:
+      name: "Nuki Battery Critical"
+    battery_level:
+      name: "Nuki Battery Level"
+    door_sensor:
+      name: "Nuki Door Sensor"
+    door_sensor_state:
+      name: "Nuki Door Sensor: State"
+    last_unlock_user:
+      name: "Nuki Last Unlock User"
+    last_lock_action:
+      name: "Nuki Last Lock Action"
+    last_lock_action_trigger:
+      name: "Nuki Last Lock Action Trigger"

@@ -82,6 +82,9 @@ class NukiLockComponent :
     SUB_BINARY_SENSOR(door_sensor_battery_critical)
     SUB_BINARY_SENSOR(door_sensor)
     SUB_BINARY_SENSOR(remote_access_connected)
+    #ifdef USE_NUKI_LOCK_HYBRID
+    SUB_BINARY_SENSOR(hybrid_connected)
+    #endif
     #endif
     #ifdef USE_SENSOR
     SUB_SENSOR(battery_level)
@@ -156,7 +159,10 @@ class NukiLockComponent :
         // guarantees is unique - so multiple nuki_lock: blocks on one device don't clobber
         // each other's pairing credentials/PIN settings in flash.
         explicit NukiLockComponent(const std::string &device_name)
-            : Lock(), device_name_(device_name), nuki_lock_(device_name, esphome::fnv1_hash(device_name)) {}
+            : Lock(), device_name_(device_name), nuki_lock_(device_name, esphome::fnv1_hash(device_name)) {
+            this->next_instance_ = first_instance_;
+            first_instance_ = this;
+        }
 
         // ESPHome overrides
         void setup() override;
@@ -192,6 +198,16 @@ class NukiLockComponent :
         }
         void set_security_pin(uint32_t security_pin);
         void set_pairing_mode(bool enabled);
+
+#ifdef USE_NUKI_LOCK_HYBRID
+        // Hybrid mode (see nuki_hybrid.cpp): state changes come from the lock's own official
+        // MQTT topics (WiFi/Thread), everything else still goes over BLE.
+        void set_hybrid_topic_prefix(const char *topic_prefix) { this->hybrid_set_topic_prefix(topic_prefix); }
+        void set_hybrid_send_actions(bool send_actions) { this->hybrid_send_actions_ = send_actions; }
+        void set_hybrid_ble_fallback(bool ble_fallback) { this->hybrid_ble_fallback_ = ble_fallback; }
+        void set_hybrid_fallback_timeout(uint32_t fallback_timeout_millis) { this->hybrid_fallback_timeout_millis_ = fallback_timeout_millis; }
+        void set_hybrid_offline_update_interval(uint32_t offline_update_interval) { this->hybrid_offline_update_interval_ = offline_update_interval; }
+#endif
 
         // Template configuration setters
         template<typename T> void set_security_pin_config(T security_pin_config) { this->security_pin_config_ = security_pin_config; }
@@ -278,6 +294,11 @@ class NukiLockComponent :
         bool nuki_op_active_{false};
         std::function<void()> nuki_op_step_;
 
+        // All nuki_lock: blocks, so only one of them is in pairing mode at a time - see
+        // set_pairing_mode(). Components are never destroyed, so there is no removal.
+        static NukiLockComponent *first_instance_;
+        NukiLockComponent *next_instance_{nullptr};
+
         std::function<CmdResult()> pending_nuki_command_;
         std::function<void(CmdResult)> pending_nuki_command_done_;
         void process_pending_nuki_command();
@@ -318,6 +339,39 @@ class NukiLockComponent :
         // executing_lock_action_, for the same reason - see set_lock_action_options().
         uint8_t executing_lock_action_flags_{0};
         std::string executing_lock_action_name_suffix_;
+
+        // Publishes the transitional lock state assumed while a lock action is executing
+        void publish_assumed_lock_state(LockAction action);
+
+#ifdef USE_NUKI_LOCK_HYBRID
+        // Hybrid mode (see nuki_hybrid.cpp)
+        void hybrid_loop();
+        void hybrid_on_config();
+        void hybrid_subscribe();
+        void hybrid_on_message(const char *key, const char *payload);
+        bool hybrid_send_lock_action(LockAction action);
+        void hybrid_fallback_to_ble(const char *reason);
+        void hybrid_set_connected(bool connected);
+        void hybrid_set_topic_prefix(const char *topic_prefix);
+
+        // Topic sizes are capped in lock.py (topic_prefix) - "nuki/<NUKI ID in hex>" by default,
+        // derived from the config if not set
+        static const size_t HYBRID_TOPIC_PREFIX_MAX_LEN = 48;
+        char hybrid_topic_prefix_[HYBRID_TOPIC_PREFIX_MAX_LEN + 1] = {0};
+        size_t hybrid_topic_prefix_len_{0};
+        char hybrid_lock_action_topic_[HYBRID_TOPIC_PREFIX_MAX_LEN + sizeof("/lockAction")] = {0};
+        bool hybrid_subscribed_{false};
+        bool hybrid_connected_{false};      // the lock's own MQTT connection, from its "connected" topic
+        bool hybrid_send_actions_{false};
+        bool hybrid_ble_fallback_{true};
+        uint32_t hybrid_fallback_timeout_millis_{2000};
+        uint32_t hybrid_offline_update_interval_{600};
+        uint32_t hybrid_last_offline_update_time_{0};
+        // Lock action sent over MQTT, retried over BLE if the lock doesn't confirm it in time
+        bool hybrid_action_pending_{false};
+        LockAction hybrid_pending_action_{};
+        uint32_t hybrid_action_sent_time_{0};
+#endif
 
         // Setup & utility methods
         void setup_intervals(bool setup = true);

@@ -571,6 +571,14 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
     // parse_device()'s unpaired-device branch only reacts to pairing-mode advertisements
     // while we're actually trying to pair.
     bool pairing_mode_active_ = false;
+
+    // All NukiBle instances (one per nuki_lock: block), so pairing can skip locks another
+    // instance is already paired with - see is_paired_by_other_instance()
+    static NukiBle *first_instance_;
+    NukiBle *next_instance_{nullptr};
+    bool is_paired_by_other_instance(uint64_t address) const;
+    uint64_t last_ignored_pairing_address_{0};
+
     std::string device_name_;       //The name to be displayed for this authorization and used for storing preferences
     uint32_t device_id_;            //The ID of the Nuki App, Nuki Bridge or Nuki Fob to be authorized.
 

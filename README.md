@@ -1,39 +1,105 @@
 # ESPHome Nuki Lock Component (ESP32) [![Build Component](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml/badge.svg)](https://github.com/uriyacovy/ESPHome_nuki_lock/actions/workflows/build.yaml)
 
-Seamlessly integrate Nuki Smart Locks (1st–5th Gen, Ultra, Go, Pro) with ESPHome, enabling a full-featured Home Assistant lock platform with [many available entities](#-entities).
-The lock state is always up-to-date thanks to Nuki's BLE advertisement mechanism—whether controlled through the Nuki app, Home Assistant, or physically at the door.
+Turn an ESP32 into a local Bluetooth bridge for Nuki Smart Locks (1st–5th Gen, Ultra, Go, Pro) and get a full-featured lock in Home Assistant via ESPHome, with [many entities](#-entities) for state, battery and lock settings. No cloud and no official Nuki Bridge needed.
 
 ![some dashboard entites](./docs/nuki_dashboard.png)
+
+**Highlights**
+
+- Lock, unlock, unlatch and Lock 'n' Go from Home Assistant or ESPHome automations
+- Instant state updates when paired as bridge, or via the lock's own MQTT in [hybrid mode](#-hybrid-mode-official-mqtt--ble)
+- Battery, door sensor and connectivity sensors, plus most lock settings as switches, selects and numbers
+- [Keypad management](#-home-assistant-actions), [event logs](#-event-logs) and [door sensor emulation](#-door-sensor-emulation)
+- Uses ESPHome's own BLE stack, so it runs next to `bluetooth_proxy` and other BLE components
+
+## Contents
+
+- [Requirements](#-requirements)
+- [Quick Start](#-quick-start)
+- [Pairing](#-pairing)
+- [Configuration Options](#%EF%B8%8F-configuration-options)
+- [Door Sensor Emulation](#-door-sensor-emulation)
+- [Hybrid Mode (Official MQTT + BLE)](#-hybrid-mode-official-mqtt--ble)
+- [Event Logs](#-event-logs)
+- [Home Assistant Actions](#-home-assistant-actions)
+- [ESPHome Automations](#-esphome-automations)
+- [Entities](#-entities)
+- [Troubleshooting](#%EF%B8%8F-troubleshooting)
+- [Upgrading](#%EF%B8%8F-upgrading)
+- [Tested Hardware](#-tested-hardware)
+- [Credits](#-credits)
+
+---
+
+# 📋 Requirements
+
+| Requirement | Details |
+| ----------- | ------- |
+| ESP32 | Any ESP32 with Bluetooth LE (tested: ESP32, ESP32-S3, ESP32-C3). ESP8266 and RP2040 are not supported. |
+| ESPHome | **2026.10.0 or newer** |
+| Framework | `esp-idf` (recommended) or `arduino` |
+| Placement | Within reliable Bluetooth range of the lock, check the `bt_signal_strength` sensor |
+
+Good to know before you start:
+
+- **BLE stack:** The component uses ESPHome's native BLE stack (`esp32_ble_tracker` / `esp32_ble_client`), which is added automatically. It coexists with `bluetooth_proxy`, `esp32_improv` and other BLE components.
+- **Connection slots:** Each `nuki_lock` uses one of the ESP32's BLE connection slots (`esp32_ble: max_connections`, default 3). If you also run `bluetooth_proxy`, make sure enough slots are left.
+- **Scan parameters:** The component sets `esp32_ble_tracker` to continuous active scanning (`interval: 40ms`, `window: 40ms`, Nuki's recommendation) for fast connections. This applies to **all** BLE scanning on the device, and the build log shows a warning about it.
+- **Memory:** BLE, WiFi and encrypted API together use a lot of RAM. If your board has PSRAM, add the [`psram`](https://esphome.io/components/psram/) component.
 
 ---
 
 # 🚀 Quick Start
 
-## Requirements
-> [!IMPORTANT]  
-> Requires an ESP32
+**1. Minimal configuration**
 
-> [!IMPORTANT]  
-> Requires **ESPHome >= 2026.10.0**
+```yaml
+esphome:
+  name: esphome-nuki-lock
 
-> [!IMPORTANT]  
-> This component uses ESPHome's native BLE stack (`esp32_ble_tracker`/`esp32_ble_client`),
-> so it coexists with other BLE components (`esp32_ble`, `esp32_improv`, `bluetooth_proxy`, ...)
-> on the same device. `esp32_ble_tracker` is added automatically as a dependency.
+esp32:
+  variant: esp32  # match your board
+  framework:
+    type: esp-idf
 
-> [!NOTE]
-> This component overrides `esp32_ble_tracker`'s scan parameters to `interval: 40ms` /
-> `window: 40ms` (continuous active scanning, per Nuki's own BLE recommendation) for faster
-> pairing/connections. This applies to all BLE scanning on the device, not just Nuki.
+wifi:
+  ssid: "SSID"
+  password: "PASSWORD"
 
-> [!TIP]  
-> If your ESP32 has PSRAM, add the `psram` component to improve BLE stability.
+api:
+  custom_services: true         # Home Assistant actions (keypad, Lock 'n' Go, ...)
+  homeassistant_services: true  # event logs
 
----
+logger:
 
-## Example Configuration
+external_components:
+  - source: github://uriyacovy/ESPHome_nuki_lock
+
+lock:
+  - platform: nuki_lock
+    id: front_door          # also the name shown in the Nuki app's user list
+    name: Nuki Lock
+    security_pin: 1234      # your lock's PIN, see below
+    pairing_mode:
+      name: "Nuki Pairing Mode"
+    paired:
+      name: "Nuki Paired"
+    connected:
+      name: "Nuki Connected"
+```
+
+**2. Flash it**
+
+```
+esphome run <yamlfile.yaml>
+```
+
+**3. Pair the lock** as described in [Pairing](#-pairing).
+
+**4. Add entities.** The full example below lists every available entity, see [Entities](#-entities) for what they do.
+
 <details>
-  <summary>ESP-IDF Example YAML</summary>
+  <summary>Full example with all entities</summary>
 
 ```yaml
 esphome:
@@ -49,10 +115,8 @@ wifi:
   ssid: "SSID"
   password: "PASSWORD"
 
-# In case you want to use the Home Assistant services
-# you need to enable custom_services
-# In case you want to send nuki event logs to Home Assistant
-# you need to enable homeassistant_services
+# custom_services: needed for the Home Assistant actions
+# homeassistant_services: needed for event logs
 api:
   custom_services: true
   homeassistant_services: true
@@ -73,13 +137,14 @@ binary_sensor:
 lock:
   # Required
   - platform: nuki_lock
+    id: front_door
     name: Nuki Lock
 
   # Component Settings
-  # Change if you want to use event logs
+  # Event name for Home Assistant event logs, "none" disables them
     event: "none"
 
-  # Needed to change most of the lock settings
+  # Needed to change most of the lock settings and for event logs
   # Needed to pair with Smart Lock Ultra/5th Gen/Go/Pro (6 digit pin)
   # Supports templating
     security_pin: 1234
@@ -94,6 +159,7 @@ lock:
     ble_command_timeout: 10s
     command_retries: 5
     command_retry_delay: 1s
+    config_cache_ttl: 1min
 
   # Component Entities
   # Switches
@@ -108,7 +174,6 @@ lock:
     unpair:
       name: "Unpair Smart Lock"
 
-
   # Nuki Smart Lock Entities
   # Optional: Binary Sensors
     battery_critical:
@@ -121,6 +186,8 @@ lock:
       name: "Nuki Door Sensor Battery Critical"
     door_sensor:
       name: "Nuki Door Sensor"
+    remote_access_connected:              # 4th Gen / Ultra
+      name: "Nuki Remote Access Connected"
 
   # Optional: Emulate the Nuki Door Sensor.
   # Point `door_sensor_input` at the binary_sensor defined above; its state is
@@ -139,6 +206,8 @@ lock:
       name: "Nuki Motor Current"
     bt_signal_strength:
       name: "Nuki Bluetooth Signal Strength"
+    wifi_connection_strength:             # 4th Gen / Ultra
+      name: "Nuki WiFi Signal Strength"
 
   # Optional: Text Sensors
     door_sensor_state:
@@ -151,6 +220,12 @@ lock:
       name: "Nuki Last Lock Action Trigger"
     pin_status:
       name: "Nuki Security Pin Status"
+    wifi_connection_status:               # 4th Gen / Ultra
+      name: "Nuki WiFi Status"
+    mqtt_connection_status:               # 4th Gen / Ultra
+      name: "Nuki MQTT Status"
+    thread_connection_status:             # 4th Gen / Ultra
+      name: "Nuki Thread Status"
 
   # Optional: Number Inputs
     led_brightness:
@@ -202,14 +277,17 @@ lock:
       name: "Nuki Single Lock"
     dst_mode_enabled:
       name: "Nuki Daylight Saving Time"
-    auto_battery_type_detection_enabled:
+    auto_battery_type_detection_enabled:  # 1st - 4th Gen
       name: "Nuki Automatic Battery Type Detection"
-    slow_speed_during_night_mode_enabled:
+    slow_speed_during_night_mode_enabled: # Ultra / 5th Gen
       name: "Nuki Slow Speed During Night Mode"
     detached_cylinder_enabled:
       name: "Nuki Detached Cylinder"
+    logging_enabled:
+      name: "Nuki Activity Log"
 
   # Optional: Select Inputs
+  # Note: "buton" (single t) is the actual option name
     single_buton_press_action:
       name: "Nuki Button: Single Press Action"
     double_buton_press_action:
@@ -224,10 +302,14 @@ lock:
       name: "Nuki Timezone"
     advertising_mode:
       name: "Nuki Advertising Mode"
-    battery_type:
+    battery_type:                         # 1st - 4th Gen
       name: "Nuki Battery Type"
-    motor_speed:
+    motor_speed:                          # Ultra / 5th Gen
       name: "Nuki Motor Speed"
+
+  # Optional: Buttons
+    request_calibration:
+      name: "Nuki Request Calibration"
 
   # Optional: Callbacks
     on_pairing_mode_on_action:
@@ -242,83 +324,85 @@ lock:
 ```
 </details>
 
-Run ESPHome:
-```
-esphome run <yamlfile.yaml>
-```
-
-Then continue with the pairing instructions below.
-
 ---
 
-# 🔐 Pairing Your Nuki Lock
+# 🔐 Pairing
 
-## Pairing with Nuki Smart Lock (1st – 4th Gen)
+## Bridge or app?
 
-1. In the official Nuki App, make sure **Bluetooth pairing** is enabled:  
-   **Settings → Features & Configuration → Button and LED**.  
-   After enabling it, press and hold the button on the Nuki lock until the LED ring lights up and stays on.
+The ESP32 registers with the lock either as a **bridge** (default) or as an **app** (`pairing_as_app: true`). Decide **before pairing**: changing it later requires unpairing and pairing again.
 
-2. Enable pairing mode in the ESPHome component.  
-   You can do this either by toggling the **Pairing Mode** switch in Home Assistant or by calling the `nuki_lock.set_pairing_mode` action in an automation.
+| | Bridge (default) | App (`pairing_as_app: true`) |
+| --- | --- | --- |
+| Instant state updates | ✅ The lock signals every state change in its Bluetooth advertisement | ❌ Not signalled. Use [hybrid mode](#-hybrid-mode-official-mqtt--ble) for instant updates |
+| Official Nuki Bridge | ❌ Pairing replaces it (the lock only supports one bridge) | ✅ Can run alongside it |
+| Smart Lock Ultra / 5th Gen / Go / Pro | ❌ Can't be paired as bridge | ✅ Required |
+| Hybrid mode | ❌ | ✅ Required |
 
-3. Once pairing is successful, ESPHome entities will automatically update to reflect the lock status, and pairing mode will disable itself.
+Recommendation: 1st–4th Gen without official bridge → **bridge**. Ultra / 5th Gen / Go / Pro, or if you keep the official bridge → **app**, ideally with hybrid mode.
 
-> [!NOTE]  
-> The ESPHome bridge *can* run alongside an official Nuki Bridge, but this is not recommended (except in hybrid mode). Running both may increase battery drain and cause missed updates. If you need both, set `pairing_as_app: true` **before pairing**. Otherwise, pairing with the ESPHome bridge will unregister the official Bridge.
+## Smart Lock 1st – 4th Gen
 
-## Pairing with Nuki Smart Lock Ultra / 5th Gen / Go / Pro
+1. In the Nuki app, enable **Bluetooth pairing**: **Settings → Features & Configuration → Button and LED**.
+2. Optional, but needed for settings and event logs: set `security_pin` to your lock's 4-digit PIN and flash.
+3. Press and hold the button on the lock until the LED ring lights up and stays on.
+4. Turn on the **Pairing Mode** switch in Home Assistant (or call `nuki_lock.set_pairing_mode`).
+5. When pairing succeeds, pairing mode turns itself off, `Paired` becomes on and the entities fill in.
 
-1. In the official Nuki App, ensure **Bluetooth pairing** is enabled:  
-   **Settings → Features & Configuration → Button and LED**.
+## Smart Lock Ultra / 5th Gen / Go / Pro
 
-2. Before activating pairing mode on the lock, configure ESPHome with:
-
-   * `security_pin: 123456`: your 6-digit PIN for the Nuki Smart Lock Ultra/5th Gen/Go/Pro
+1. In the Nuki app, enable **Bluetooth pairing**: **Settings → Features & Configuration → Button and LED**.
+2. Configure and flash **before** pairing:
+   ```yaml
+   lock:
+     - platform: nuki_lock
+       pairing_as_app: true
+       security_pin: 123456   # your 6-digit PIN, without leading zeros
+   ```
+3. Press and hold the button on the lock until the LED ring lights up and stays on.
+4. Turn on the **Pairing Mode** switch in Home Assistant (or call `nuki_lock.set_pairing_mode`).
+5. When pairing succeeds, pairing mode turns itself off and the entities fill in.
 
 > [!IMPORTANT]
-> If your PIN starts with zeros, remove them (e.g., 000548 → 548). Pairing will fail if you include leading zeros.
+> Remove leading zeros from the PIN (000548 → 548), otherwise pairing fails.
 
-3. Press and hold the button on the Nuki lock until the LED ring lights up and stays on.
+## Good to know
 
-4. Enable pairing mode in the ESPHome component.  
-   You can do this either by toggling the **Pairing Mode** switch in Home Assistant or by calling the `nuki_lock.set_pairing_mode` action in an automation.
-
-5. Once pairing is successful, ESPHome entities will automatically update to reflect the lock status, and pairing mode will disable itself.
+- Pairing mode turns itself off after `pairing_mode_timeout` (default 5 minutes).
+- The lock lists the ESP32 under its YAML `id`. Set a readable `id` of at most 32 characters (e.g. `front_door`) **before pairing**, otherwise a generated id shows up in the Nuki app.
+- The pairing is stored on the ESP32 and survives reboots and updates. To pair a different lock, press **Unpair** (or call `nuki_lock.unpair`) first.
+- You can use several `nuki_lock` blocks on one ESP32 for several locks, each with its own `id`. Pair them **one after the other**, with only one lock in pairing mode at a time:
+  - Only one block can be in pairing mode. Turning it on for one block turns it off for the others (with a warning in the log).
+  - A block in pairing mode ignores locks that another block is already paired with.
 
 ---
 
 # ⚙️ Configuration Options
 
-The following configuration options allow you to customize the behavior of the Nuki Lock component, optimizing its performance and reliability. You can configure these in your ESPHome YAML file.
-
-| Option                     | Description                                   | Default |
-| -------------------------- | --------------------------------------------- | ------- |
-| `security_pin`             | Required for event logs & advanced operations (mandatory for Ultra/5th Gen/Go/Pro pairing - remove leading zeros: 000548 → 548) | —       |
-| `pairing_mode_timeout`     | Auto-timeout for pairing mode                 | `300s`  |
-| `event`                    | Event log event name (`none` disables logs)   | `none`  |
-| `pairing_as_app`           | Pair as app                                   | `false` |
-| `query_interval_config`    | Config refresh interval                       | `3600s` |
-| `query_interval_auth_data` | Auth data refresh interval                    | `3600s` |
-| `query_interval_battery_report` | Battery report (voltage/drain/motor current) refresh interval | `3600s` |
-| `ble_general_timeout`      | General BLE timeout                           | `3s`    |
-| `ble_command_timeout`      | Command BLE timeout                           | `10s`   |
-| `command_retries`          | Retries for a failed lock action or queued command (config/keypad/etc., not BLE connection errors) | `5` |
-| `command_retry_delay`      | Delay between retries                         | `1s`    |
+| Option | Description | Default |
+| ------ | ----------- | ------- |
+| `security_pin` | The lock's PIN: 4 digits (1st–4th Gen) or 6 digits (Ultra / 5th Gen / Go / Pro, **required for pairing**). Needed for event logs and changing most settings. No leading zeros (000548 → 548). Templatable. | — |
+| `pairing_as_app` | Pair as app instead of bridge, see [Bridge or app?](#bridge-or-app). Templatable. | `false` |
+| `pairing_mode_timeout` | Pairing mode turns itself off after this time | `300s` |
+| `event` | Event name for [event logs](#-event-logs) (`nuki` → `esphome.nuki`), `none` disables them | `none` |
+| `query_interval_config` | How often the lock's settings are read | `3600s` |
+| `query_interval_auth_data` | How often the user list (for `Last Unlock User`) is read | `3600s` |
+| `query_interval_battery_report` | How often battery voltage, drain and motor current are read | `3600s` |
+| `ble_general_timeout` | Timeout for BLE responses | `3s` |
+| `ble_command_timeout` | Timeout for a command to complete (includes motor movement) | `10s` |
+| `command_retries` | Retries for a failed lock action or setting change (not for connection errors) | `5` |
+| `command_retry_delay` | Delay between retries | `1s` |
+| `config_cache_ttl` | Changing a setting reuses lock settings read within this time instead of reading them again (fewer BLE round-trips, but can overwrite a change made in the Nuki app in that window). `0s` always reads fresh. | `1min` |
+| `door_sensor_report` | [Door sensor emulation](#-door-sensor-emulation) | — |
+| `hybrid_mode` | [Hybrid mode](#-hybrid-mode-official-mqtt--ble) | — |
 
 ---
 
 # 🚪 Door Sensor Emulation
 
-Report the state of an **external door sensor** (e.g. a reed switch) to the lock, emulating the Nuki Door Sensor. The lock can then take smart actions based on the door state (e.g., auto-locking when the door is closed). The state is pushed to the lock **whenever it changes** (the lock must be paired).
+Report the state of an **external door sensor** (e.g. a reed switch) to the lock, emulating the Nuki Door Sensor. The lock can then react to the door state (e.g. auto-lock when the door is closed). The state is pushed to the lock **whenever it changes** (the lock must be paired).
 
-> [!NOTE]
-> The emulated door sensor is not visible or configurable via the Nuki App. To activate it, simply ensure that a `door_sensor_report` is defined in the ESPHome YAML configuration as shown below.
-
-**How to use it:**
-
-1. Define a `binary_sensor` for the physical door (any platform — `gpio`, `homeassistant`,
-   `template`, ...). `false` = closed, `true` = open.
+1. Define a `binary_sensor` for the physical door (any platform: `gpio`, `homeassistant`, `template`, ...). `false` = closed, `true` = open.
 2. Add `door_sensor_report` to the `lock:` block and point `door_sensor_input` at that sensor.
 
 ```yaml
@@ -335,175 +419,90 @@ lock:
       door_sensor_input: reed_switch    # <---- and this
 ```
 
----
-
-# 🧩 Home Assistant Actions
-
-> [!IMPORTANT]  
-> In order to use the services, you have to enable them in your `api` configuration.
-> Set `custom_services` to `true` as in the example below:
-> ```
-> api:
->   custom_services: true
-> ```
-
-## Unlatch
-To unlatch doors without a handle, call the `open` action in Home Assistant:
-```yaml
-action: lock.open
-data: {}
-target:
-  entity_id: lock.<NODE_NAME>
-```
-
-## Lock ’n’ Go
-To activate the Lock 'n' Go feature on your Nuki Smart Lock, call the following action in Home Assistant:
-
-```yaml
-action: esphome.<NODE_NAME>_lock_n_go
-data: {}
-```
-
-## Print Keypad Entries
-To print the Keypad Entries in the ESPHome Console call the following action in Home Assistant:
-
-```yaml
-action: esphome.<NODE_NAME>_print_keypad_entries
-data: {}
-```
-
-## Add a Keypad Entry
-To add a Keypad Entry, call the following action in Home Assistant:
-
-```yaml
-action: esphome.<NODE_NAME>_add_keypad_entry
-data:
-  name: "Name"
-  code: 12345678
-```
-
-## Remove a Keypad Entry
-To remove a Keypad Entry, call the following action in Home Assistant:
-
-```yaml
-action: esphome.<NODE_NAME>_delete_keypad_entry
-data:
-  id: 1
-```
-
-## Update a Keypad Entry
-To update a Keypad Entry, call the following action in Home Assistant:
-
-```yaml
-action: esphome.<NODE_NAME>_update_keypad_entry
-data:
-  id: 1
-  name: "Name"
-  code: 12345678
-  enabled: True
-```
-
----
-
-# 🤖 ESPHome Automations
-
-## Action: Pairing Mode
-To toggle the components Pairing Mode, use the following action:
-```yaml
-on_...:
-  - nuki_lock.set_pairing_mode:
-      pairing_mode: True
-```
-
-## Action: Unpair
-To unpair your Nuki Smart Lock, use the following action:
-```yaml
-on_...:
-  - nuki_lock.unpair:
-```
-
-## Action: Request Calibration
-To request a calibration of your Nuki Smart Lock, use the following action:
-```yaml
-on_...:
-  - nuki_lock.request_calibration:
-```
-
-## Action: Security Pin
-
-> [!CAUTION]  
-> Overriding the security PIN will save it to flash!  
-> To revert back to the PIN defined in your YAML configuration, you must set the override PIN to `0`.
-
-To override the security pin without recompiling, use the following action:
-```yaml
-on_...:
-  - nuki_lock.set_security_pin:
-      security_pin: 1234
-```
-
-## Condition: Connected
-To check if the component recently established a connection to a smart lock, use the following condition:
-```yaml
-on_...:
-  - if:
-      condition:
-        nuki_lock.connected:
-      then:
-        - logger.log: "Recently connected to smart lock! Lock should be available."
-```
-
-## Condition: Paired
-To check if the component is already paired with a smart lock, use the following condition:
-```yaml
-on_...:
-  - if:
-      condition:
-        nuki_lock.paired:
-      then:
-        - logger.log: "Paired!"
-```
-
-## Callbacks
-To run specific actions when certain events occur, you can use the following callbacks:
-```yaml
-on_pairing_mode_on_action:
-  - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
-on_pairing_mode_off_action:
-  - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned off");
-on_paired_action:
-  - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
-on_event_log_action:
-  - lambda: |-
-      ESP_LOGI("nuki_lock", "Event Log (NukiLock::LogEntry) received index: %i, authId: %i", x.index, x.authId);
-```
-
----
-
-# 📡 Event Logs (Optional)
-This component can send Nuki logs as events to Home Assistant, enabling you to use them in automations.
-<b>This is disabled by default.</b>
-
-> [!IMPORTANT]  
-> In order to use the event logs, you have to enable them in your `api` configuration.
-> Set `homeassistant_services` to `true` as in the example below:
-> ```
-> api:
->   homeassistant_services: true
-> ```
-
 > [!NOTE]
-> To receive events, **you must set your security PIN**.
-> Without it, it's not possible to access any event logs from your lock.
+> The emulated door sensor is not visible or configurable in the Nuki app. It is active as soon as `door_sensor_report` is configured.
 
-- **To Enable Logs**: Set the `event` property in your YAML configuration to something else than `none` if you want to receive log events.
+---
 
-- **To View Log Events**: Go to **Home Assistant Developer Tools** -> **Events**, and listen for `esphome.nuki` events to monitor log activity. You can also use the `on_event_log_action` callback to access the LogEntry which is available as `x`.
+# 📶 Hybrid Mode (Official MQTT + BLE)
 
-These log events provide insights into lock operations and help fine-tune automations based on lock data.
-Keep in mind that the logs **are not displayed in real-time** and may take up to a minute to arrive.
+Locks with WiFi or Thread can publish their state to an MQTT broker themselves (Nuki's official MQTT API). In hybrid mode the component subscribes to these topics, like [Nuki Hub](https://github.com/technyon/nuki_hub/blob/master/HYBRID.md) does:
 
-Example Event:
+- **State changes arrive immediately**, without a BLE connection.
+- Everything MQTT doesn't provide (battery details, settings, keypad, event logs, ...) is still read over BLE, after each state change.
+- Optionally, **lock actions are sent over MQTT** too, with BLE as fallback.
+- While the lock's MQTT connection is offline, the component falls back to BLE and polls the state now and then.
+
+This matters most when paired as app (always the case for Ultra / 5th Gen / Go / Pro): without hybrid mode, the lock doesn't signal state changes to the ESP32 at all.
+
+**Requirements**
+
+- Smart Lock 3.0 Pro, 4.0 (Pro), 5.0 Pro, Go or Ultra with WiFi or Thread
+- `pairing_as_app: true` (unpair and pair again if you were paired as bridge)
+- An MQTT broker that both the lock and the ESP32 can reach. **Thread:** the broker must be reachable from the Thread network, which may need a Thread border router with NAT64 if your broker has no IPv6 address.
+- ESPHome's [`mqtt:`](https://esphome.io/components/mqtt/) component, connected to the same broker
+
+**Setup**
+
+1. In the Nuki app, set up MQTT ([Nuki KB](https://support.nuki.io/hc/en-us/articles/14052016143249-Activate-MQTT-via-the-Nuki-app)) with your broker:
+   - Do **not** enable *Auto discovery*. Home Assistant gets the entities from ESPHome.
+   - Enable *Allow locking* only if you want `send_actions`.
+   - Wait for the green check mark in the app.
+2. Add `mqtt:` and `hybrid_mode:` to your configuration and flash:
+   ```yaml
+   mqtt:
+     broker: 192.168.1.10
+     username: !secret mqtt_user
+     password: !secret mqtt_password
+     discovery: false          # entities already come via the native API
+
+   lock:
+     - platform: nuki_lock
+       name: Nuki Lock
+       pairing_as_app: true
+       hybrid_mode:
+         send_actions: true    # optional
+         connected:            # optional: is the lock itself online on MQTT?
+           name: "Nuki Hybrid Connected"
+   ```
+3. Check the log: after the lock's settings are read, it shows `Using official MQTT topics nuki/<ID>/...`, and `Official MQTT of the lock is online` once the lock's `connected` topic arrives.
+
+| Option | Description | Default |
+| ------ | ----------- | ------- |
+| `topic_prefix` | Topic path of the lock (max. 48 characters). Only needed if the lock uses a different path. | `nuki/<Nuki ID in hex>` |
+| `send_actions` | Send lock actions over MQTT instead of BLE (needs *Allow locking*). Actions with `set_lock_action_options` always use BLE. | `false` |
+| `ble_fallback` | Retry a lock action over BLE if the lock doesn't confirm it in time | `true` |
+| `fallback_timeout` | How long to wait for that confirmation | `2s` |
+| `offline_update_interval` | BLE status polling while the lock's MQTT connection is offline, `0s` disables it | `10min` |
+| `connected` | Binary sensor: is the lock's own MQTT connection online? | — |
+
+> [!IMPORTANT]
+> With *Allow locking*, everyone who can publish to `nuki/<Nuki ID>/lockAction` can operate the lock. Restrict that topic on your broker (ACL) to the lock and this ESP32.
+
+> [!TIP]
+> Use a tool like MQTT Explorer to watch the `nuki/` topics. If nothing shows up there, the problem is the lock's MQTT setup, not ESPHome.
+
+---
+
+# 📡 Event Logs
+
+The component can send the lock's activity log to Home Assistant as events, e.g. to trigger automations on "unlocked by keypad". **Disabled by default.**
+
+**Requirements**
+
+- `security_pin` set. Without it, the lock doesn't hand out its log.
+- `event: nuki` (or another name) in the `lock:` block
+- `homeassistant_services: true` in the `api:` block
+
+**Viewing events:** In Home Assistant, go to **Developer Tools → Events** and listen to `esphome.nuki`. In ESPHome, the `on_event_log_action` callback gets each entry as `x`.
+
+If no events arrive although everything is set up, check that the lock's activity log is enabled (`logging_enabled` switch).
+
+Events are **not real-time**: they are fetched after a state change and can take up to a minute to arrive. The `Last Unlock User` sensor also relies on event logs.
+
+<details>
+  <summary>Example event</summary>
+
 ```yaml
 event_type: esphome.nuki
 data:
@@ -529,109 +528,267 @@ context:
   user_id: null
 ```
 
+Keypad entries (`type: KeypadAction`) also contain `codeId`, and `trigger` can be `arrowkey`, `code`, `fingerprint`, `invalidCode`, `invalidFingerprint` or `notAuthorized`.
+</details>
+
+---
+
+# 🧩 Home Assistant Actions
+
+> [!IMPORTANT]
+> These actions need `custom_services: true` in your `api:` configuration. Replace `<NODE_NAME>` with your ESPHome node name (dashes become underscores).
+
+## Unlatch
+To unlatch doors without a handle, use Home Assistant's `lock.open`:
+```yaml
+action: lock.open
+target:
+  entity_id: lock.<NODE_NAME>
+```
+
+## Lock 'n' Go
+```yaml
+action: esphome.<NODE_NAME>_lock_n_go
+data: {}
+```
+
+## Lock Action Options
+Applies to the **next** lock, unlock or unlatch only, then resets:
+- `force`: skip checks such as the "too recent" cooldown
+- `auto_unlock`: mark the action as automatic unlock in the Nuki app's history
+- `name_suffix`: text (max. 19 characters) appended to the history entry
+
+```yaml
+action: esphome.<NODE_NAME>_set_lock_action_options
+data:
+  force: false
+  auto_unlock: false
+  name_suffix: "Doorbell"
+```
+
+## Keypad Entries
+Keypad codes must have **6 digits and must not contain 0**. Entry ids are shown by *print keypad entries*.
+
+```yaml
+# Print all entries (with ids) to the ESPHome log
+action: esphome.<NODE_NAME>_print_keypad_entries
+data: {}
+
+# Add an entry
+action: esphome.<NODE_NAME>_add_keypad_entry
+data:
+  name: "Name"
+  code: 123456
+
+# Update an entry
+action: esphome.<NODE_NAME>_update_keypad_entry
+data:
+  id: 1
+  name: "Name"
+  code: 123456
+  enabled: true
+
+# Remove an entry
+action: esphome.<NODE_NAME>_delete_keypad_entry
+data:
+  id: 1
+```
+
+---
+
+# 🤖 ESPHome Automations
+
+## Actions
+
+```yaml
+on_...:
+  # Turn pairing mode on or off
+  - nuki_lock.set_pairing_mode:
+      pairing_mode: true
+
+  # Unpair the lock
+  - nuki_lock.unpair:
+
+  # Ask the lock to recalibrate
+  - nuki_lock.request_calibration:
+
+  # Override the security PIN without recompiling (templatable)
+  - nuki_lock.set_security_pin:
+      security_pin: 1234
+```
+
+> [!CAUTION]
+> An overridden security PIN is saved to flash and wins over the PIN in your YAML, also after reflashing. Set it to `0` to go back to the YAML PIN.
+
+## Conditions
+
+```yaml
+on_...:
+  - if:
+      condition:
+        nuki_lock.paired:      # paired with a lock
+      then:
+        - logger.log: "Paired!"
+  - if:
+      condition:
+        nuki_lock.connected:   # recently talked to the lock successfully
+      then:
+        - logger.log: "Lock is available"
+```
+
+## Callbacks
+
+```yaml
+lock:
+  - platform: nuki_lock
+    on_pairing_mode_on_action:
+      - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned on");
+    on_pairing_mode_off_action:
+      - lambda: ESP_LOGI("nuki_lock", "Pairing mode turned off");
+    on_paired_action:
+      - lambda: ESP_LOGI("nuki_lock", "Paired sucessfuly");
+    on_event_log_action:   # needs event logs, see above
+      - lambda: |-
+          ESP_LOGI("nuki_lock", "Event Log (NukiLock::LogEntry) received index: %i, authId: %i", x.index, x.authId);
+```
+
 ---
 
 # 📦 Entities
 
-> [!NOTE]  
-> Most settings entities **require the security PIN** to make changes.  
-> Without the PIN, modifying these settings is not possible.  
-> Additionally, the `Last Unlock User` feature will only function if events are enabled!  
+All entities are optional, add the ones you need under the `lock:` block with a `name:`.
 
-## ESPHome
-**Binary Sensor:**  
-- Paired
-- Connected
+> [!NOTE]
+> Changing lock settings through switches, selects and numbers **requires the security PIN**.
 
-**Text Sensor:**  
-- Pin Status
+## Component
 
-**Switch:**  
-- Pairing Mode
+| YAML key | Type | Description |
+| -------- | ---- | ----------- |
+| `paired` | Binary sensor | Paired with a lock |
+| `connected` | Binary sensor | Recently talked to the lock successfully |
+| `pin_status` | Text sensor | Whether the security PIN is set and accepted by the lock |
+| `pairing_mode` | Switch | Pairing mode |
+| `unpair` | Button | Unpair the lock |
 
-**Button:**  
-- Unpair Device
+## Lock state and sensors
 
-## Nuki Lock
-**Lock:**  
-- Lock
+| YAML key | Type | Description |
+| -------- | ---- | ----------- |
+| *(the lock itself)* | Lock | Lock, unlock, open (unlatch) |
+| `battery_critical` | Binary sensor | Battery critical |
+| `battery_charging` | Binary sensor | Battery charging (Power Pack) |
+| `keypad_battery_critical` | Binary sensor | Keypad battery critical |
+| `door_sensor_battery_critical` | Binary sensor | Door sensor battery critical |
+| `door_sensor` | Binary sensor | Door open/closed (Nuki Door Sensor or emulation) |
+| `remote_access_connected` | Binary sensor | Lock's remote access connected (4th Gen / Ultra) |
+| `battery_level` | Sensor | Battery level in % |
+| `battery_voltage` | Sensor | Battery voltage |
+| `battery_drain` | Sensor | Battery drain of the last action |
+| `motor_current` | Sensor | Maximum motor current of the last action |
+| `bt_signal_strength` | Sensor | Bluetooth signal between ESP32 and lock |
+| `wifi_connection_strength` | Sensor | Lock's own WiFi signal (4th Gen / Ultra) |
+| `door_sensor_state` | Text sensor | Detailed door sensor state |
+| `last_unlock_user` | Text sensor | Who operated the lock last (needs event logs) |
+| `last_lock_action` | Text sensor | Last lock action |
+| `last_lock_action_trigger` | Text sensor | What triggered the last lock action |
+| `wifi_connection_status` | Text sensor | Lock's WiFi status (4th Gen / Ultra) |
+| `mqtt_connection_status` | Text sensor | Lock's MQTT status (4th Gen / Ultra) |
+| `thread_connection_status` | Text sensor | Lock's Thread status (4th Gen / Ultra) |
+| `hybrid_mode: connected` | Binary sensor | Lock's own MQTT connection, see [hybrid mode](#-hybrid-mode-official-mqtt--ble) |
 
-**Binary Sensor:**  
-- Critical Battery 
-- Battery Charging
-- Keypad Battery Critical
-- Door Sensor Battery Critical
-- Door Sensor
+## Lock settings
 
-**Sensor:**
-- Battery Level
-- Battery Voltage
-- Battery Drain
-- Motor Current
-- Bluetooth Signal Strength
-
-**Text Sensor:**  
-- Door Sensor State
-- Last Unlock User
-- Last Lock Action
-- Last Lock Action Trigger
-
-**Switch:**  
-- Button: Bluetooth Pairing
-- Button: Locking operations
-- LED Signal
-- Night Mode
-- Night Mode: Auto Lock
-- Night Mode: Reject Auto Unlock
-- Night Mode: Lock at Start Time
-- Auto Lock
-- Auto Unlock: Disable
-- Auto Lock: Immediately
-- Single Lock
-- Daylight Saving Time
-- Automatic Updates
-- Automatic Battery Type Detection (Smart Lock Gen 1-4)
-- Slow Speed During Night Mode (Smart Lock Ultra)
-- Detached Cylinder
-
-**Button:**  
-- Request Calibration
-
-**Select Input:**  
-- Single Button Press Action
-- Double Button Press Action
-- Fob Action 1
-- Fob Action 2
-- Fob Action 3
-- Timezone
-- Advertising Mode
-- Battery Type (Smart Lock Gen 1-4)
-- Motor Speed (Smart Lock Ultra)
-
-**Number Input:**  
-- LED: Brightness
-- Timezone Offset
-- Lock 'n' Go Timeout
-- Auto Lock Timeout
-- Unlatch Duration
-- Unlocked Position Offset Degrees
-- Locked Position Offset Degrees
-- Single Locked Position Offset Degrees
-- Unlocked to Locked Transition Offset Degrees
+| YAML key | Type | Description |
+| -------- | ---- | ----------- |
+| `pairing_enabled` | Switch | Button: allow Bluetooth pairing |
+| `button_enabled` | Switch | Button: allow locking operations |
+| `led_enabled` | Switch | LED signal |
+| `auto_unlatch` | Switch | Unlatch when unlocking |
+| `night_mode_enabled` | Switch | Night mode |
+| `night_mode_auto_lock_enabled` | Switch | Night mode: auto lock |
+| `night_mode_auto_unlock_disabled` | Switch | Night mode: reject auto unlock |
+| `night_mode_immediate_lock_on_start_enabled` | Switch | Night mode: lock at start time |
+| `auto_lock_enabled` | Switch | Auto lock |
+| `auto_unlock_disabled` | Switch | Disable auto unlock |
+| `immediate_auto_lock_enabled` | Switch | Auto lock immediately |
+| `auto_update_enabled` | Switch | Automatic firmware updates |
+| `single_lock_enabled` | Switch | Single lock (one turn) |
+| `dst_mode_enabled` | Switch | Daylight saving time |
+| `auto_battery_type_detection_enabled` | Switch | Automatic battery type detection (1st–4th Gen) |
+| `slow_speed_during_night_mode_enabled` | Switch | Slow motor speed during night mode (Ultra / 5th Gen) |
+| `detached_cylinder_enabled` | Switch | Detached cylinder |
+| `logging_enabled` | Switch | Lock's activity log |
+| `single_buton_press_action` | Select | Action on single button press (note the spelling) |
+| `double_buton_press_action` | Select | Action on double button press (note the spelling) |
+| `fob_action_1` / `_2` / `_3` | Select | Fob actions |
+| `timezone` | Select | Time zone |
+| `advertising_mode` | Select | Bluetooth advertising interval (faster = quicker reactions, more battery) |
+| `battery_type` | Select | Battery type (1st–4th Gen) |
+| `motor_speed` | Select | Motor speed (Ultra / 5th Gen) |
+| `led_brightness` | Number | LED brightness |
+| `timezone_offset` | Number | Time zone offset |
+| `lock_n_go_timeout` | Number | Lock 'n' Go timeout |
+| `auto_lock_timeout` | Number | Auto lock timeout |
+| `unlatch_duration` | Number | Unlatch duration |
+| `unlocked_position_offset` | Number | Calibration: unlocked position offset |
+| `locked_position_offset` | Number | Calibration: locked position offset |
+| `single_locked_position_offset` | Number | Calibration: single locked position offset |
+| `unlocked_to_locked_transition_offset` | Number | Calibration: unlocked to locked transition offset |
+| `request_calibration` | Button | Start a calibration |
 
 ---
 
-# 🔗 Dependencies
-This component is based on **NukiBleEsp32** by [I-Connect](https://github.com/I-Connect), using a maintained ESP-IDF-compatible [fork](https://github.com/AzonInc/NukiBleEsp32/tree/idf).
+# 🛠️ Troubleshooting
+
+**Pairing doesn't work**
+- Bluetooth pairing must be enabled in the Nuki app, and the LED ring must stay lit when you turn on pairing mode.
+- Ultra / 5th Gen / Go / Pro: `pairing_as_app: true` and the 6-digit `security_pin` must be flashed **before** pairing.
+- Remove leading zeros from the PIN (000548 → 548).
+- Move the ESP32 closer to the lock while pairing.
+
+**The state doesn't update by itself (only after own actions)**
+- When paired as app, the lock doesn't signal state changes over Bluetooth. Pair as bridge (1st–4th Gen) or use [hybrid mode](#-hybrid-mode-official-mqtt--ble).
+- Check `bt_signal_strength`, weak signals lead to missed advertisements.
+
+**The lock shows "unknown" / commands fail**
+- After several failed attempts in a row, the lock entity goes to unknown and `connected` turns off. Usually the Bluetooth link is too weak, or the lock is busy with another device.
+- A wrong `security_pin` makes settings changes fail. `pin_status` shows whether the lock accepts it.
+
+**Settings changes or event logs don't work**
+- Set `security_pin`. Check `pin_status`, and that no [PIN override](#actions) with an old PIN is saved in flash.
+- Event logs also need `event:` and `homeassistant_services: true`, and the lock's activity log must be enabled.
+
+**Crashes, reboots or out of memory**
+- BLE, WiFi and encrypted API together need a lot of RAM, and the build log warns about API encryption. Use a board with PSRAM and add `psram:`, or reduce other components.
+
+**Other Bluetooth devices react slower**
+- The component switches the whole BLE scanner to continuous active scanning, see [Requirements](#-requirements).
+
+**Hybrid mode doesn't receive anything**
+- Check the `nuki/` topics with MQTT Explorer. If the lock doesn't publish there, fix its MQTT setup in the Nuki app first.
+- The ESP32 must be paired as app, and the lock and ESP32 must use the same broker.
+
+---
+
+# ⬆️ Upgrading
+
+- **ESPHome 2026.10.0 or newer** is required. Older versions fail to build.
+- **From releases that used the NukiBleEsp32 library as external component:** the existing pairing is taken over automatically on first boot, no new pairing needed. The log shows `Migrated pairing credentials from legacy storage`.
+- **Renamed option:** `slow_speed_during_night_mode` is now `slow_speed_during_night_mode_enabled`, like the other switches.
+- **Switching between bridge and app** (`pairing_as_app`) always requires unpairing and pairing again.
 
 ---
 
 # 🧪 Tested Hardware
-- ESP32
-- ESP32-S3
-- Nuki Smart Lock 2nd gen
-- Nuki Smart Lock 3rd gen
-- Nuki Smart Lock 4th gen
-- Nuki Smart Lock 5th gen
+
+- ESP32, ESP32-S3, ESP32-C3
+- Nuki Smart Lock 2nd, 3rd, 4th and 5th Gen
 - Nuki Smart Lock Ultra
 - Nuki Door Sensor
+
+---
+
+# 🙏 Credits
+
+The Bluetooth protocol implementation is based on [**NukiBleEsp32**](https://github.com/I-Connect/NukiBleEsp32) by I-Connect, via the ESP-IDF fork by [AzonInc](https://github.com/AzonInc/NukiBleEsp32/tree/idf). A lock-only subset is included directly in this component and adapted to ESPHome's BLE stack. Hybrid mode follows the approach of [Nuki Hub](https://github.com/technyon/nuki_hub).
