@@ -68,7 +68,7 @@ CONF_UNPAIR_BUTTON = "unpair"
 CONF_REQUEST_CALIBRATION_BUTTON = "request_calibration"
 
 CONF_PAIRING_MODE_SWITCH = "pairing_mode"
-CONF_PAIRING_ENABLED_SWITCH = "pairing_enabled"
+CONF_BLUETOOTH_PAIRING_ENABLED_SWITCH = "bluetooth_pairing_enabled"
 CONF_AUTO_UNLATCH_SWITCH = "auto_unlatch"
 CONF_BUTTON_ENABLED_SWITCH = "button_enabled"
 CONF_LED_ENABLED_SWITCH = "led_enabled"
@@ -202,7 +202,6 @@ CONF_QUERY_INTERVAL_BATTERY_REPORT = "query_interval_battery_report"
 CONF_COMMAND_RETRIES = "command_retries"
 CONF_COMMAND_RETRY_DELAY = "command_retry_delay"
 CONF_CONFIG_CACHE_TTL = "config_cache_ttl"
-CONF_DOOR_SENSOR_REPORT = "door_sensor_report"
 CONF_DOOR_SENSOR_INPUT = "door_sensor_input"
 CONF_BLE_GENERAL_TIMEOUT = "ble_general_timeout"
 CONF_BLE_COMMAND_TIMEOUT = "ble_command_timeout"
@@ -231,7 +230,7 @@ NukiLockRequestCalibrationButton = nuki_lock_ns.class_("NukiLockRequestCalibrati
 
 # Switches
 NukiLockPairingModeSwitch = nuki_lock_ns.class_("NukiLockPairingModeSwitch", switch.Switch, cg.Component)
-NukiLockPairingEnabledSwitch = nuki_lock_ns.class_("NukiLockPairingEnabledSwitch", switch.Switch, cg.Component)
+NukiLockBluetoothPairingEnabledSwitch = nuki_lock_ns.class_("NukiLockBluetoothPairingEnabledSwitch", switch.Switch, cg.Component)
 NukiLockAutoUnlatchEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoUnlatchEnabledSwitch", switch.Switch, cg.Component)
 NukiLockButtonEnabledSwitch = nuki_lock_ns.class_("NukiLockButtonEnabledSwitch", switch.Switch, cg.Component)
 NukiLockLedEnabledSwitch = nuki_lock_ns.class_("NukiLockLedEnabledSwitch", switch.Switch, cg.Component)
@@ -445,8 +444,8 @@ CONFIG_SCHEMA = cv.All(
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:bluetooth"
             ),
-            cv.Optional(CONF_PAIRING_ENABLED_SWITCH): switch.switch_schema(
-                NukiLockPairingEnabledSwitch,
+            cv.Optional(CONF_BLUETOOTH_PAIRING_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockBluetoothPairingEnabledSwitch,
                 device_class=DEVICE_CLASS_SWITCH,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:bluetooth"
@@ -675,11 +674,9 @@ CONFIG_SCHEMA = cv.All(
             # of overwriting a change made elsewhere (Nuki app, another authorized device) in
             # that window. 0 always fetches fresh.
             cv.Optional(CONF_CONFIG_CACHE_TTL, default="1min"): cv.positive_time_period_seconds,
-            cv.Optional(CONF_DOOR_SENSOR_REPORT): cv.Schema(
-                {
-                    cv.Required(CONF_DOOR_SENSOR_INPUT): cv.use_id(binary_sensor.BinarySensor),
-                }
-            ),
+            # Door sensor emulation: every state of this binary sensor (true = open) is
+            # reported to the lock
+            cv.Optional(CONF_DOOR_SENSOR_INPUT): cv.use_id(binary_sensor.BinarySensor),
             # Hybrid mode: receive state changes from the lock's own official MQTT topics
             # (WiFi/Thread locks, MQTT enabled in the Nuki app on the same broker) - see
             # nuki_hybrid.cpp. Requires pairing as app.
@@ -815,8 +812,8 @@ async def to_code(config):
     if CONF_CONFIG_CACHE_TTL in config:
         cg.add(var.set_config_cache_ttl(config[CONF_CONFIG_CACHE_TTL]))
 
-    if door_sensor_report := config.get(CONF_DOOR_SENSOR_REPORT):
-        door_sensor_input = await cg.get_variable(door_sensor_report[CONF_DOOR_SENSOR_INPUT])
+    if door_sensor_input_id := config.get(CONF_DOOR_SENSOR_INPUT):
+        door_sensor_input = await cg.get_variable(door_sensor_input_id)
         cg.add(var.set_door_sensor_input(door_sensor_input))
 
     if hybrid_mode := config.get(CONF_HYBRID_MODE):
@@ -1003,10 +1000,10 @@ async def to_code(config):
         await cg.register_parented(s, config[CONF_ID])
         cg.add(var.set_pairing_mode_switch(s))
 
-    if pairing_enabled := config.get(CONF_PAIRING_ENABLED_SWITCH):
-        s = await switch.new_switch(pairing_enabled)
+    if bluetooth_pairing_enabled := config.get(CONF_BLUETOOTH_PAIRING_ENABLED_SWITCH):
+        s = await switch.new_switch(bluetooth_pairing_enabled)
         await cg.register_parented(s, config[CONF_ID])
-        cg.add(var.set_pairing_enabled_switch(s))
+        cg.add(var.set_bluetooth_pairing_enabled_switch(s))
 
     if button_enabled := config.get(CONF_BUTTON_ENABLED_SWITCH):
         s = await switch.new_switch(button_enabled)

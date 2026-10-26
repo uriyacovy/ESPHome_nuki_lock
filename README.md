@@ -25,7 +25,6 @@ Turn an ESP32 into a local Bluetooth bridge for Nuki Smart Locks (1st–5th Gen,
 - [ESPHome Automations](#-esphome-automations)
 - [Entities](#-entities)
 - [Troubleshooting](#%EF%B8%8F-troubleshooting)
-- [Upgrading](#%EF%B8%8F-upgrading)
 - [Tested Hardware](#-tested-hardware)
 - [Credits](#-credits)
 
@@ -124,7 +123,7 @@ api:
 external_components:
   - source: github://uriyacovy/ESPHome_nuki_lock
 
-# Optional: external door state input for the `door_sensor_report` feature below.
+# Optional: external door state input for the `door_sensor_input` feature below.
 # This binary_sensor reflects the physical door (false = closed, true = open) and
 # is pushed to the lock on every change. Use whatever platform matches your door
 # sensor (gpio, homeassistant, template, ...).
@@ -192,8 +191,7 @@ lock:
   # Optional: Emulate the Nuki Door Sensor.
   # Point `door_sensor_input` at the binary_sensor defined above; its state is
   # sent to the lock on every change.
-    door_sensor_report:
-      door_sensor_input: reed_switch
+    door_sensor_input: reed_switch
 
   # Optional: Sensors
     battery_level:
@@ -249,7 +247,7 @@ lock:
       name: "Nuki Unlocked to Locked Transition Offset Degrees"
 
   # Optional: Switches
-    pairing_enabled:
+    bluetooth_pairing_enabled:
       name: "Nuki Button: Bluetooth Pairing"
     auto_unlatch:
       name: "Nuki Auto unlatch"
@@ -393,17 +391,17 @@ Recommendation: 1st–4th Gen without official bridge → **bridge**. Ultra / 5t
 | `command_retries` | Retries for a failed lock action or setting change (not for connection errors) | `5` |
 | `command_retry_delay` | Delay between retries | `1s` |
 | `config_cache_ttl` | Changing a setting reuses lock settings read within this time instead of reading them again (fewer BLE round-trips, but can overwrite a change made in the Nuki app in that window). `0s` always reads fresh. | `1min` |
-| `door_sensor_report` | [Door sensor emulation](#-door-sensor-emulation) | — |
+| `door_sensor_input` | Binary sensor whose state (`true` = open) is reported to the lock, see [door sensor emulation](#-door-sensor-emulation) | — |
 | `hybrid_mode` | [Hybrid mode](#-hybrid-mode-official-mqtt--ble) | — |
 
 ---
 
 # 🚪 Door Sensor Emulation
 
-Report the state of an **external door sensor** (e.g. a reed switch) to the lock, emulating the Nuki Door Sensor. The lock can then react to the door state (e.g. auto-lock when the door is closed). The state is pushed to the lock **whenever it changes** (the lock must be paired).
+Report the state of an **external door sensor** (e.g. a reed switch) to the lock, emulating the Nuki Door Sensor. The lock can then react to the door state (e.g. auto-lock when the door is closed). The state is pushed to the lock **at startup and whenever it changes** (the lock must be paired).
 
 1. Define a `binary_sensor` for the physical door (any platform: `gpio`, `homeassistant`, `template`, ...). `false` = closed, `true` = open.
-2. Add `door_sensor_report` to the `lock:` block and point `door_sensor_input` at that sensor.
+2. Point `door_sensor_input` in the `lock:` block at that sensor.
 
 ```yaml
 binary_sensor:
@@ -415,12 +413,11 @@ binary_sensor:
 lock:
   - platform: nuki_lock
     name: Nuki Lock
-    door_sensor_report:                 # <---- add this
-      door_sensor_input: reed_switch    # <---- and this
+    door_sensor_input: reed_switch      # <---- add this
 ```
 
 > [!NOTE]
-> The emulated door sensor is not visible or configurable in the Nuki app. It is active as soon as `door_sensor_report` is configured.
+> The emulated door sensor is not visible or configurable in the Nuki app. It is active as soon as `door_sensor_input` is configured.
 
 ---
 
@@ -695,13 +692,13 @@ All entities are optional, add the ones you need under the `lock:` block with a 
 | `wifi_connection_status` | Text sensor | Lock's WiFi status (4th Gen / Ultra) |
 | `mqtt_connection_status` | Text sensor | Lock's MQTT status (4th Gen / Ultra) |
 | `thread_connection_status` | Text sensor | Lock's Thread status (4th Gen / Ultra) |
-| `hybrid_mode: connected` | Binary sensor | Lock's own MQTT connection, see [hybrid mode](#-hybrid-mode-official-mqtt--ble) |
+| `connected` inside `hybrid_mode:` | Binary sensor | Whether the lock itself is online on MQTT (not the ESP32's Bluetooth connection, that's the `connected` above), see [hybrid mode](#-hybrid-mode-official-mqtt--ble) |
 
 ## Lock settings
 
 | YAML key | Type | Description |
 | -------- | ---- | ----------- |
-| `pairing_enabled` | Switch | Button: allow Bluetooth pairing |
+| `bluetooth_pairing_enabled` | Switch | Button: allow Bluetooth pairing |
 | `button_enabled` | Switch | Button: allow locking operations |
 | `led_enabled` | Switch | LED signal |
 | `auto_unlatch` | Switch | Unlatch when unlocking |
@@ -768,15 +765,6 @@ All entities are optional, add the ones you need under the `lock:` block with a 
 **Hybrid mode doesn't receive anything**
 - Check the `nuki/` topics with MQTT Explorer. If the lock doesn't publish there, fix its MQTT setup in the Nuki app first.
 - The ESP32 must be paired as app, and the lock and ESP32 must use the same broker.
-
----
-
-# ⬆️ Upgrading
-
-- **ESPHome 2026.10.0 or newer** is required. Older versions fail to build.
-- **From releases that used the NukiBleEsp32 library as external component:** the existing pairing is taken over automatically on first boot, no new pairing needed. The log shows `Migrated pairing credentials from legacy storage`.
-- **Renamed option:** `slow_speed_during_night_mode` is now `slow_speed_during_night_mode_enabled`, like the other switches.
-- **Switching between bridge and app** (`pairing_as_app`) always requires unpairing and pairing again.
 
 ---
 

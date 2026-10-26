@@ -132,7 +132,7 @@ class NukiLockComponent :
     #endif
     #ifdef USE_SWITCH
     SUB_SWITCH(pairing_mode)
-    SUB_SWITCH(pairing_enabled)
+    SUB_SWITCH(bluetooth_pairing_enabled)
     SUB_SWITCH(button_enabled)
     SUB_SWITCH(auto_unlatch_enabled)
     SUB_SWITCH(led_enabled)
@@ -420,8 +420,12 @@ class NukiLockComponent :
 #ifdef USE_BINARY_SENSOR
         binary_sensor::BinarySensor* door_sensor_input_{nullptr};
 #endif
+        // Set by door_sensor_input_'s state callback: latest door state not reported yet
         bool door_sensor_report_pending_{false};
         bool door_sensor_report_open_{false};
+        // Snapshot of door_sensor_report_open_ for the report in flight, so a change during
+        // it is reported afterwards instead of altering the command being sent
+        bool door_sensor_report_sending_open_{false};
 
         // Action flags
         bool open_latch_{false};
@@ -550,9 +554,9 @@ class NukiLockPairingModeSwitch : public switch_::Switch, public Parented<NukiLo
         void write_state(bool state) override;
 };
 
-class NukiLockPairingEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
+class NukiLockBluetoothPairingEnabledSwitch : public switch_::Switch, public Parented<NukiLockComponent> {
     public:
-        NukiLockPairingEnabledSwitch() = default;
+        NukiLockBluetoothPairingEnabledSwitch() = default;
     protected:
         void write_state(bool state) override;
 };

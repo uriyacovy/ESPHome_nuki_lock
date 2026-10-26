@@ -246,8 +246,8 @@ void NukiLockComponent::update_config() {
         keypad_paired_ = this->nuki_lock_config_.hasKeypad || (this->nuki_lock_config_.hasKeypadV2 != 0 && this->nuki_lock_config_.hasKeypadV2 != 255);
 
         #ifdef USE_SWITCH
-        if (this->pairing_enabled_switch_ != nullptr) {
-            this->pairing_enabled_switch_->publish_state(this->nuki_lock_config_.pairing_enabled);
+        if (this->bluetooth_pairing_enabled_switch_ != nullptr) {
+            this->bluetooth_pairing_enabled_switch_->publish_state(this->nuki_lock_config_.pairing_enabled);
         }
 
         if (this->auto_unlatch_enabled_switch_ != nullptr) {
@@ -543,19 +543,19 @@ void NukiLockComponent::update_battery_report() {
 }
 
 void NukiLockComponent::report_door_sensor_step() {
-    CmdResult result = this->nuki_lock_.report_door_sensor_state(this->door_sensor_report_open_);
+    CmdResult result = this->nuki_lock_.report_door_sensor_state(this->door_sensor_report_sending_open_);
     if (result == CmdResult::Working) {
         return;  // still in flight on the single Nuki command slot; retry next tick
     }
-    this->door_sensor_report_pending_ = false;
     this->nuki_op_active_ = false;
 
     App.feed_wdt();
 
+    const char *state = this->door_sensor_report_sending_open_ ? "OPEN" : "CLOSED";
     if (result == CmdResult::Success) {
-        ESP_LOGI(TAG, "Door sensor report: %s -> accepted", this->door_sensor_report_open_ ? "OPEN" : "CLOSED");
+        ESP_LOGI(TAG, "Door sensor report: %s -> accepted", state);
     } else {
-        ESP_LOGW(TAG, "Door sensor report: %s -> failed (%d)", this->door_sensor_report_open_ ? "OPEN" : "CLOSED", result);
+        ESP_LOGW(TAG, "Door sensor report: %s -> failed (%d)", state, result);
     }
 }
 
@@ -1033,18 +1033,6 @@ void NukiLockComponent::loop()
     this->hybrid_loop();
 #endif
 
-#ifdef USE_BINARY_SENSOR
-    // Door sensor report (0x0092): send whenever the configured door state sensor
-    // reports a state different from the last one pushed to the lock.
-    if (this->door_sensor_input_ != nullptr && !this->door_sensor_report_pending_) {
-        bool open = this->door_sensor_input_->state;
-        if (open != this->door_sensor_report_open_) {
-            this->door_sensor_report_open_ = open;
-            this->door_sensor_report_pending_ = true;
-        }
-    }
-#endif
-
     // Once a Nuki BLE operation is in flight (nuki_op_active_), it must keep being
     // re-driven every tick regardless of the cooldown below - the cooldown only applies
     // *between* completed operations, never while one is still working towards a result.
@@ -1081,6 +1069,8 @@ void NukiLockComponent::loop()
             // it differs between success, a retry-after-failure, and exhausted retries.
         } else if (this->door_sensor_report_pending_) {
             ESP_LOGD(TAG, "Reporting door sensor state...");
+            this->door_sensor_report_sending_open_ = this->door_sensor_report_open_;
+            this->door_sensor_report_pending_ = false;
             this->nuki_op_active_ = true;
             this->nuki_op_step_ = [this] { this->report_door_sensor_step(); };
             this->nuki_op_step_();
@@ -1264,6 +1254,24 @@ void NukiLockComponent::setup() {
     this->nuki_lock_.set_general_timeout(this->ble_general_timeout_ * 1000);
     this->nuki_lock_.set_command_timeout(this->ble_command_timeout_ * 1000);
     this->nuki_lock_.set_config_cache_ttl(this->config_cache_ttl_ * 1000);
+
+    #ifdef USE_BINARY_SENSOR
+    // Door sensor report (0x0092): push every state of the door sensor input to the lock,
+    // the first one included (add_on_state_callback() would skip it). A sensor that already
+    // has its state (set up before us) is reported right away.
+    if (this->door_sensor_input_ != nullptr) {
+        this->door_sensor_input_->add_full_state_callback([this](optional<bool> previous, optional<bool> current) {
+            if (current.has_value()) {
+                this->door_sensor_report_open_ = *current;
+                this->door_sensor_report_pending_ = true;
+            }
+        });
+        if (this->door_sensor_input_->has_state()) {
+            this->door_sensor_report_open_ = this->door_sensor_input_->state;
+            this->door_sensor_report_pending_ = true;
+        }
+    }
+    #endif
 
     App.feed_wdt();
 
@@ -1537,7 +1545,7 @@ void NukiLockComponent::dump_config() {
     #endif
     #ifdef USE_SWITCH
     LOG_SWITCH(TAG, "Pairing Mode", this->pairing_mode_switch_);
-    LOG_SWITCH(TAG, "Pairing Enabled", this->pairing_enabled_switch_);
+    LOG_SWITCH(TAG, "Bluetooth Pairing Enabled", this->bluetooth_pairing_enabled_switch_);
     LOG_SWITCH(TAG, "Auto Unlatch Enabled", this->auto_unlatch_enabled_switch_);
     LOG_SWITCH(TAG, "Button Enabled", this->button_enabled_switch_);
     LOG_SWITCH(TAG, "LED Enabled", this->led_enabled_switch_);
@@ -1851,7 +1859,7 @@ void NukiLockPairingModeSwitch::write_state(bool state) {
     this->parent_->set_pairing_mode(state);
 }
 
-void NukiLockPairingEnabledSwitch::write_state(bool state) {
+void NukiLockBluetoothPairingEnabledSwitch::write_state(bool state) {
     this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_pairing(state); }, [this, state](CmdResult result) {
         if (result == CmdResult::Success) {
             this->parent_->get_nuki_lock_config()->pairing_enabled = state;

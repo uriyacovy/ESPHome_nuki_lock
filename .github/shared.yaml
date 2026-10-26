@@ -78,7 +78,7 @@ lock:
     request_calibration:
       name: "Nuki Request Calibration"
       
-    pairing_enabled:
+    bluetooth_pairing_enabled:
       name: "Nuki Button: Bluetooth Pairing"
     auto_unlatch:
       name: "Nuki Auto unlatch"
