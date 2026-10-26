@@ -386,6 +386,13 @@ struct __attribute__((packed)) LogEntry {
   uint8_t data[5];
 };
 
+// Completion status of keypad log entries (LoggingType::KeypadAction, data[2])
+enum class LogEntryCompletionStatus : uint8_t {
+  InvalidCode            = 0xe0,
+  InvalidFingerprint     = 0xe1,
+  NotAuthorized          = 0x09,
+};
+
 inline void lock_action_to_string(const LockAction action, char* str) {
   switch (action) {
     case LockAction::Unlock:

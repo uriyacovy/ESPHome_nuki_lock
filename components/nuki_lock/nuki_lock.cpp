@@ -698,10 +698,12 @@ void NukiLockComponent::process_log_entries() {
                         default: event_data["trigger"] = "unknown"; break;
                     }
 
-                    if (log.data[2] == 9)
+                    if (log.data[2] == (uint8_t)LogEntryCompletionStatus::NotAuthorized)
                         event_data["trigger"] = "notAuthorized";
-                    else if (log.data[2] == 224)
+                    else if (log.data[2] == (uint8_t)LogEntryCompletionStatus::InvalidCode)
                         event_data["trigger"] = "invalidCode";
+                    else if (log.data[2] == (uint8_t)LogEntryCompletionStatus::InvalidFingerprint)
+                        event_data["trigger"] = "invalidFingerprint";
                     else {
                         completion_status_to_string((CompletionStatus)log.data[2], buffer);
                         event_data["completionStatus"] = buffer;
