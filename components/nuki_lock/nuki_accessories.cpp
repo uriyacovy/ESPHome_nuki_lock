@@ -205,21 +205,31 @@ CmdResult NukiBle::retrieve_keypad_entries(const uint16_t offset, const uint16_t
     if (this->debug_nuki_command_) {
       ESP_LOGD(TAG, "Keypad code count %d", this->get_keypad_entry_count());
     }
+    // The count is the lock's total, but it only sends the codes within offset/count
+    uint16_t total = this->get_keypad_entry_count();
+    this->expected_keypad_codes_ = std::min<uint16_t>(total > offset ? total - offset : 0, count);
     // Count is known now (just arrived in the notification handled above), so size the
     // buffer for it in one allocation instead of growing node-by-node as entries arrive.
-    this->list_of_key_pad_entries_.init(this->get_keypad_entry_count());
+    this->list_of_key_pad_entries_.init(this->expected_keypad_codes_);
     this->keypad_retrieval_state_ = KeypadRetrievalState::AwaitingCodes;
     this->keypad_retrieval_time_now_ = (esp_timer_get_time() / 1000);
+    this->last_received_keypad_codes_ = 0;
   }
 
   //wait for return of Keypad Codes (0x0045)
+  // Restart the timeout whenever a code arrived, so long lists don't time out while codes
+  // are still coming in.
+  if (this->nr_of_received_keypad_codes_ != this->last_received_keypad_codes_) {
+    this->last_received_keypad_codes_ = this->nr_of_received_keypad_codes_;
+    this->keypad_retrieval_time_now_ = (esp_timer_get_time() / 1000);
+  }
   if ((esp_timer_get_time() / 1000) - this->keypad_retrieval_time_now_ > this->general_timeout_duration_) {
     ESP_LOGW(TAG, "Receive keypadcodes timeout");
     this->keypad_retrieval_state_ = KeypadRetrievalState::Idle;
     this->disconnect();
     return CmdResult::TimeOut;
   }
-  if (this->nr_of_received_keypad_codes_ < this->get_keypad_entry_count()) {
+  if (this->nr_of_received_keypad_codes_ < this->expected_keypad_codes_) {
     return CmdResult::Working;
   }
 

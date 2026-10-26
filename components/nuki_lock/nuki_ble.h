@@ -477,6 +477,10 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
     enum class KeypadRetrievalState : uint8_t { Idle, AwaitingCount, AwaitingCodes };
     KeypadRetrievalState keypad_retrieval_state_ = KeypadRetrievalState::Idle;
     int64_t keypad_retrieval_time_now_ = 0;
+    // Codes the lock sends for the requested offset/count: min(count, total - offset)
+    uint16_t expected_keypad_codes_ = 0;
+    // nr_of_received_keypad_codes_ at the last timeout restart, so the timeout restarts per code
+    uint16_t last_received_keypad_codes_ = 0;
     // RequestKeypadCodes uses cmd_chall_state_machine(), whose "success" detection is satisfied
     // by the *first* non-empty/non-error response - which, for this command, is the
     // KeypadCodeCount notification itself. So by the time execute_action() reports Success
@@ -606,7 +610,7 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
     unsigned char sent_nonce_[crypto_secretbox_NONCEBYTES] = {};
 
     uint16_t nr_of_keypad_codes_ = 0;
-    uint8_t nr_of_received_keypad_codes_ = 0;
+    uint16_t nr_of_received_keypad_codes_ = 0;
     bool keypad_code_count_received_ = false;
     uint16_t log_entry_count_ = 0;
     bool logging_enabled_ = false;
