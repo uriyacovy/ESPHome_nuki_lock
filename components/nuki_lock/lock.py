@@ -1,10 +1,13 @@
 import logging
+from pathlib import Path
 from esphome.core import CORE
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import automation
-from esphome.components.esp32 import add_idf_component, add_idf_sdkconfig_option
-from esphome.components import lock, binary_sensor, text_sensor, sensor, switch, button, number, select
+from esphome.components.esp32 import add_idf_component, add_idf_sdkconfig_option, arduino_bundles_libsodium
+from esphome.components.noise import LIBSODIUM_VERSION
+from esphome.components import esp32_ble, esp32_ble_tracker, lock, binary_sensor, text_sensor, sensor, switch, button, number, select
+from esphome.components.esp32_ble import BTLoggers
 from esphome.const import (
     CONF_ID,
     CONF_TRIGGER_ID,
@@ -12,40 +15,60 @@ from esphome.const import (
     ENTITY_CATEGORY_DIAGNOSTIC,
     DEVICE_CLASS_CONNECTIVITY,
     DEVICE_CLASS_BATTERY,
+    DEVICE_CLASS_BATTERY_CHARGING,
     DEVICE_CLASS_DOOR,
     DEVICE_CLASS_SWITCH,
     DEVICE_CLASS_SIGNAL_STRENGTH,
+    DEVICE_CLASS_VOLTAGE,
+    DEVICE_CLASS_CURRENT,
     UNIT_SECOND,
     UNIT_MINUTE,
     UNIT_DEGREES,
     UNIT_PERCENT,
     UNIT_DECIBEL_MILLIWATT,
+    UNIT_VOLT,
+    UNIT_MILLIAMP,
 )
 import esphome.final_validate as fv
 
 LOGGER = logging.getLogger(__name__)
 
-AUTO_LOAD = ["binary_sensor", "text_sensor", "sensor", "switch", "button", "number", "select"]
+DEPENDENCIES = ["esp32_ble_tracker"]
+
+# ESP-IDF component compiling the libsodium modules ESPHome's port leaves out
+NUKI_SODIUM_DIR = Path(__file__).resolve().parent / "nuki_sodium"
+AUTO_LOAD = ["binary_sensor", "text_sensor", "sensor", "switch", "button", "number", "select", "esp32_ble_client"]
 
 CONF_CONNECTED_BINARY_SENSOR = "connected"
 CONF_PAIRED_BINARY_SENSOR = "paired"
 CONF_BATTERY_CRITICAL_BINARY_SENSOR = "battery_critical"
+CONF_BATTERY_CHARGING_BINARY_SENSOR = "battery_charging"
+CONF_KEYPAD_BATTERY_CRITICAL_BINARY_SENSOR = "keypad_battery_critical"
+CONF_DOOR_SENSOR_BATTERY_CRITICAL_BINARY_SENSOR = "door_sensor_battery_critical"
 CONF_DOOR_SENSOR_BINARY_SENSOR = "door_sensor"
+CONF_REMOTE_ACCESS_CONNECTED_BINARY_SENSOR = "remote_access_connected"
 
 CONF_BATTERY_LEVEL_SENSOR = "battery_level"
+CONF_BATTERY_VOLTAGE_SENSOR = "battery_voltage"
+CONF_BATTERY_DRAIN_SENSOR = "battery_drain"
+CONF_MOTOR_CURRENT_SENSOR = "motor_current"
 CONF_BT_SIGNAL_SENSOR = "bt_signal_strength"
+CONF_WIFI_CONNECTION_STRENGTH_SENSOR = "wifi_connection_strength"
 
 CONF_DOOR_SENSOR_STATE_TEXT_SENSOR = "door_sensor_state"
 CONF_LAST_UNLOCK_USER_TEXT_SENSOR = "last_unlock_user"
 CONF_LAST_LOCK_ACTION_TEXT_SENSOR = "last_lock_action"
 CONF_LAST_LOCK_ACTION_TRIGGER_TEXT_SENSOR = "last_lock_action_trigger"
 CONF_PIN_STATE_TEXT_SENSOR = "pin_status"
+CONF_WIFI_CONNECTION_STATUS_TEXT_SENSOR = "wifi_connection_status"
+CONF_MQTT_CONNECTION_STATUS_TEXT_SENSOR = "mqtt_connection_status"
+CONF_THREAD_CONNECTION_STATUS_TEXT_SENSOR = "thread_connection_status"
 
 CONF_UNPAIR_BUTTON = "unpair"
 CONF_REQUEST_CALIBRATION_BUTTON = "request_calibration"
 
 CONF_PAIRING_MODE_SWITCH = "pairing_mode"
-CONF_PAIRING_ENABLED_SWITCH = "pairing_enabled"
+CONF_BLUETOOTH_PAIRING_ENABLED_SWITCH = "bluetooth_pairing_enabled"
 CONF_AUTO_UNLATCH_SWITCH = "auto_unlatch"
 CONF_BUTTON_ENABLED_SWITCH = "button_enabled"
 CONF_LED_ENABLED_SWITCH = "led_enabled"
@@ -60,8 +83,9 @@ CONF_AUTO_UPDATE_ENABLED_SWITCH = "auto_update_enabled"
 CONF_SINGLE_LOCK_ENABLED_SWITCH = "single_lock_enabled"
 CONF_DST_MODE_ENABLED_SWITCH = "dst_mode_enabled"
 CONF_AUTO_BATTERY_TYPE_DETECTION_ENABLED_SWITCH = "auto_battery_type_detection_enabled"
-CONF_SLOW_SPEED_DURING_NIGHT_MODE_ENABLED_SWITCH = "slow_speed_during_night_mode"
+CONF_SLOW_SPEED_DURING_NIGHT_MODE_ENABLED_SWITCH = "slow_speed_during_night_mode_enabled"
 CONF_DETACHED_CYLINDER_ENABLED_SWITCH = "detached_cylinder_enabled"
+CONF_LOGGING_ENABLED_SWITCH = "logging_enabled"
 
 CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT = "single_buton_press_action"
 CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT = "double_buton_press_action"
@@ -174,10 +198,23 @@ CONF_PAIRING_AS_APP = "pairing_as_app"
 CONF_SECURITY_PIN = "security_pin"
 CONF_QUERY_INTERVAL_CONFIG = "query_interval_config"
 CONF_QUERY_INTERVAL_AUTH_DATA = "query_interval_auth_data"
+CONF_QUERY_INTERVAL_BATTERY_REPORT = "query_interval_battery_report"
+CONF_COMMAND_RETRIES = "command_retries"
+CONF_COMMAND_RETRY_DELAY = "command_retry_delay"
+CONF_CONFIG_CACHE_TTL = "config_cache_ttl"
+CONF_DOOR_SENSOR_INPUT = "door_sensor_input"
 CONF_BLE_GENERAL_TIMEOUT = "ble_general_timeout"
 CONF_BLE_COMMAND_TIMEOUT = "ble_command_timeout"
 CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_EVENT = "event"
+
+CONF_HYBRID_MODE = "hybrid_mode"
+CONF_HYBRID_TOPIC_PREFIX = "topic_prefix"
+CONF_HYBRID_SEND_ACTIONS = "send_actions"
+CONF_HYBRID_BLE_FALLBACK = "ble_fallback"
+CONF_HYBRID_FALLBACK_TIMEOUT = "fallback_timeout"
+CONF_HYBRID_OFFLINE_UPDATE_INTERVAL = "offline_update_interval"
+CONF_HYBRID_CONNECTED_BINARY_SENSOR = "connected"
 
 CONF_ON_PAIRING_MODE_ON = "on_pairing_mode_on_action"
 CONF_ON_PAIRING_MODE_OFF = "on_pairing_mode_off_action"
@@ -193,7 +230,7 @@ NukiLockRequestCalibrationButton = nuki_lock_ns.class_("NukiLockRequestCalibrati
 
 # Switches
 NukiLockPairingModeSwitch = nuki_lock_ns.class_("NukiLockPairingModeSwitch", switch.Switch, cg.Component)
-NukiLockPairingEnabledSwitch = nuki_lock_ns.class_("NukiLockPairingEnabledSwitch", switch.Switch, cg.Component)
+NukiLockBluetoothPairingEnabledSwitch = nuki_lock_ns.class_("NukiLockBluetoothPairingEnabledSwitch", switch.Switch, cg.Component)
 NukiLockAutoUnlatchEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoUnlatchEnabledSwitch", switch.Switch, cg.Component)
 NukiLockButtonEnabledSwitch = nuki_lock_ns.class_("NukiLockButtonEnabledSwitch", switch.Switch, cg.Component)
 NukiLockLedEnabledSwitch = nuki_lock_ns.class_("NukiLockLedEnabledSwitch", switch.Switch, cg.Component)
@@ -210,6 +247,7 @@ NukiLockDstModeEnabledSwitch = nuki_lock_ns.class_("NukiLockDstModeEnabledSwitch
 NukiLockAutoBatteryTypeDetectionEnabledSwitch = nuki_lock_ns.class_("NukiLockAutoBatteryTypeDetectionEnabledSwitch", switch.Switch, cg.Component)
 NukiLockSlowSpeedDuringNightModeEnabledSwitch = nuki_lock_ns.class_("NukiLockSlowSpeedDuringNightModeEnabledSwitch", switch.Switch, cg.Component)
 NukiLockDetachedCylinderEnabledSwitch = nuki_lock_ns.class_("NukiLockDetachedCylinderEnabledSwitch", switch.Switch, cg.Component)
+NukiLockLoggingEnabledSwitch = nuki_lock_ns.class_("NukiLockLoggingEnabledSwitch", switch.Switch, cg.Component)
 
 # Number Inputs
 NukiLockLedBrightnessNumber = nuki_lock_ns.class_("NukiLockLedBrightnessNumber", number.Number, cg.Component)
@@ -260,8 +298,7 @@ NukiLockPairedCondition = nuki_lock_ns.class_(
 )
 
 # Triggers
-nuki_lock_lib_ns = cg.esphome_ns.namespace('NukiLock')
-LogEntry = nuki_lock_lib_ns.struct('LogEntry')
+LogEntry = nuki_lock_ns.struct('LogEntry')
 
 PairingModeOnTrigger = nuki_lock_ns.class_("PairingModeOnTrigger", automation.Trigger.template())
 PairingModeOffTrigger = nuki_lock_ns.class_("PairingModeOffTrigger", automation.Trigger.template())
@@ -270,6 +307,8 @@ EventLogReceivedTrigger = nuki_lock_ns.class_("EventLogReceivedTrigger", automat
 
 CONFIG_SCHEMA = cv.All(
     lock.lock_schema(NukiLockComponent).extend(
+        esp32_ble_tracker.ESP_BLE_DEVICE_SCHEMA
+    ).extend(
         {
             cv.Optional(CONF_CONNECTED_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
                 device_class=DEVICE_CLASS_CONNECTIVITY,
@@ -286,9 +325,32 @@ CONFIG_SCHEMA = cv.All(
                 entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
                 icon="mdi:battery-alert-variant-outline",
             ),
+            cv.Optional(CONF_BATTERY_CHARGING_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
+                device_class=DEVICE_CLASS_BATTERY_CHARGING,
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                icon="mdi:battery-charging",
+            ),
+            cv.Optional(CONF_KEYPAD_BATTERY_CRITICAL_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
+                device_class=DEVICE_CLASS_BATTERY,
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                icon="mdi:battery-alert-variant-outline",
+            ),
+            cv.Optional(CONF_DOOR_SENSOR_BATTERY_CRITICAL_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
+                device_class=DEVICE_CLASS_BATTERY,
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                icon="mdi:battery-alert-variant-outline",
+            ),
             cv.Optional(CONF_DOOR_SENSOR_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
                 device_class=DEVICE_CLASS_DOOR,
                 icon="mdi:door-open",
+            ),
+            # Whether the lock's remote-access (cloud/SSE) uplink is currently connected,
+            # via any transport (bridge, the lock's own WiFi, or Thread) - 4th Generation/
+            # Ultra only.
+            cv.Optional(CONF_REMOTE_ACCESS_CONNECTED_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
+                device_class=DEVICE_CLASS_CONNECTIVITY,
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                icon="mdi:cloud-check-outline",
             ),
             cv.Optional(CONF_DOOR_SENSOR_STATE_TEXT_SENSOR): text_sensor.text_sensor_schema(
                 entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
@@ -310,17 +372,61 @@ CONFIG_SCHEMA = cv.All(
                 entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
                 icon="mdi:account-clock"
             ),
+            # WiFi/MQTT/Thread connection status of the Smart Lock's own built-in
+            # connectivity (4th Generation/Ultra only).
+            cv.Optional(CONF_WIFI_CONNECTION_STATUS_TEXT_SENSOR): text_sensor.text_sensor_schema(
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                icon="mdi:wifi"
+            ),
+            cv.Optional(CONF_MQTT_CONNECTION_STATUS_TEXT_SENSOR): text_sensor.text_sensor_schema(
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                icon="mdi:upload-network"
+            ),
+            cv.Optional(CONF_THREAD_CONNECTION_STATUS_TEXT_SENSOR): text_sensor.text_sensor_schema(
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                icon="mdi:thread"
+            ),
             cv.Optional(CONF_BATTERY_LEVEL_SENSOR): sensor.sensor_schema(
                 device_class=DEVICE_CLASS_BATTERY,
                 entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
                 unit_of_measurement=UNIT_PERCENT,
                 icon="mdi:battery-50",
             ),
+            # These three come from a separate, less frequently polled BLE command
+            # (request_battery_report) than battery_level/battery_critical (which piggyback
+            # on the regular status poll) - see query_interval_battery_report below.
+            cv.Optional(CONF_BATTERY_VOLTAGE_SENSOR): sensor.sensor_schema(
+                device_class=DEVICE_CLASS_VOLTAGE,
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                unit_of_measurement=UNIT_VOLT,
+                accuracy_decimals=3,
+                icon="mdi:battery-sync-outline",
+            ),
+            cv.Optional(CONF_BATTERY_DRAIN_SENSOR): sensor.sensor_schema(
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                unit_of_measurement="mWs",
+                icon="mdi:battery-arrow-down-outline",
+            ),
+            cv.Optional(CONF_MOTOR_CURRENT_SENSOR): sensor.sensor_schema(
+                device_class=DEVICE_CLASS_CURRENT,
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                unit_of_measurement=UNIT_MILLIAMP,
+                icon="mdi:engine-outline",
+            ),
             cv.Optional(CONF_BT_SIGNAL_SENSOR): sensor.sensor_schema(
                 device_class=DEVICE_CLASS_SIGNAL_STRENGTH,
                 entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
                 unit_of_measurement=UNIT_DECIBEL_MILLIWATT,
                 icon="mdi:bluetooth-audio"
+            ),
+            # The Smart Lock's own WiFi connection to its router (4th Generation/Ultra
+            # only, which have a built-in WiFi chip) - unrelated to bt_signal_strength
+            # above, which is our ESP32's own BLE connection to the lock.
+            cv.Optional(CONF_WIFI_CONNECTION_STRENGTH_SENSOR): sensor.sensor_schema(
+                device_class=DEVICE_CLASS_SIGNAL_STRENGTH,
+                entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                unit_of_measurement=UNIT_DECIBEL_MILLIWATT,
+                icon="mdi:wifi"
             ),
             cv.Optional(CONF_UNPAIR_BUTTON): button.button_schema(
                 NukiLockUnpairButton,
@@ -338,8 +444,8 @@ CONFIG_SCHEMA = cv.All(
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:bluetooth"
             ),
-            cv.Optional(CONF_PAIRING_ENABLED_SWITCH): switch.switch_schema(
-                NukiLockPairingEnabledSwitch,
+            cv.Optional(CONF_BLUETOOTH_PAIRING_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockBluetoothPairingEnabledSwitch,
                 device_class=DEVICE_CLASS_SWITCH,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:bluetooth"
@@ -439,6 +545,12 @@ CONFIG_SCHEMA = cv.All(
                 device_class=DEVICE_CLASS_SWITCH,
                 entity_category=ENTITY_CATEGORY_CONFIG,
                 icon="mdi:rotate-orbit",
+            ),
+            cv.Optional(CONF_LOGGING_ENABLED_SWITCH): switch.switch_schema(
+                NukiLockLoggingEnabledSwitch,
+                device_class=DEVICE_CLASS_SWITCH,
+                entity_category=ENTITY_CATEGORY_CONFIG,
+                icon="mdi:math-log",
             ),
             cv.Optional(CONF_LED_BRIGHTNESS_NUMBER): number.number_schema(
                 NukiLockLedBrightnessNumber,
@@ -544,8 +656,51 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_SECURITY_PIN, default="0"): cv.templatable(cv.uint32_t),
             cv.Optional(CONF_QUERY_INTERVAL_CONFIG, default="3600s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_QUERY_INTERVAL_AUTH_DATA, default="3600s"): cv.positive_time_period_seconds,
+            cv.Optional(CONF_QUERY_INTERVAL_BATTERY_REPORT, default="3600s"): cv.positive_time_period_seconds,
             cv.Optional(CONF_BLE_GENERAL_TIMEOUT, default="3s"): cv.positive_time_period_seconds,
-            cv.Optional(CONF_BLE_COMMAND_TIMEOUT, default="3s"): cv.positive_time_period_seconds,
+            # 3s was too tight for the CmdSent/Accept->Complete wait specifically (the lock's
+            # motor movement needs to finish before it reports back) - repeatedly observed in
+            # testing to cost a full wasted connection retry cycle when hit. 10s gives enough
+            # margin without making a genuine failure take too long to surface.
+            cv.Optional(CONF_BLE_COMMAND_TIMEOUT, default="10s"): cv.positive_time_period_seconds,
+            # Applies to lock actions (lock/unlock/...) and queued commands (switches, numbers,
+            # selects, keypad management) alike if the lock reports a failure (not a BLE
+            # connection/timeout error, which is handled separately above).
+            cv.Optional(CONF_COMMAND_RETRIES, default=5): cv.uint8_t,
+            cv.Optional(CONF_COMMAND_RETRY_DELAY, default="1s"): cv.positive_time_period_milliseconds,
+            # If a Config/AdvancedConfig setter (set_fob_action, enable_auto_unlatch, ...) has
+            # a snapshot fetched within this long, it's reused instead of fetching a fresh one
+            # before writing the single changed field back - fewer BLE round-trips, at the risk
+            # of overwriting a change made elsewhere (Nuki app, another authorized device) in
+            # that window. 0 always fetches fresh.
+            cv.Optional(CONF_CONFIG_CACHE_TTL, default="1min"): cv.positive_time_period_seconds,
+            # Door sensor emulation: every state of this binary sensor (true = open) is
+            # reported to the lock
+            cv.Optional(CONF_DOOR_SENSOR_INPUT): cv.use_id(binary_sensor.BinarySensor),
+            # Hybrid mode: receive state changes from the lock's own official MQTT topics
+            # (WiFi/Thread locks, MQTT enabled in the Nuki app on the same broker) - see
+            # nuki_hybrid.cpp. Requires pairing as app.
+            cv.Optional(CONF_HYBRID_MODE): cv.All(
+                cv.Schema(
+                    {
+                        # Defaults to "nuki/<Nuki ID in hex>", the lock's own topic path
+                        cv.Optional(CONF_HYBRID_TOPIC_PREFIX): cv.All(cv.string_strict, cv.Length(min=1, max=48)),
+                        # Send lock actions over MQTT too (needs "Allow locking" in the Nuki app)
+                        cv.Optional(CONF_HYBRID_SEND_ACTIONS, default=False): cv.boolean,
+                        # Retry a lock action over BLE if the lock doesn't confirm it in time
+                        cv.Optional(CONF_HYBRID_BLE_FALLBACK, default=True): cv.boolean,
+                        cv.Optional(CONF_HYBRID_FALLBACK_TIMEOUT, default="2s"): cv.positive_time_period_milliseconds,
+                        # Status polling over BLE while the lock's MQTT connection is offline, 0 disables
+                        cv.Optional(CONF_HYBRID_OFFLINE_UPDATE_INTERVAL, default="10min"): cv.positive_time_period_seconds,
+                        cv.Optional(CONF_HYBRID_CONNECTED_BINARY_SENSOR): binary_sensor.binary_sensor_schema(
+                            device_class=DEVICE_CLASS_CONNECTIVITY,
+                            entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+                            icon="mdi:lan-connect",
+                        ),
+                    }
+                ),
+                cv.requires_component("mqtt"),
+            ),
             cv.Optional(CONF_ON_PAIRING_MODE_ON): automation.validate_automation(
                 {
                     cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(PairingModeOnTrigger),
@@ -567,13 +722,56 @@ CONFIG_SCHEMA = cv.All(
                 }
             ),
         }
-    )
+    ),
+    esp32_ble.consume_connection_slots(1, "nuki_lock"),
 )
 
 
 async def to_code(config):
-    var = await lock.new_lock(config)
+    # device_name identifies this ESP32 to the lock during pairing and seeds the BLE
+    # credential/settings storage keys - passing the YAML id (always unique, whether the
+    # user set it or ESPHome generated it) keeps multiple nuki_lock: instances on one device
+    # from clobbering each other's pairing credentials/PIN settings in flash.
+    var = await lock.new_lock(config, config[CONF_ID].id)
     await cg.register_component(var, config)
+
+    # The embedded NukiLock/NukiBle object (not NukiLockComponent itself) is the
+    # esp32_ble_client::BLEClientBase - register *it* with the tracker so it gets a GATTC
+    # app_id and parse_device()/gattc_event_handler() actually get called. It is not
+    # registered as its own ESPHome Component (no cg.register_component for it): its
+    # Component::setup()/loop() are instead called explicitly from NukiLockComponent's own
+    # setup()/loop() (see nuki_lock.cpp), since it isn't a standalone user-configured entity.
+    esp32_ble.register_bt_logger(BTLoggers.GATT)
+    await esp32_ble_tracker.register_client(var.get_nuki_lock(), config)
+
+    # Nuki recommends continuous active scanning with interval == window (40ms) for fast,
+    # reliable discovery/connection - see
+    # https://developer.nuki.io/t/bluetooth-specification-questions/1109/27. ESPHome's own
+    # esp32_ble_tracker default (320ms interval / 30ms window, ~9% duty cycle) is tuned for
+    # low-power passive beacon detection instead, which makes connecting to a Nuki lock
+    # noticeably slower.
+    #
+    # An earlier test at interval==window (40ms/40ms) appeared to leave already-paired status
+    # updates never arriving, while the 320ms/30ms default worked - but that test ran while
+    # parse_device()'s service-UUID-list gate for those same status updates was still broken
+    # (since fixed; it made advertisement-based status updates impossible at *any* scan
+    # timing). The 40ms/40ms regression was likely that bug, not the timing - back on Nuki's
+    # own recommendation pending confirmation.
+    #
+    # scan_parameters is a single global esp32_ble_tracker setting (not a per-client one), so
+    # it's forced here unconditionally - esp32_ble_tracker's own to_code() already ran (it's a
+    # dependency), so this plain setter call runs after/overrides it regardless of what the
+    # user configured in their own esp32_ble_tracker: block.
+    LOGGER.warning(
+        "nuki_lock is overriding esp32_ble_tracker's scan_parameters to interval=window=40ms "
+        "(Nuki's own recommendation) for faster connections. This applies to ALL BLE scanning "
+        "on this device, not just nuki_lock."
+    )
+    ble_tracker = await cg.get_variable(config[esp32_ble_tracker.CONF_ESP32_BLE_ID])
+    cg.add(ble_tracker.set_scan_interval(64))  # 40ms / 0.625ms per tick
+    cg.add(ble_tracker.set_scan_window(64))  # 40ms / 0.625ms per tick
+    cg.add(ble_tracker.set_scan_active(True))
+    cg.add(ble_tracker.set_scan_continuous(True))
 
     # Component Settings
     if CONF_PAIRING_MODE_TIMEOUT in config:
@@ -596,11 +794,39 @@ async def to_code(config):
     if CONF_QUERY_INTERVAL_AUTH_DATA in config:
         cg.add(var.set_query_interval_auth_data(config[CONF_QUERY_INTERVAL_AUTH_DATA]))
 
+    if CONF_QUERY_INTERVAL_BATTERY_REPORT in config:
+        cg.add(var.set_query_interval_battery_report(config[CONF_QUERY_INTERVAL_BATTERY_REPORT]))
+
     if CONF_BLE_GENERAL_TIMEOUT in config:
         cg.add(var.set_ble_general_timeout(config[CONF_BLE_GENERAL_TIMEOUT]))
 
     if CONF_BLE_COMMAND_TIMEOUT in config:
         cg.add(var.set_ble_command_timeout(config[CONF_BLE_COMMAND_TIMEOUT]))
+
+    if CONF_COMMAND_RETRIES in config:
+        cg.add(var.set_command_retries(config[CONF_COMMAND_RETRIES]))
+
+    if CONF_COMMAND_RETRY_DELAY in config:
+        cg.add(var.set_command_retry_delay(config[CONF_COMMAND_RETRY_DELAY]))
+
+    if CONF_CONFIG_CACHE_TTL in config:
+        cg.add(var.set_config_cache_ttl(config[CONF_CONFIG_CACHE_TTL]))
+
+    if door_sensor_input_id := config.get(CONF_DOOR_SENSOR_INPUT):
+        door_sensor_input = await cg.get_variable(door_sensor_input_id)
+        cg.add(var.set_door_sensor_input(door_sensor_input))
+
+    if hybrid_mode := config.get(CONF_HYBRID_MODE):
+        cg.add_define("USE_NUKI_LOCK_HYBRID")
+        if CONF_HYBRID_TOPIC_PREFIX in hybrid_mode:
+            cg.add(var.set_hybrid_topic_prefix(hybrid_mode[CONF_HYBRID_TOPIC_PREFIX].rstrip("/")))
+        cg.add(var.set_hybrid_send_actions(hybrid_mode[CONF_HYBRID_SEND_ACTIONS]))
+        cg.add(var.set_hybrid_ble_fallback(hybrid_mode[CONF_HYBRID_BLE_FALLBACK]))
+        cg.add(var.set_hybrid_fallback_timeout(hybrid_mode[CONF_HYBRID_FALLBACK_TIMEOUT]))
+        cg.add(var.set_hybrid_offline_update_interval(hybrid_mode[CONF_HYBRID_OFFLINE_UPDATE_INTERVAL]))
+        if hybrid_connected := hybrid_mode.get(CONF_HYBRID_CONNECTED_BINARY_SENSOR):
+            sens = await binary_sensor.new_binary_sensor(hybrid_connected)
+            cg.add(var.set_hybrid_connected_binary_sensor(sens))
 
     # Binary Sensor
     if connected := config.get(CONF_CONNECTED_BINARY_SENSOR):
@@ -615,18 +841,50 @@ async def to_code(config):
         sens = await binary_sensor.new_binary_sensor(battery_critical)
         cg.add(var.set_battery_critical_binary_sensor(sens))
 
+    if battery_charging := config.get(CONF_BATTERY_CHARGING_BINARY_SENSOR):
+        sens = await binary_sensor.new_binary_sensor(battery_charging)
+        cg.add(var.set_battery_charging_binary_sensor(sens))
+
+    if keypad_battery_critical := config.get(CONF_KEYPAD_BATTERY_CRITICAL_BINARY_SENSOR):
+        sens = await binary_sensor.new_binary_sensor(keypad_battery_critical)
+        cg.add(var.set_keypad_battery_critical_binary_sensor(sens))
+
+    if door_sensor_battery_critical := config.get(CONF_DOOR_SENSOR_BATTERY_CRITICAL_BINARY_SENSOR):
+        sens = await binary_sensor.new_binary_sensor(door_sensor_battery_critical)
+        cg.add(var.set_door_sensor_battery_critical_binary_sensor(sens))
+
     if door_sensor := config.get(CONF_DOOR_SENSOR_BINARY_SENSOR):
         sens = await binary_sensor.new_binary_sensor(door_sensor)
         cg.add(var.set_door_sensor_binary_sensor(sens))
+
+    if remote_access_connected := config.get(CONF_REMOTE_ACCESS_CONNECTED_BINARY_SENSOR):
+        sens = await binary_sensor.new_binary_sensor(remote_access_connected)
+        cg.add(var.set_remote_access_connected_binary_sensor(sens))
 
     # Sensor
     if battery_level := config.get(CONF_BATTERY_LEVEL_SENSOR):
         sens = await sensor.new_sensor(battery_level)
         cg.add(var.set_battery_level_sensor(sens))
 
+    if battery_voltage := config.get(CONF_BATTERY_VOLTAGE_SENSOR):
+        sens = await sensor.new_sensor(battery_voltage)
+        cg.add(var.set_battery_voltage_sensor(sens))
+
+    if battery_drain := config.get(CONF_BATTERY_DRAIN_SENSOR):
+        sens = await sensor.new_sensor(battery_drain)
+        cg.add(var.set_battery_drain_sensor(sens))
+
+    if motor_current := config.get(CONF_MOTOR_CURRENT_SENSOR):
+        sens = await sensor.new_sensor(motor_current)
+        cg.add(var.set_motor_current_sensor(sens))
+
     if bt_signal := config.get(CONF_BT_SIGNAL_SENSOR):
         sens = await sensor.new_sensor(bt_signal)
         cg.add(var.set_bt_signal_sensor(sens))
+
+    if wifi_connection_strength := config.get(CONF_WIFI_CONNECTION_STRENGTH_SENSOR):
+        sens = await sensor.new_sensor(wifi_connection_strength)
+        cg.add(var.set_wifi_connection_strength_sensor(sens))
 
     # Text Sensor
     if door_sensor_state := config.get(CONF_DOOR_SENSOR_STATE_TEXT_SENSOR):
@@ -648,6 +906,18 @@ async def to_code(config):
     if pin_state := config.get(CONF_PIN_STATE_TEXT_SENSOR):
         sens = await text_sensor.new_text_sensor(pin_state)
         cg.add(var.set_pin_state_text_sensor(sens))
+
+    if wifi_connection_status := config.get(CONF_WIFI_CONNECTION_STATUS_TEXT_SENSOR):
+        sens = await text_sensor.new_text_sensor(wifi_connection_status)
+        cg.add(var.set_wifi_connection_status_text_sensor(sens))
+
+    if mqtt_connection_status := config.get(CONF_MQTT_CONNECTION_STATUS_TEXT_SENSOR):
+        sens = await text_sensor.new_text_sensor(mqtt_connection_status)
+        cg.add(var.set_mqtt_connection_status_text_sensor(sens))
+
+    if thread_connection_status := config.get(CONF_THREAD_CONNECTION_STATUS_TEXT_SENSOR):
+        sens = await text_sensor.new_text_sensor(thread_connection_status)
+        cg.add(var.set_thread_connection_status_text_sensor(sens))
 
     # Button
     if unpair := config.get(CONF_UNPAIR_BUTTON):
@@ -730,10 +1000,10 @@ async def to_code(config):
         await cg.register_parented(s, config[CONF_ID])
         cg.add(var.set_pairing_mode_switch(s))
 
-    if pairing_enabled := config.get(CONF_PAIRING_ENABLED_SWITCH):
-        s = await switch.new_switch(pairing_enabled)
+    if bluetooth_pairing_enabled := config.get(CONF_BLUETOOTH_PAIRING_ENABLED_SWITCH):
+        s = await switch.new_switch(bluetooth_pairing_enabled)
         await cg.register_parented(s, config[CONF_ID])
-        cg.add(var.set_pairing_enabled_switch(s))
+        cg.add(var.set_bluetooth_pairing_enabled_switch(s))
 
     if button_enabled := config.get(CONF_BUTTON_ENABLED_SWITCH):
         s = await switch.new_switch(button_enabled)
@@ -815,11 +1085,16 @@ async def to_code(config):
         await cg.register_parented(s, config[CONF_ID])
         cg.add(var.set_detached_cylinder_enabled_switch(s))
 
+    if logging_enabled := config.get(CONF_LOGGING_ENABLED_SWITCH):
+        s = await switch.new_switch(logging_enabled)
+        await cg.register_parented(s, config[CONF_ID])
+        cg.add(var.set_logging_enabled_switch(s))
+
     # Select
     if single_button_press_action := config.get(CONF_SINGLE_BUTTON_PRESS_ACTION_SELECT):
         sel = await select.new_select(
             single_button_press_action,
-            options=[CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS],
+            options=CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_single_button_press_action_select(sel))
@@ -827,7 +1102,7 @@ async def to_code(config):
     if double_button_press_action := config.get(CONF_DOUBLE_BUTTON_PRESS_ACTION_SELECT):
         sel = await select.new_select(
             double_button_press_action,
-            options=[CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS],
+            options=CONF_BUTTON_PRESS_ACTION_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_double_button_press_action_select(sel))
@@ -835,7 +1110,7 @@ async def to_code(config):
     if fob_action_1 := config.get(CONF_FOB_ACTION_1_SELECT):
         sel = await select.new_select(
             fob_action_1,
-            options=[CONF_FOB_ACTION_SELECT_OPTIONS],
+            options=CONF_FOB_ACTION_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_fob_action_1_select(sel))
@@ -843,7 +1118,7 @@ async def to_code(config):
     if fob_action_2 := config.get(CONF_FOB_ACTION_2_SELECT):
         sel = await select.new_select(
             fob_action_2,
-            options=[CONF_FOB_ACTION_SELECT_OPTIONS],
+            options=CONF_FOB_ACTION_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_fob_action_2_select(sel))
@@ -851,7 +1126,7 @@ async def to_code(config):
     if fob_action_3 := config.get(CONF_FOB_ACTION_3_SELECT):
         sel = await select.new_select(
             fob_action_3,
-            options=[CONF_FOB_ACTION_SELECT_OPTIONS],
+            options=CONF_FOB_ACTION_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_fob_action_3_select(sel))
@@ -859,7 +1134,7 @@ async def to_code(config):
     if timezone := config.get(CONF_TIMEZONE_SELECT):
         sel = await select.new_select(
             timezone,
-            options=[CONF_TIMEZONE_SELECT_OPTIONS],
+            options=CONF_TIMEZONE_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_timezone_select(sel))
@@ -867,7 +1142,7 @@ async def to_code(config):
     if advertising_mode := config.get(CONF_ADVERTISING_MODE_SELECT):
         sel = await select.new_select(
             advertising_mode,
-            options=[CONF_ADVERTISING_MODE_SELECT_OPTIONS],
+            options=CONF_ADVERTISING_MODE_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_advertising_mode_select(sel))
@@ -875,7 +1150,7 @@ async def to_code(config):
     if battery_type := config.get(CONF_BATTERY_TYPE_SELECT):
         sel = await select.new_select(
             battery_type,
-            options=[CONF_BATTERY_TYPE_SELECT_OPTIONS],
+            options=CONF_BATTERY_TYPE_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_battery_type_select(sel))
@@ -883,7 +1158,7 @@ async def to_code(config):
     if motor_speed := config.get(CONF_MOTOR_SPEED_SELECT):
         sel = await select.new_select(
             motor_speed,
-            options=[CONF_MOTOR_SPEED_SELECT_OPTIONS],
+            options=CONF_MOTOR_SPEED_SELECT_OPTIONS,
         )
         await cg.register_parented(sel, config[CONF_ID])
         cg.add(var.set_motor_speed_select(sel))
@@ -906,67 +1181,48 @@ async def to_code(config):
         await automation.build_automation(trigger, [(LogEntry, "x")], conf)
 
     # Libraries
-    if getattr(CORE, "using_toolchain_esp_idf", False):
-        # ESPHome 2026.7+ native ESP-IDF toolchain: ESPHome converts its
-        # PlatformIO libraries (noise-c and its libsodium subset, pulled in when
-        # `api` encryption is enabled) into ESP-IDF managed components. That
-        # copy of libsodium collides with espressif/libsodium below (also
-        # required by NukiBleEsp32 itself), and the IDF component manager
-        # aborts: both end up as "project_managed_components" named libsodium.
-        # Ignore ESPHome's subset build so espressif's full libsodium is the
-        # only one; noise-c links against it via the shared managed-components
-        # requirement. On the PlatformIO toolchain ESPHome's libsodium stays a
-        # plain PlatformIO library and never conflicts, so leave it alone.
+    if arduino_bundles_libsodium():
+        # arduino-esp32 (below IDF 6.0) ships espressif/libsodium, and ESPHome's
+        # noise component then falls back to its PlatformIO libsodium library.
+        # Ignore that one so espressif's full libsodium is the only copy;
+        # noise-c links against it via the shared managed-components requirement.
         cg.add_platformio_option("lib_ignore", ["libsodium"])
+        add_idf_component(
+            name="espressif/libsodium",
+            ref="^1.0.20~2",
+        )
+        # libsodium's HMAC-SHA256 can return wrong results when backed by hardware SHA
+        # acceleration via mbedTLS (likely related to esphome/esphome#12707, #13021, #13234).
+        # Force libsodium to use its own SHA implementation instead.
+        add_idf_sdkconfig_option("CONFIG_LIBSODIUM_USE_MBEDTLS_SHA", False)
+    else:
+        # Everywhere else ESPHome's noise component (`api` encryption) adds its own
+        # esphome/libsodium as an ESP-IDF managed component, which can't coexist with
+        # espressif/libsodium. Always use ESPHome's port (same version as noise, so
+        # both requests dedupe) and compile the modules it leaves out in nuki_sodium.
+        add_idf_component(
+            name="esphome/libsodium",
+            ref=LIBSODIUM_VERSION,
+        )
+        add_idf_component(
+            name="nuki_sodium",
+            path=str(NUKI_SODIUM_DIR),
+        )
 
-    add_idf_component(
-        name="espressif/libsodium",
-        ref="^1.0.20~2",
-    )
     add_idf_component(
         name="crc16",
         repo="https://github.com/AzonInc/Crc16.git",
     )
-    add_idf_component(
-        name="ble-scanner",
-        repo="https://github.com/AzonInc/ble-scanner.git",
-        ref="2.1.0",
-    )
-    add_idf_component(
-        name="esp-nimble-cpp",
-        repo="https://github.com/h2zero/esp-nimble-cpp.git",
-        ref="2.3.3",
-    )
-    add_idf_component(
-        name="NukiBleEsp32",
-        repo="https://github.com/AzonInc/NukiBleEsp32.git",
-        ref="idf",
-    )
+    # NukiBleEsp32 (lock-only subset, Opener files excluded) is vendored directly as
+    # component sources instead of a fetched IDF component, see nuki_ble.cpp/.h,
+    # nuki_lock_protocol.cpp/.h etc. in this directory. It now talks to the lock via
+    # ESPHome's own (Bluedroid-based) BLE stack (esp32_ble_tracker/esp32_ble_client)
+    # instead of NimBLE.
 
-    # General settings
-    add_idf_sdkconfig_option("CONFIG_BT_ENABLED", True)
-    add_idf_sdkconfig_option("CONFIG_BT_BLUEDROID_ENABLED", False)
-    add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ENABLED", True)
-    add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_ROLE_PERIPHERAL", True)
-    add_idf_sdkconfig_option("CONFIG_BTDM_BLE_SCAN_DUPL", True)
-
-    # libsodium's HMAC-SHA256 can return wrong results when backed by hardware SHA
-    # acceleration via mbedTLS (likely related to esphome/esphome#12707, #13021, #13234).
-    # Force libsodium to use its own SHA implementation instead.
-    add_idf_sdkconfig_option("CONFIG_LIBSODIUM_USE_MBEDTLS_SHA", False)
-
-    # Reduce NimBLE log level to save memory
-    add_idf_sdkconfig_option("CONFIG_NIMBLE_CPP_LOG_LEVEL", 0)
-    add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL", 0)
-    add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL_NONE", True)
-
-    # Set for debugging purposes
-    #add_idf_sdkconfig_option("CONFIG_NIMBLE_CPP_LOG_LEVEL", 4)
-    #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL", 4)
-    #add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_LOG_LEVEL_DEBUG", True)
-
-    # Defines
-    cg.add_define("NUKI_NO_WDT_RESET")
+    # Nuki relies on seeing every advertisement to catch lock-state-changed notifications
+    # (a status bit inside the manufacturer data - see NukiBle::parse_device()), so
+    # duplicate-advertisement filtering must stay off.
+    add_idf_sdkconfig_option("CONFIG_BTDM_BLE_SCAN_DUPL", False)
 
     # Build flags
     cg.add_build_flag("-Wno-unused-result")
@@ -978,29 +1234,7 @@ async def to_code(config):
 def _final_validate(config):
     full_config = fv.full_config.get()
 
-    incompatible_components = [
-        "esp32_ble", 
-        "esp32_improv", 
-        "esp32_ble_beacon", 
-        "esp32_ble_client", 
-        "esp32_ble_tracker", 
-        "esp32_ble_server"
-    ]
-
     if CORE.is_esp32:
-        # Check if any of the incompatible components are in the configuration
-        if any(component in full_config for component in incompatible_components):
-            raise cv.Invalid(f"The `nuki_lock` component relies on NimBLE, which is incompatible with the ESPHome BLE stack.\nTo use `nuki_lock`, please remove all Bluetooth components (esp32_ble, esp32_improv, ...) from your configuration.")
-        
-        # Check for PSRAM support
-        if "psram" in full_config:
-            add_idf_sdkconfig_option("CONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL", True)
-            add_idf_sdkconfig_option("CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL", 50768)
-            add_idf_sdkconfig_option("CONFIG_BT_ALLOCATION_FROM_SPIRAM_FIRST", True)
-            add_idf_sdkconfig_option("CONFIG_BT_BLE_DYNAMIC_ENV_MEMORY", True)
-        else:
-            LOGGER.warning("Consider enabling PSRAM if available for the NimBLE Stack.")
-
         # Check API configuration
         if "api" in full_config:
             api_conf = full_config.get("api", {})
@@ -1012,6 +1246,12 @@ def _final_validate(config):
 
             if not api_conf.get("homeassistant_services", False):
                 LOGGER.warning("Enable homeassistant_services to use nuki event logs.")
+
+        if CONF_HYBRID_MODE in config:
+            if config.get(CONF_PAIRING_AS_APP) is False:
+                LOGGER.warning("hybrid_mode needs pairing_as_app: true (re-pair the lock after changing it).")
+            if full_config.get("mqtt", {}).get("discovery", True) is not False and "api" in full_config:
+                LOGGER.warning("hybrid_mode: consider 'discovery: false' in mqtt: to not announce all entities over MQTT as well.")
 
     return config
 

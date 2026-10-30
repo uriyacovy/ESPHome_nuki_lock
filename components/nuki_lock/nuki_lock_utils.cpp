@@ -1,77 +1,78 @@
-#include "utils.h"
+#include "nuki_lock_utils.h"
+#include <cstdio>
 #include <cstring>
 
 #include "esphome/components/lock/lock.h"
-#include "NukiLock.h"
+#include "nuki_lock_protocol.h"
 
 namespace esphome::nuki_lock {
-    lock::LockState nuki_to_lock_state(NukiLock::LockState nukiLockState) {
+    lock::LockState nuki_to_lock_state(LockState nukiLockState) {
         switch(nukiLockState) {
-            case NukiLock::LockState::Locked:
+            case LockState::Locked:
                 return lock::LOCK_STATE_LOCKED;
-            case NukiLock::LockState::Unlocked:
-            case NukiLock::LockState::Unlatched:
+            case LockState::Unlocked:
+            case LockState::Unlatched:
                 return lock::LOCK_STATE_UNLOCKED;
-            case NukiLock::LockState::MotorBlocked:
+            case LockState::MotorBlocked:
                 return lock::LOCK_STATE_JAMMED;
-            case NukiLock::LockState::Locking:
+            case LockState::Locking:
                 return lock::LOCK_STATE_LOCKING;
-            case NukiLock::LockState::Unlocking:
-            case NukiLock::LockState::Unlatching:
+            case LockState::Unlocking:
+            case LockState::Unlatching:
                 return lock::LOCK_STATE_UNLOCKING;
             default:
                 return lock::LOCK_STATE_NONE;
         }
     }
 
-    bool nuki_doorsensor_to_binary(Nuki::DoorSensorState nuki_door_sensor_state) {
-        if (nuki_door_sensor_state == Nuki::DoorSensorState::DoorClosed) {
+    bool nuki_doorsensor_to_binary(DoorSensorState nuki_door_sensor_state) {
+        if (nuki_door_sensor_state == DoorSensorState::DoorClosed) {
             return false;
         }
         return true;
     }
 
-    NukiLock::ButtonPressAction button_press_action_to_enum(const char* str)
+    ButtonPressAction button_press_action_to_enum(const char* str)
     {
         if (strcmp(str, "No action") == 0) {
-            return NukiLock::ButtonPressAction::NoAction;
+            return ButtonPressAction::NoAction;
         } else if (strcmp(str, "Intelligent") == 0) {
-            return NukiLock::ButtonPressAction::Intelligent;
+            return ButtonPressAction::Intelligent;
         } else if (strcmp(str, "Unlock") == 0) {
-            return NukiLock::ButtonPressAction::Unlock;
+            return ButtonPressAction::Unlock;
         } else if (strcmp(str, "Lock") == 0) {
-            return NukiLock::ButtonPressAction::Lock;
+            return ButtonPressAction::Lock;
         } else if (strcmp(str, "Open door") == 0) {
-            return NukiLock::ButtonPressAction::Unlatch;
+            return ButtonPressAction::Unlatch;
         } else if (strcmp(str, "Lock 'n' Go") == 0) {
-            return NukiLock::ButtonPressAction::LockNgo;
+            return ButtonPressAction::LockNgo;
         } else if (strcmp(str, "Show state") == 0) {
-            return NukiLock::ButtonPressAction::ShowStatus;
+            return ButtonPressAction::ShowStatus;
         }
-        return NukiLock::ButtonPressAction::NoAction;
+        return ButtonPressAction::NoAction;
     }
 
-    void button_press_action_to_string(const NukiLock::ButtonPressAction action, char* str) {
+    void button_press_action_to_string(const ButtonPressAction action, char* str) {
         switch (action) {
-            case NukiLock::ButtonPressAction::NoAction:
+            case ButtonPressAction::NoAction:
                 strcpy(str, "No action");
                 break;
-            case NukiLock::ButtonPressAction::Intelligent:
+            case ButtonPressAction::Intelligent:
                 strcpy(str, "Intelligent");
                 break;
-            case NukiLock::ButtonPressAction::Unlock:
+            case ButtonPressAction::Unlock:
                 strcpy(str, "Unlock");
                 break;
-            case NukiLock::ButtonPressAction::Lock:
+            case ButtonPressAction::Lock:
                 strcpy(str, "Lock");
                 break;
-            case NukiLock::ButtonPressAction::Unlatch:
+            case ButtonPressAction::Unlatch:
                 strcpy(str, "Open door");
                 break;
-            case NukiLock::ButtonPressAction::LockNgo:
+            case ButtonPressAction::LockNgo:
                 strcpy(str, "Lock 'n' Go");
                 break;
-            case NukiLock::ButtonPressAction::ShowStatus:
+            case ButtonPressAction::ShowStatus:
                 strcpy(str, "Show state");
                 break;
             default:
@@ -80,15 +81,15 @@ namespace esphome::nuki_lock {
         }
     }
 
-    void battery_type_to_string(const Nuki::BatteryType battery_type, char* str) {
+    void battery_type_to_string(const BatteryType battery_type, char* str) {
         switch (battery_type) {
-            case Nuki::BatteryType::Alkali:
+            case BatteryType::Alkali:
                 strcpy(str, "Alkali");
                 break;
-            case Nuki::BatteryType::Accumulators:
+            case BatteryType::Accumulators:
                 strcpy(str, "Accumulators");
                 break;
-            case Nuki::BatteryType::Lithium:
+            case BatteryType::Lithium:
                 strcpy(str, "Lithium");
                 break;
             default:
@@ -97,15 +98,15 @@ namespace esphome::nuki_lock {
         }
     }
 
-    Nuki::BatteryType battery_type_to_enum(const char* str) {
+    BatteryType battery_type_to_enum(const char* str) {
         if(strcmp(str, "Alkali") == 0) {
-            return Nuki::BatteryType::Alkali;
+            return BatteryType::Alkali;
         } else if(strcmp(str, "Accumulators") == 0) {
-            return Nuki::BatteryType::Accumulators;
+            return BatteryType::Accumulators;
         } else if(strcmp(str, "Lithium") == 0) {
-            return Nuki::BatteryType::Lithium;
+            return BatteryType::Lithium;
         }
-        return (Nuki::BatteryType)0xff;
+        return (BatteryType)0xff;
     }
 
     void homekit_status_to_string(const int status, char* str) {
@@ -128,15 +129,15 @@ namespace esphome::nuki_lock {
         }
     }
 
-    void motor_speed_to_string(const NukiLock::MotorSpeed speed, char* str) {
+    void motor_speed_to_string(const MotorSpeed speed, char* str) {
         switch (speed) {
-            case NukiLock::MotorSpeed::Standard:
+            case MotorSpeed::Standard:
                 strcpy(str, "Standard");
                 break;
-            case NukiLock::MotorSpeed::Insane:
+            case MotorSpeed::Insane:
                 strcpy(str, "Insane");
                 break;
-            case NukiLock::MotorSpeed::Gentle:
+            case MotorSpeed::Gentle:
                 strcpy(str, "Gentle");
                 break;
             default:
@@ -145,15 +146,15 @@ namespace esphome::nuki_lock {
         }
     }
 
-    NukiLock::MotorSpeed motor_speed_to_enum(const char* str) {
+    MotorSpeed motor_speed_to_enum(const char* str) {
         if(strcmp(str, "Standard") == 0) {
-            return NukiLock::MotorSpeed::Standard;
+            return MotorSpeed::Standard;
         } else if(strcmp(str, "Insane") == 0) {
-            return NukiLock::MotorSpeed::Insane;
+            return MotorSpeed::Insane;
         } else if(strcmp(str, "Gentle") == 0) {
-            return NukiLock::MotorSpeed::Gentle;
+            return MotorSpeed::Gentle;
         }
-        return NukiLock::MotorSpeed::Standard;
+        return MotorSpeed::Standard;
     }
 
     uint8_t fob_action_to_int(const char *str) {
@@ -194,246 +195,246 @@ namespace esphome::nuki_lock {
         }
     }
 
-    Nuki::TimeZoneId timezone_to_enum(const char *str) {
+    TimeZoneId timezone_to_enum(const char *str) {
         if(strcmp(str, "Africa/Cairo") == 0) {
-            return Nuki::TimeZoneId::Africa_Cairo;
+            return TimeZoneId::Africa_Cairo;
         } else if(strcmp(str, "Africa/Lagos") == 0) {
-            return Nuki::TimeZoneId::Africa_Lagos;
+            return TimeZoneId::Africa_Lagos;
         } else if(strcmp(str, "Africa/Maputo") == 0) {
-            return Nuki::TimeZoneId::Africa_Maputo;
+            return TimeZoneId::Africa_Maputo;
         } else if(strcmp(str, "Africa/Nairobi") == 0) {
-            return Nuki::TimeZoneId::Africa_Nairobi;
+            return TimeZoneId::Africa_Nairobi;
         } else if(strcmp(str, "America/Anchorage") == 0) {
-            return Nuki::TimeZoneId::America_Anchorage;
+            return TimeZoneId::America_Anchorage;
         } else if(strcmp(str, "America/Argentina/Buenos_Aires") == 0) {
-            return Nuki::TimeZoneId::America_Argentina_Buenos_Aires;
+            return TimeZoneId::America_Argentina_Buenos_Aires;
         } else if(strcmp(str, "America/Chicago") == 0) {
-            return Nuki::TimeZoneId::America_Chicago;
+            return TimeZoneId::America_Chicago;
         } else if(strcmp(str, "America/Denver") == 0) {
-            return Nuki::TimeZoneId::America_Denver;
+            return TimeZoneId::America_Denver;
         } else if(strcmp(str, "America/Halifax") == 0) {
-            return Nuki::TimeZoneId::America_Halifax;
+            return TimeZoneId::America_Halifax;
         } else if(strcmp(str, "America/Los_Angeles") == 0) {
-            return Nuki::TimeZoneId::America_Los_Angeles;
+            return TimeZoneId::America_Los_Angeles;
         } else if(strcmp(str, "America/Manaus") == 0) {
-            return Nuki::TimeZoneId::America_Manaus;
+            return TimeZoneId::America_Manaus;
         } else if(strcmp(str, "America/Mexico_City") == 0) {
-            return Nuki::TimeZoneId::America_Mexico_City;
+            return TimeZoneId::America_Mexico_City;
         } else if(strcmp(str, "America/New_York") == 0) {
-            return Nuki::TimeZoneId::America_New_York;
+            return TimeZoneId::America_New_York;
         } else if(strcmp(str, "America/Phoenix") == 0) {
-            return Nuki::TimeZoneId::America_Phoenix;
+            return TimeZoneId::America_Phoenix;
         } else if(strcmp(str, "America/Regina") == 0) {
-            return Nuki::TimeZoneId::America_Regina;
+            return TimeZoneId::America_Regina;
         } else if(strcmp(str, "America/Santiago") == 0) {
-            return Nuki::TimeZoneId::America_Santiago;
+            return TimeZoneId::America_Santiago;
         } else if(strcmp(str, "America/Sao_Paulo") == 0) {
-            return Nuki::TimeZoneId::America_Sao_Paulo;
+            return TimeZoneId::America_Sao_Paulo;
         } else if(strcmp(str, "America/St_Johns") == 0) {
-            return Nuki::TimeZoneId::America_St_Johns;
+            return TimeZoneId::America_St_Johns;
         } else if(strcmp(str, "Asia/Bangkok") == 0) {
-            return Nuki::TimeZoneId::Asia_Bangkok;
+            return TimeZoneId::Asia_Bangkok;
         } else if(strcmp(str, "Asia/Dubai") == 0) {
-            return Nuki::TimeZoneId::Asia_Dubai;
+            return TimeZoneId::Asia_Dubai;
         } else if(strcmp(str, "Asia/Hong_Kong") == 0) {
-            return Nuki::TimeZoneId::Asia_Hong_Kong;
+            return TimeZoneId::Asia_Hong_Kong;
         } else if(strcmp(str, "Asia/Jerusalem") == 0) {
-            return Nuki::TimeZoneId::Asia_Jerusalem;
+            return TimeZoneId::Asia_Jerusalem;
         } else if(strcmp(str, "Asia/Karachi") == 0) {
-            return Nuki::TimeZoneId::Asia_Karachi;
+            return TimeZoneId::Asia_Karachi;
         } else if(strcmp(str, "Asia/Kathmandu") == 0) {
-            return Nuki::TimeZoneId::Asia_Kathmandu;
+            return TimeZoneId::Asia_Kathmandu;
         } else if(strcmp(str, "Asia/Kolkata") == 0) {
-            return Nuki::TimeZoneId::Asia_Kolkata;
+            return TimeZoneId::Asia_Kolkata;
         } else if(strcmp(str, "Asia/Riyadh") == 0) {
-            return Nuki::TimeZoneId::Asia_Riyadh;
+            return TimeZoneId::Asia_Riyadh;
         } else if(strcmp(str, "Asia/Seoul") == 0) {
-            return Nuki::TimeZoneId::Asia_Seoul;
+            return TimeZoneId::Asia_Seoul;
         } else if(strcmp(str, "Asia/Shanghai") == 0) {
-            return Nuki::TimeZoneId::Asia_Shanghai;
+            return TimeZoneId::Asia_Shanghai;
         } else if(strcmp(str, "Asia/Tehran") == 0) {
-            return Nuki::TimeZoneId::Asia_Tehran;
+            return TimeZoneId::Asia_Tehran;
         } else if(strcmp(str, "Asia/Tokyo") == 0) {
-            return Nuki::TimeZoneId::Asia_Tokyo;
+            return TimeZoneId::Asia_Tokyo;
         } else if(strcmp(str, "Asia/Yangon") == 0) {
-            return Nuki::TimeZoneId::Asia_Yangon;
+            return TimeZoneId::Asia_Yangon;
         } else if(strcmp(str, "Australia/Adelaide") == 0) {
-            return Nuki::TimeZoneId::Australia_Adelaide;
+            return TimeZoneId::Australia_Adelaide;
         } else if(strcmp(str, "Australia/Brisbane") == 0) {
-            return Nuki::TimeZoneId::Australia_Brisbane;
+            return TimeZoneId::Australia_Brisbane;
         } else if(strcmp(str, "Australia/Darwin") == 0) {
-            return Nuki::TimeZoneId::Australia_Darwin;
+            return TimeZoneId::Australia_Darwin;
         } else if(strcmp(str, "Australia/Hobart") == 0) {
-            return Nuki::TimeZoneId::Australia_Hobart;
+            return TimeZoneId::Australia_Hobart;
         } else if(strcmp(str, "Australia/Perth") == 0) {
-            return Nuki::TimeZoneId::Australia_Perth;
+            return TimeZoneId::Australia_Perth;
         } else if(strcmp(str, "Australia/Sydney") == 0) {
-            return Nuki::TimeZoneId::Australia_Sydney;
+            return TimeZoneId::Australia_Sydney;
         } else if(strcmp(str, "Europe/Berlin") == 0) {
-            return Nuki::TimeZoneId::Europe_Berlin;
+            return TimeZoneId::Europe_Berlin;
         } else if(strcmp(str, "Europe/Helsinki") == 0) {
-            return Nuki::TimeZoneId::Europe_Helsinki;
+            return TimeZoneId::Europe_Helsinki;
         } else if(strcmp(str, "Europe/Istanbul") == 0) {
-            return Nuki::TimeZoneId::Europe_Istanbul;
+            return TimeZoneId::Europe_Istanbul;
         } else if(strcmp(str, "Europe/London") == 0) {
-            return Nuki::TimeZoneId::Europe_London;
+            return TimeZoneId::Europe_London;
         } else if(strcmp(str, "Europe/Moscow") == 0) {
-            return Nuki::TimeZoneId::Europe_Moscow;
+            return TimeZoneId::Europe_Moscow;
         } else if(strcmp(str, "Pacific/Auckland") == 0) {
-            return Nuki::TimeZoneId::Pacific_Auckland;
+            return TimeZoneId::Pacific_Auckland;
         } else if(strcmp(str, "Pacific/Guam") == 0) {
-            return Nuki::TimeZoneId::Pacific_Guam;
+            return TimeZoneId::Pacific_Guam;
         } else if(strcmp(str, "Pacific/Honolulu") == 0) {
-            return Nuki::TimeZoneId::Pacific_Honolulu;
+            return TimeZoneId::Pacific_Honolulu;
         } else if(strcmp(str, "Pacific/Pago_Pago") == 0) {
-            return Nuki::TimeZoneId::Pacific_Pago_Pago;
+            return TimeZoneId::Pacific_Pago_Pago;
         } else if(strcmp(str, "None") == 0) {
-            return Nuki::TimeZoneId::None;
+            return TimeZoneId::None;
         }
-        return (Nuki::TimeZoneId)0xff;
+        return (TimeZoneId)0xff;
     }
 
-    void timezone_to_string(const Nuki::TimeZoneId timeZoneId, char* str) {
+    void timezone_to_string(const TimeZoneId timeZoneId, char* str) {
         switch (timeZoneId) {
-            case Nuki::TimeZoneId::Africa_Cairo:
+            case TimeZoneId::Africa_Cairo:
                 strcpy(str, "Africa/Cairo");
                 break;
-            case Nuki::TimeZoneId::Africa_Lagos:
+            case TimeZoneId::Africa_Lagos:
                 strcpy(str, "Africa/Lagos");
                 break;
-            case Nuki::TimeZoneId::Africa_Maputo:
+            case TimeZoneId::Africa_Maputo:
                 strcpy(str, "Africa/Maputo");
                 break;
-            case Nuki::TimeZoneId::Africa_Nairobi:
+            case TimeZoneId::Africa_Nairobi:
                 strcpy(str, "Africa/Nairobi");
                 break;
-            case Nuki::TimeZoneId::America_Anchorage:
+            case TimeZoneId::America_Anchorage:
                 strcpy(str, "America/Anchorage");
                 break;
-            case Nuki::TimeZoneId::America_Argentina_Buenos_Aires:
+            case TimeZoneId::America_Argentina_Buenos_Aires:
                 strcpy(str, "America/Argentina/Buenos_Aires");
                 break;
-            case Nuki::TimeZoneId::America_Chicago:
+            case TimeZoneId::America_Chicago:
                 strcpy(str, "America/Chicago");
                 break;
-            case Nuki::TimeZoneId::America_Denver:
+            case TimeZoneId::America_Denver:
                 strcpy(str, "America/Denver");
                 break;
-            case Nuki::TimeZoneId::America_Halifax:
+            case TimeZoneId::America_Halifax:
                 strcpy(str, "America/Halifax");
                 break;
-            case Nuki::TimeZoneId::America_Los_Angeles:
+            case TimeZoneId::America_Los_Angeles:
                 strcpy(str, "America/Los_Angeles");
                 break;
-            case Nuki::TimeZoneId::America_Manaus:
+            case TimeZoneId::America_Manaus:
                 strcpy(str, "America/Manaus");
                 break;
-            case Nuki::TimeZoneId::America_Mexico_City:
+            case TimeZoneId::America_Mexico_City:
                 strcpy(str, "America/Mexico_City");
                 break;
-            case Nuki::TimeZoneId::America_New_York:
+            case TimeZoneId::America_New_York:
                 strcpy(str, "America/New_York");
                 break;
-            case Nuki::TimeZoneId::America_Phoenix:
+            case TimeZoneId::America_Phoenix:
                 strcpy(str, "America/Phoenix");
                 break;
-            case Nuki::TimeZoneId::America_Regina:
+            case TimeZoneId::America_Regina:
                 strcpy(str, "America/Regina");
                 break;
-            case Nuki::TimeZoneId::America_Santiago:
+            case TimeZoneId::America_Santiago:
                 strcpy(str, "America/Santiago");
                 break;
-            case Nuki::TimeZoneId::America_Sao_Paulo:
+            case TimeZoneId::America_Sao_Paulo:
                 strcpy(str, "America/Sao_Paulo");
                 break;
-            case Nuki::TimeZoneId::America_St_Johns:
+            case TimeZoneId::America_St_Johns:
                 strcpy(str, "America/St_Johns");
                 break;
-            case Nuki::TimeZoneId::Asia_Bangkok:
+            case TimeZoneId::Asia_Bangkok:
                 strcpy(str, "Asia/Bangkok");
                 break;
-            case Nuki::TimeZoneId::Asia_Dubai:
+            case TimeZoneId::Asia_Dubai:
                 strcpy(str, "Asia/Dubai");
                 break;
-            case Nuki::TimeZoneId::Asia_Hong_Kong:
+            case TimeZoneId::Asia_Hong_Kong:
                 strcpy(str, "Asia/Hong_Kong");
                 break;
-            case Nuki::TimeZoneId::Asia_Jerusalem:
+            case TimeZoneId::Asia_Jerusalem:
                 strcpy(str, "Asia/Jerusalem");
                 break;
-            case Nuki::TimeZoneId::Asia_Karachi:
+            case TimeZoneId::Asia_Karachi:
                 strcpy(str, "Asia/Karachi");
                 break;
-            case Nuki::TimeZoneId::Asia_Kathmandu:
+            case TimeZoneId::Asia_Kathmandu:
                 strcpy(str, "Asia/Kathmandu");
                 break;
-            case Nuki::TimeZoneId::Asia_Kolkata:
+            case TimeZoneId::Asia_Kolkata:
                 strcpy(str, "Asia/Kolkata");
                 break;
-            case Nuki::TimeZoneId::Asia_Riyadh:
+            case TimeZoneId::Asia_Riyadh:
                 strcpy(str, "Asia/Riyadh");
                 break;
-            case Nuki::TimeZoneId::Asia_Seoul:
+            case TimeZoneId::Asia_Seoul:
                 strcpy(str, "Asia/Seoul");
                 break;
-            case Nuki::TimeZoneId::Asia_Shanghai:
+            case TimeZoneId::Asia_Shanghai:
                 strcpy(str, "Asia/Shanghai");
                 break;
-            case Nuki::TimeZoneId::Asia_Tehran:
+            case TimeZoneId::Asia_Tehran:
                 strcpy(str, "Asia/Tehran");
                 break;
-            case Nuki::TimeZoneId::Asia_Tokyo:
+            case TimeZoneId::Asia_Tokyo:
                 strcpy(str, "Asia/Tokyo");
                 break;
-            case Nuki::TimeZoneId::Asia_Yangon:
+            case TimeZoneId::Asia_Yangon:
                 strcpy(str, "Asia/Yangon");
                 break;
-            case Nuki::TimeZoneId::Australia_Adelaide:
+            case TimeZoneId::Australia_Adelaide:
                 strcpy(str, "Australia/Adelaide");
                 break;
-            case Nuki::TimeZoneId::Australia_Brisbane:
+            case TimeZoneId::Australia_Brisbane:
                 strcpy(str, "Australia/Brisbane");
                 break;
-            case Nuki::TimeZoneId::Australia_Darwin:
+            case TimeZoneId::Australia_Darwin:
                 strcpy(str, "Australia/Darwin");
                 break;
-            case Nuki::TimeZoneId::Australia_Hobart:
+            case TimeZoneId::Australia_Hobart:
                 strcpy(str, "Australia/Hobart");
                 break;
-            case Nuki::TimeZoneId::Australia_Perth:
+            case TimeZoneId::Australia_Perth:
                 strcpy(str, "Australia/Perth");
                 break;
-            case Nuki::TimeZoneId::Australia_Sydney:
+            case TimeZoneId::Australia_Sydney:
                 strcpy(str, "Australia/Sydney");
                 break;
-            case Nuki::TimeZoneId::Europe_Berlin:
+            case TimeZoneId::Europe_Berlin:
                 strcpy(str, "Europe/Berlin");
                 break;
-            case Nuki::TimeZoneId::Europe_Helsinki:
+            case TimeZoneId::Europe_Helsinki:
                 strcpy(str, "Europe/Helsinki");
                 break;
-            case Nuki::TimeZoneId::Europe_Istanbul:
+            case TimeZoneId::Europe_Istanbul:
                 strcpy(str, "Europe/Istanbul");
                 break;
-            case Nuki::TimeZoneId::Europe_London:
+            case TimeZoneId::Europe_London:
                 strcpy(str, "Europe/London");
                 break;
-            case Nuki::TimeZoneId::Europe_Moscow:
+            case TimeZoneId::Europe_Moscow:
                 strcpy(str, "Europe/Moscow");
                 break;
-            case Nuki::TimeZoneId::Pacific_Auckland:
+            case TimeZoneId::Pacific_Auckland:
                 strcpy(str, "Pacific/Auckland");
                 break;
-            case Nuki::TimeZoneId::Pacific_Guam:
+            case TimeZoneId::Pacific_Guam:
                 strcpy(str, "Pacific/Guam");
                 break;
-            case Nuki::TimeZoneId::Pacific_Honolulu:
+            case TimeZoneId::Pacific_Honolulu:
                 strcpy(str, "Pacific/Honolulu");
                 break;
-            case Nuki::TimeZoneId::Pacific_Pago_Pago:
+            case TimeZoneId::Pacific_Pago_Pago:
                 strcpy(str, "Pacific/Pago_Pago");
                 break;
-            case Nuki::TimeZoneId::None:
+            case TimeZoneId::None:
                 strcpy(str, "None");
                 break;
             default:
@@ -442,31 +443,31 @@ namespace esphome::nuki_lock {
         }
     }
 
-    Nuki::AdvertisingMode advertising_mode_to_enum(const char *str) {
+    AdvertisingMode advertising_mode_to_enum(const char *str) {
         if(strcmp(str, "Automatic") == 0) {
-            return Nuki::AdvertisingMode::Automatic;
+            return AdvertisingMode::Automatic;
         } else if(strcmp(str, "Normal") == 0) {
-            return Nuki::AdvertisingMode::Normal;
+            return AdvertisingMode::Normal;
         } else if(strcmp(str, "Slow") == 0) {
-            return Nuki::AdvertisingMode::Slow;
+            return AdvertisingMode::Slow;
         } else if(strcmp(str, "Slowest") == 0) {
-            return Nuki::AdvertisingMode::Slowest;
+            return AdvertisingMode::Slowest;
         }
-        return (Nuki::AdvertisingMode)0xff;
+        return (AdvertisingMode)0xff;
     }
 
-    void advertising_mode_to_string(const Nuki::AdvertisingMode mode, char* str) {
+    void advertising_mode_to_string(const AdvertisingMode mode, char* str) {
         switch (mode) {
-            case Nuki::AdvertisingMode::Automatic:
+            case AdvertisingMode::Automatic:
                 strcpy(str, "Automatic");
                 break;
-            case Nuki::AdvertisingMode::Normal:
+            case AdvertisingMode::Normal:
                 strcpy(str, "Normal");
                 break;
-            case Nuki::AdvertisingMode::Slow:
+            case AdvertisingMode::Slow:
                 strcpy(str, "Slow");
                 break;
-            case Nuki::AdvertisingMode::Slowest:
+            case AdvertisingMode::Slowest:
                 strcpy(str, "Slowest");
                 break;
             default:
@@ -496,4 +497,42 @@ namespace esphome::nuki_lock {
                 break;
         }
     }
-}
+
+    // Shared by wifi/mqtt/thread_connection_status_to_string below - bits 0-1 of all three
+    // use this same 4-state connection lifecycle.
+    static const char* connection_status_to_string(const uint8_t status) {
+        switch (status & 3) {
+            case 0: return "disabled";
+            case 1: return "disconnected";
+            case 2: return "connecting";
+            default: return "connected";
+        }
+    }
+
+    void wifi_connection_status_to_string(const uint8_t status, char* str) {
+        const char* sse_status;
+        switch ((status >> 2) & 3) {
+            case 0: sse_status = "suspended"; break;
+            case 1: sse_status = "not reachable"; break;
+            case 2: sse_status = "connecting"; break;
+            default: sse_status = "connected"; break;
+        }
+        sprintf(str, "WiFi %s, SSE %s, quality %u%%", connection_status_to_string(status), sse_status, (unsigned)((status >> 4) & 15) * 100 / 15);
+    }
+
+    void mqtt_connection_status_to_string(const uint8_t status, char* str) {
+        sprintf(str, "MQTT %s (via %s)", connection_status_to_string(status), ((status >> 2) & 1) ? "Thread" : "WiFi");
+    }
+
+    void thread_connection_status_to_string(const uint8_t status, char* str) {
+        const char* sse_status;
+        switch ((status >> 2) & 3) {
+            case 0: sse_status = "suspended"; break;
+            case 1: sse_status = "not reachable"; break;
+            case 2: sse_status = "connecting"; break;
+            default: sse_status = "connected"; break;
+        }
+        sprintf(str, "Thread %s, SSE %s%s%s", connection_status_to_string(status), sse_status,
+                (status & 16) ? ", commissioning active" : "", (status & 32) ? ", WiFi suspended" : "");
+    }
+}  // namespace esphome::nuki_lock
