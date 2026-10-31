@@ -186,6 +186,14 @@ class NukiLockComponent :
         void set_command_retries(uint8_t command_retries) { this->command_retries_ = command_retries; }
         void set_command_retry_delay(uint32_t command_retry_delay_millis) { this->command_retry_delay_millis_ = command_retry_delay_millis; }
         void set_config_cache_ttl(uint32_t config_cache_ttl) { this->config_cache_ttl_ = config_cache_ttl; }
+        // Extra debug logging of the BLE protocol, see the `debug:` options in lock.py
+        void set_debug(bool connect, bool communication, bool readable_data, bool hex_data, bool command) {
+            this->debug_connect_ = connect;
+            this->debug_communication_ = communication;
+            this->debug_readable_data_ = readable_data;
+            this->debug_hex_data_ = hex_data;
+            this->debug_command_ = command;
+        }
         // Door sensor report (0x0092) configuration
 #ifdef USE_BINARY_SENSOR
         void set_door_sensor_input(binary_sensor::BinarySensor* door_sensor_input) { this->door_sensor_input_ = door_sensor_input; }
@@ -457,6 +465,13 @@ class NukiLockComponent :
         uint8_t command_retries_ = 5;
         uint32_t command_retry_delay_millis_ = 1000;
         uint32_t config_cache_ttl_ = 60;
+
+        // Debug logging, applied to nuki_lock_ in setup()
+        bool debug_connect_{false};
+        bool debug_communication_{false};
+        bool debug_readable_data_{false};
+        bool debug_hex_data_{false};
+        bool debug_command_{false};
 
         // Event Logs
         uint32_t last_rolling_log_id = 0;

@@ -1245,11 +1245,11 @@ void NukiLockComponent::setup() {
         }
     }
 
-    this->nuki_lock_.set_debug_connect(true);
-    this->nuki_lock_.set_debug_communication(false);
-    this->nuki_lock_.set_debug_readable_data(false);
-    this->nuki_lock_.set_debug_hex_data(false);
-    this->nuki_lock_.set_debug_command(false);
+    this->nuki_lock_.set_debug_connect(this->debug_connect_);
+    this->nuki_lock_.set_debug_communication(this->debug_communication_);
+    this->nuki_lock_.set_debug_readable_data(this->debug_readable_data_);
+    this->nuki_lock_.set_debug_hex_data(this->debug_hex_data_);
+    this->nuki_lock_.set_debug_command(this->debug_command_);
 
     // nuki_lock_ is not registered with App as its own Component, so its own
     // Component::setup() override (BLEClientBase::setup(), which assigns its

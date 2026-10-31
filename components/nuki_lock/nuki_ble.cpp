@@ -71,22 +71,6 @@ NukiBle::NukiBle(const std::string& device_name,
   this->last_received_beacon_ts_ = 0;
   this->last_heartbeat_ = 0;
 
-  #ifdef DEBUG_NUKI_CONNECT
-  this->debug_nuki_connect_ = true;
-  #endif
-  #ifdef DEBUG_NUKI_COMMUNICATION
-  this->debug_nuki_communication_ = true;
-  #endif
-  #ifdef DEBUG_NUKI_READABLE_DATA
-  this->debug_nuki_readable_data_ = true;
-  #endif
-  #ifdef DEBUG_NUKI_HEX_DATA
-  this->debug_nuki_hex_data_ = true;
-  #endif
-  #ifdef DEBUG_NUKI_COMMAND
-  this->debug_nuki_command_ = true;
-  #endif
-
   this->next_instance_ = first_instance_;
   first_instance_ = this;
 }

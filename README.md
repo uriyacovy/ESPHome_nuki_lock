@@ -393,6 +393,7 @@ Recommendation: 1st–4th Gen without official bridge → **bridge**. Ultra / 5t
 | `config_cache_ttl` | Changing a setting reuses lock settings read within this time instead of reading them again (fewer BLE round-trips, but can overwrite a change made in the Nuki app in that window). `0s` always reads fresh. | `1min` |
 | `door_sensor_input` | Binary sensor whose state (`true` = open) is reported to the lock, see [door sensor emulation](#-door-sensor-emulation) | — |
 | `hybrid_mode` | [Hybrid mode](#-hybrid-mode-official-mqtt--ble) | — |
+| `debug` | Extra debug logging, see [Troubleshooting](#%EF%B8%8F-troubleshooting) | all off |
 
 ---
 
@@ -737,6 +738,21 @@ All entities are optional, add the ones you need under the `lock:` block with a 
 ---
 
 # 🛠️ Troubleshooting
+
+**Debug logging**
+
+For bug reports, turn on the extra logging of the Bluetooth protocol (logged at `DEBUG` level, so `logger:` must be at `DEBUG` or lower). Turn it off again afterwards: `connect` alone logs every advertisement, about once per second.
+
+```yaml
+lock:
+  - platform: nuki_lock
+    debug:
+      connect: true          # connection, pairing, credentials, advertisements
+      communication: true    # command flow (challenge, accept, complete)
+      readable_data: false   # received data decoded (states, config, log entries, ...)
+      hex_data: false        # raw messages as hex dumps
+      command: false         # keypad code retrieval progress
+```
 
 **Pairing doesn't work**
 - Bluetooth pairing must be enabled in the Nuki app, and the LED ring must stay lit when you turn on pairing mode.

@@ -202,6 +202,12 @@ CONF_QUERY_INTERVAL_BATTERY_REPORT = "query_interval_battery_report"
 CONF_COMMAND_RETRIES = "command_retries"
 CONF_COMMAND_RETRY_DELAY = "command_retry_delay"
 CONF_CONFIG_CACHE_TTL = "config_cache_ttl"
+CONF_DEBUG = "debug"
+CONF_DEBUG_CONNECT = "connect"
+CONF_DEBUG_COMMUNICATION = "communication"
+CONF_DEBUG_READABLE_DATA = "readable_data"
+CONF_DEBUG_HEX_DATA = "hex_data"
+CONF_DEBUG_COMMAND = "command"
 CONF_DOOR_SENSOR_INPUT = "door_sensor_input"
 CONF_BLE_GENERAL_TIMEOUT = "ble_general_timeout"
 CONF_BLE_COMMAND_TIMEOUT = "ble_command_timeout"
@@ -689,6 +695,21 @@ CONFIG_SCHEMA = cv.All(
             # of overwriting a change made elsewhere (Nuki app, another authorized device) in
             # that window. 0 always fetches fresh.
             cv.Optional(CONF_CONFIG_CACHE_TTL, default="1min"): cv.positive_time_period_seconds,
+            # Extra debug logging of the BLE protocol (logged at DEBUG level)
+            cv.Optional(CONF_DEBUG, default={}): cv.Schema(
+                {
+                    # Connection, pairing, credentials and advertisements
+                    cv.Optional(CONF_DEBUG_CONNECT, default=False): cv.boolean,
+                    # Command state machines (challenge, accept, complete)
+                    cv.Optional(CONF_DEBUG_COMMUNICATION, default=False): cv.boolean,
+                    # Received data decoded (states, config, log entries, ...)
+                    cv.Optional(CONF_DEBUG_READABLE_DATA, default=False): cv.boolean,
+                    # Raw data as hex dumps
+                    cv.Optional(CONF_DEBUG_HEX_DATA, default=False): cv.boolean,
+                    # Keypad code retrieval progress
+                    cv.Optional(CONF_DEBUG_COMMAND, default=False): cv.boolean,
+                }
+            ),
             # Door sensor emulation: every state of this binary sensor (true = open) is
             # reported to the lock
             cv.Optional(CONF_DOOR_SENSOR_INPUT): cv.use_id(binary_sensor.BinarySensor),
@@ -827,6 +848,15 @@ async def to_code(config):
 
     if CONF_CONFIG_CACHE_TTL in config:
         cg.add(var.set_config_cache_ttl(config[CONF_CONFIG_CACHE_TTL]))
+
+    debug = config[CONF_DEBUG]
+    cg.add(var.set_debug(
+        debug[CONF_DEBUG_CONNECT],
+        debug[CONF_DEBUG_COMMUNICATION],
+        debug[CONF_DEBUG_READABLE_DATA],
+        debug[CONF_DEBUG_HEX_DATA],
+        debug[CONF_DEBUG_COMMAND],
+    ))
 
     if door_sensor_input_id := config.get(CONF_DOOR_SENSOR_INPUT):
         door_sensor_input = await cg.get_variable(door_sensor_input_id)
