@@ -1050,6 +1050,7 @@ void NukiLockComponent::loop()
         // are also true) until it reaches a terminal result; only then can a new
         // operation be picked, in priority order: PIN validation, lock actions, queued
         // entity/service commands, then the various periodic polls.
+        bool idle = false;
         if (this->nuki_op_active_) {
             this->nuki_op_step_();
         } else if (this->pin_validation_pending_) {
@@ -1111,6 +1112,8 @@ void NukiLockComponent::loop()
             this->nuki_op_step_ = [this] { this->update_battery_report(); };
             this->nuki_op_step_();
             command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
+        } else {
+            idle = true;
         }
 
         // Process retrieved data
@@ -1122,7 +1125,11 @@ void NukiLockComponent::loop()
             this->event_log_ready_time_ = 0;
         }
 
-        last_command_executed_time_ = millis();
+        // The cooldown only applies after an operation actually ran - restarting it on idle
+        // ticks too would delay every new command (e.g. a lock action) by up to a second
+        if (!idle) {
+            last_command_executed_time_ = millis();
+        }
 
     } else {
         this->connected_ = false;
