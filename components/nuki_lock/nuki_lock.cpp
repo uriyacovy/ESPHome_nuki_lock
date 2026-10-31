@@ -31,6 +31,154 @@ void NukiLockComponent::save_settings() {
     }
 }
 
+// Publishes retrieved_key_turner_state_: from a status request (update_status()) or the
+// state the lock pushes on its own during a lock action (execute_lock_action_step()).
+void NukiLockComponent::process_key_turner_state() {
+    char str[50] = {0};
+
+    this->status_update_consecutive_errors_ = 0;
+    this->connected_ = true;
+
+    LockState current_lock_state = this->retrieved_key_turner_state_.lockState;
+    char current_lock_state_as_string[30] = {0};
+    lock_state_to_string(current_lock_state, current_lock_state_as_string);
+
+    ESP_LOGI(TAG, "Lock state: %s (%d), Battery (state: %#x, critical: %d, level: %d, charging: %s), Time: %d:%d:%d",
+        current_lock_state_as_string,
+        current_lock_state,
+        this->retrieved_key_turner_state_.criticalBatteryState,
+        this->nuki_lock_.is_battery_critical(),
+        this->nuki_lock_.get_battery_perc(),
+        YESNO(this->nuki_lock_.is_battery_charging()),
+        this->retrieved_key_turner_state_.currentTimeHour,
+        this->retrieved_key_turner_state_.currentTimeMinute,
+        this->retrieved_key_turner_state_.currentTimeSecond
+    );
+
+    this->publish_state(nuki_lock::nuki_to_lock_state(this->retrieved_key_turner_state_.lockState));
+
+    #ifdef USE_BINARY_SENSOR
+    if (this->connected_binary_sensor_ != nullptr) {
+        this->connected_binary_sensor_->publish_state(this->connected_);
+    }
+    
+    if (this->battery_critical_binary_sensor_ != nullptr) {
+        this->battery_critical_binary_sensor_->publish_state(this->nuki_lock_.is_battery_critical());
+    }
+
+    if (this->battery_charging_binary_sensor_ != nullptr) {
+        this->battery_charging_binary_sensor_->publish_state(this->nuki_lock_.is_battery_charging());
+    }
+
+    if (this->keypad_battery_critical_binary_sensor_ != nullptr) {
+        this->keypad_battery_critical_binary_sensor_->publish_state(this->nuki_lock_.is_keypad_battery_critical());
+    }
+
+    if (this->door_sensor_battery_critical_binary_sensor_ != nullptr) {
+        this->door_sensor_battery_critical_binary_sensor_->publish_state(this->nuki_lock_.is_door_sensor_battery_critical());
+    }
+
+    // Whether the lock's remote-access (cloud/SSE) uplink is currently connected, via
+    // any transport (bridge, the lock's own WiFi, or Thread) - only supported by Smart
+    // Lock 4th Generation and Ultra; 255 is the struct's default-init sentinel.
+    if (this->remote_access_connected_binary_sensor_ != nullptr) {
+        uint8_t remote_access_status = this->retrieved_key_turner_state_.remoteAccessStatus;
+        if (remote_access_status != 255) {
+            this->remote_access_connected_binary_sensor_->publish_state((remote_access_status & 8) == 8);
+        } else {
+            this->remote_access_connected_binary_sensor_->invalidate_state();
+        }
+    }
+
+    // If pin needs validation, validate now
+    if(this->pin_state_ == PinState::Set) {
+        validate_pin();
+    }
+    
+    if (this->door_sensor_binary_sensor_ != nullptr) {
+        DoorSensorState door_sensor_state = this->retrieved_key_turner_state_.doorSensorState;
+        if(door_sensor_state != DoorSensorState::Unavailable) {
+            this->door_sensor_binary_sensor_->publish_state(nuki_lock::nuki_doorsensor_to_binary(door_sensor_state));
+        } else {
+            this->door_sensor_binary_sensor_->invalidate_state();
+        }
+    }
+    #endif
+    #ifdef USE_SENSOR
+    if (this->battery_level_sensor_ != nullptr) {
+        this->battery_level_sensor_->publish_state(this->nuki_lock_.get_battery_perc());
+    }
+    if (this->bt_signal_sensor_ != nullptr) {
+        this->bt_signal_sensor_->publish_state(this->nuki_lock_.get_rssi());
+    }
+    // Only supported by Smart Lock 4th Generation and Ultra; negative values are the
+    // actual RSSI, 0 means invalid and 1 means not supported.
+    if (this->wifi_connection_strength_sensor_ != nullptr) {
+        int8_t wifi_connection_strength = this->retrieved_key_turner_state_.wifiConnectionStrength;
+        if (wifi_connection_strength < 0) {
+            this->wifi_connection_strength_sensor_->publish_state(wifi_connection_strength);
+        } else {
+            this->wifi_connection_strength_sensor_->publish_state(NAN);
+        }
+    }
+    #endif
+    #ifdef USE_TEXT_SENSOR
+    if (this->door_sensor_state_text_sensor_ != nullptr){
+        memset(str, 0, sizeof(str));
+        door_sensor_state_to_string(this->retrieved_key_turner_state_.doorSensorState, str);
+        this->door_sensor_state_text_sensor_->publish_state(str);
+    }
+
+    if (this->last_lock_action_text_sensor_ != nullptr) {
+        memset(str, 0, sizeof(str));
+        lock_action_to_string(this->retrieved_key_turner_state_.lastLockAction, str);
+        this->last_lock_action_text_sensor_->publish_state(str);
+    }
+
+    if (this->last_lock_action_trigger_text_sensor_ != nullptr) {
+        memset(str, 0, sizeof(str));
+        trigger_to_string(this->retrieved_key_turner_state_.lastLockActionTrigger, str);
+        this->last_lock_action_trigger_text_sensor_->publish_state(str);
+    }
+
+    if (this->last_unlock_user_text_sensor_ != nullptr && this->retrieved_key_turner_state_.lastLockActionTrigger == NukiTrigger::Manual)
+    {
+        this->last_unlock_user_text_sensor_->publish_state("Manual");
+    }
+
+    // WiFi/MQTT/Thread connection status - only supported by Smart Lock 4th Generation
+    // and Ultra; 255 is the struct's default-init sentinel for "not received yet".
+    char status_str[80] = {0};
+    if (this->wifi_connection_status_text_sensor_ != nullptr &&
+        this->retrieved_key_turner_state_.wifiConnectionStatus != 255) {
+        wifi_connection_status_to_string(this->retrieved_key_turner_state_.wifiConnectionStatus, status_str);
+        this->wifi_connection_status_text_sensor_->publish_state(status_str);
+    }
+    if (this->mqtt_connection_status_text_sensor_ != nullptr &&
+        this->retrieved_key_turner_state_.mqttConnectionStatus != 255) {
+        mqtt_connection_status_to_string(this->retrieved_key_turner_state_.mqttConnectionStatus, status_str);
+        this->mqtt_connection_status_text_sensor_->publish_state(status_str);
+    }
+    if (this->thread_connection_status_text_sensor_ != nullptr &&
+        this->retrieved_key_turner_state_.threadConnectionStatus != 255) {
+        thread_connection_status_to_string(this->retrieved_key_turner_state_.threadConnectionStatus, status_str);
+        this->thread_connection_status_text_sensor_->publish_state(status_str);
+    }
+    #endif
+
+    if (this->retrieved_key_turner_state_.lockState == LockState::Locking ||
+        this->retrieved_key_turner_state_.lockState == LockState::Unlocking ||
+        this->retrieved_key_turner_state_.lockState == LockState::Calibration) {
+        // Schedule a status update without waiting for the next advertisement because the lock
+        // is in a transition state. This will speed up the feedback.
+        this->status_update_ = true;
+        
+        if (this->send_events_) {
+            this->event_log_update_ = true;
+        }
+    }
+}
+
 void NukiLockComponent::update_status() {
     CmdResult cmd_result = this->nuki_lock_.request_key_turner_state(&(this->retrieved_key_turner_state_));
     if (cmd_result == CmdResult::Working) {
@@ -47,147 +195,7 @@ void NukiLockComponent::update_status() {
     if (cmd_result == CmdResult::Success) {
         ESP_LOGD(TAG, "request_key_turner_state has resulted in %s (%d)", str, cmd_result);
 
-        this->status_update_consecutive_errors_ = 0;
-        this->connected_ = true;
-
-        LockState current_lock_state = this->retrieved_key_turner_state_.lockState;
-        char current_lock_state_as_string[30] = {0};
-        lock_state_to_string(current_lock_state, current_lock_state_as_string);
-
-        ESP_LOGI(TAG, "Lock state: %s (%d), Battery (state: %#x, critical: %d, level: %d, charging: %s), Time: %d:%d:%d",
-            current_lock_state_as_string,
-            current_lock_state,
-            this->retrieved_key_turner_state_.criticalBatteryState,
-            this->nuki_lock_.is_battery_critical(),
-            this->nuki_lock_.get_battery_perc(),
-            YESNO(this->nuki_lock_.is_battery_charging()),
-            this->retrieved_key_turner_state_.currentTimeHour,
-            this->retrieved_key_turner_state_.currentTimeMinute,
-            this->retrieved_key_turner_state_.currentTimeSecond
-        );
-
-        this->publish_state(nuki_lock::nuki_to_lock_state(this->retrieved_key_turner_state_.lockState));
-
-        #ifdef USE_BINARY_SENSOR
-        if (this->connected_binary_sensor_ != nullptr) {
-            this->connected_binary_sensor_->publish_state(this->connected_);
-        }
-        
-        if (this->battery_critical_binary_sensor_ != nullptr) {
-            this->battery_critical_binary_sensor_->publish_state(this->nuki_lock_.is_battery_critical());
-        }
-
-        if (this->battery_charging_binary_sensor_ != nullptr) {
-            this->battery_charging_binary_sensor_->publish_state(this->nuki_lock_.is_battery_charging());
-        }
-
-        if (this->keypad_battery_critical_binary_sensor_ != nullptr) {
-            this->keypad_battery_critical_binary_sensor_->publish_state(this->nuki_lock_.is_keypad_battery_critical());
-        }
-
-        if (this->door_sensor_battery_critical_binary_sensor_ != nullptr) {
-            this->door_sensor_battery_critical_binary_sensor_->publish_state(this->nuki_lock_.is_door_sensor_battery_critical());
-        }
-
-        // Whether the lock's remote-access (cloud/SSE) uplink is currently connected, via
-        // any transport (bridge, the lock's own WiFi, or Thread) - only supported by Smart
-        // Lock 4th Generation and Ultra; 255 is the struct's default-init sentinel.
-        if (this->remote_access_connected_binary_sensor_ != nullptr) {
-            uint8_t remote_access_status = this->retrieved_key_turner_state_.remoteAccessStatus;
-            if (remote_access_status != 255) {
-                this->remote_access_connected_binary_sensor_->publish_state((remote_access_status & 8) == 8);
-            } else {
-                this->remote_access_connected_binary_sensor_->invalidate_state();
-            }
-        }
-
-        // If pin needs validation, validate now
-        if(this->pin_state_ == PinState::Set) {
-            validate_pin();
-        }
-        
-        if (this->door_sensor_binary_sensor_ != nullptr) {
-            DoorSensorState door_sensor_state = this->retrieved_key_turner_state_.doorSensorState;
-            if(door_sensor_state != DoorSensorState::Unavailable) {
-                this->door_sensor_binary_sensor_->publish_state(nuki_lock::nuki_doorsensor_to_binary(door_sensor_state));
-            } else {
-                this->door_sensor_binary_sensor_->invalidate_state();
-            }
-        }
-        #endif
-        #ifdef USE_SENSOR
-        if (this->battery_level_sensor_ != nullptr) {
-            this->battery_level_sensor_->publish_state(this->nuki_lock_.get_battery_perc());
-        }
-        if (this->bt_signal_sensor_ != nullptr) {
-            this->bt_signal_sensor_->publish_state(this->nuki_lock_.get_rssi());
-        }
-        // Only supported by Smart Lock 4th Generation and Ultra; negative values are the
-        // actual RSSI, 0 means invalid and 1 means not supported.
-        if (this->wifi_connection_strength_sensor_ != nullptr) {
-            int8_t wifi_connection_strength = this->retrieved_key_turner_state_.wifiConnectionStrength;
-            if (wifi_connection_strength < 0) {
-                this->wifi_connection_strength_sensor_->publish_state(wifi_connection_strength);
-            } else {
-                this->wifi_connection_strength_sensor_->publish_state(NAN);
-            }
-        }
-        #endif
-        #ifdef USE_TEXT_SENSOR
-        if (this->door_sensor_state_text_sensor_ != nullptr){
-            memset(str, 0, sizeof(str));
-            door_sensor_state_to_string(this->retrieved_key_turner_state_.doorSensorState, str);
-            this->door_sensor_state_text_sensor_->publish_state(str);
-        }
-
-        if (this->last_lock_action_text_sensor_ != nullptr) {
-            memset(str, 0, sizeof(str));
-            lock_action_to_string(this->retrieved_key_turner_state_.lastLockAction, str);
-            this->last_lock_action_text_sensor_->publish_state(str);
-        }
-
-        if (this->last_lock_action_trigger_text_sensor_ != nullptr) {
-            memset(str, 0, sizeof(str));
-            trigger_to_string(this->retrieved_key_turner_state_.lastLockActionTrigger, str);
-            this->last_lock_action_trigger_text_sensor_->publish_state(str);
-        }
-
-        if (this->last_unlock_user_text_sensor_ != nullptr && this->retrieved_key_turner_state_.lastLockActionTrigger == NukiTrigger::Manual)
-        {
-            this->last_unlock_user_text_sensor_->publish_state("Manual");
-        }
-
-        // WiFi/MQTT/Thread connection status - only supported by Smart Lock 4th Generation
-        // and Ultra; 255 is the struct's default-init sentinel for "not received yet".
-        char status_str[80] = {0};
-        if (this->wifi_connection_status_text_sensor_ != nullptr &&
-            this->retrieved_key_turner_state_.wifiConnectionStatus != 255) {
-            wifi_connection_status_to_string(this->retrieved_key_turner_state_.wifiConnectionStatus, status_str);
-            this->wifi_connection_status_text_sensor_->publish_state(status_str);
-        }
-        if (this->mqtt_connection_status_text_sensor_ != nullptr &&
-            this->retrieved_key_turner_state_.mqttConnectionStatus != 255) {
-            mqtt_connection_status_to_string(this->retrieved_key_turner_state_.mqttConnectionStatus, status_str);
-            this->mqtt_connection_status_text_sensor_->publish_state(status_str);
-        }
-        if (this->thread_connection_status_text_sensor_ != nullptr &&
-            this->retrieved_key_turner_state_.threadConnectionStatus != 255) {
-            thread_connection_status_to_string(this->retrieved_key_turner_state_.threadConnectionStatus, status_str);
-            this->thread_connection_status_text_sensor_->publish_state(status_str);
-        }
-        #endif
-
-        if (this->retrieved_key_turner_state_.lockState == LockState::Locking ||
-            this->retrieved_key_turner_state_.lockState == LockState::Unlocking ||
-            this->retrieved_key_turner_state_.lockState == LockState::Calibration) {
-            // Schedule a status update without waiting for the next advertisement because the lock
-            // is in a transition state. This will speed up the feedback.
-            this->status_update_ = true;
-            
-            if (this->send_events_) {
-                this->event_log_update_ = true;
-            }
-        }
+        this->process_key_turner_state();
     } else {
         ESP_LOGE(TAG, "request_key_turner_state has resulted in %s (%d)", str, cmd_result);
 
@@ -790,6 +798,8 @@ void NukiLockComponent::execute_lock_action_step() {
         this->auto_unlock_ = false;
         this->name_suffix_.clear();
         this->lock_action_in_flight_ = true;
+        // Only states the lock pushes during this action count, see the success case below
+        this->nuki_lock_.clear_pushed_key_turner_state();
 
         char currentlock_action_as_string[30] = {0};
         lock_action_to_string(this->executing_lock_action_, currentlock_action_as_string);
@@ -845,12 +855,24 @@ void NukiLockComponent::execute_lock_action_step() {
         }
     }
 
-    // Schedule a status update without waiting for the next advertisement for a faster feedback
-    this->status_update_ = true;
+    // The lock pushes its state during the action, the final one right before "complete". Use
+    // that instead of requesting it: some locks don't answer a status request on the same
+    // connection right after the action (#117). The advertisement then flags this very state
+    // change too, which would trigger the same request - ignore that for a moment.
+    if (is_execution_successful && this->nuki_lock_.take_pushed_key_turner_state(&this->retrieved_key_turner_state_)) {
+        ESP_LOGD(TAG, "Using the state pushed by the lock during the action");
+        this->process_key_turner_state();
+        this->ignore_status_beacon_until_ = millis() + IGNORE_STATUS_BEACON_AFTER_ACTION_MILLIS;
+        if (this->send_events_) {
+            this->event_log_update_ = true;
+        }
+    } else {
+        // Schedule a status update without waiting for the next advertisement for a faster feedback
+        this->status_update_ = true;
+    }
 
-    // Some locks don't answer a status request sent right after the lock action completed
-    // (#117), so give them a moment. COOLDOWN_COMMANDS_MILLIS stays below
-    // BLE_DISCONNECT_TIMEOUT, so the status is still read on the same connection.
+    // Give the lock a moment before the next command. COOLDOWN_COMMANDS_MILLIS stays below
+    // BLE_DISCONNECT_TIMEOUT, so a status request is still sent on the same connection.
     // Failed attempts use the configured retry delay.
     this->command_cooldown_millis = is_execution_successful ? COOLDOWN_COMMANDS_MILLIS : this->command_retry_delay_millis_;
 }
@@ -1623,6 +1645,13 @@ void NukiLockComponent::notify(EventType event_type) {
         this->publish_pin_state();
     } else if(event_type == EventType::KeyTurnerStatusUpdated) {
         ESP_LOGD(TAG, "KeyTurnerStatusUpdated");
+
+        if ((int32_t)(millis() - this->ignore_status_beacon_until_) < 0) {
+            // Flags the state change of our own lock action, already published from the
+            // state the lock pushed during it
+            ESP_LOGD(TAG, "Ignoring status update flag right after lock action");
+            return;
+        }
 
         #ifdef USE_NUKI_LOCK_HYBRID
         if (this->hybrid_connected_) {

@@ -87,6 +87,15 @@ void NukiLock::retrieve_key_tuner_state(KeyTurnerState* retrievedKeyTurnerState)
   memcpy(retrievedKeyTurnerState, &this->key_turner_state_, sizeof(KeyTurnerState));
 }
 
+bool NukiLock::take_pushed_key_turner_state(KeyTurnerState* retrievedKeyTurnerState) {
+  if (!this->key_turner_state_pushed_) {
+    return false;
+  }
+  this->key_turner_state_pushed_ = false;
+  memcpy(retrievedKeyTurnerState, &this->key_turner_state_, sizeof(KeyTurnerState));
+  return true;
+}
+
 CmdResult NukiLock::request_battery_report(BatteryReport* retrievedBatteryReport) {
   NukiAction action{};
   uint16_t payload = (uint16_t)Command::BatteryReport;
@@ -903,6 +912,7 @@ void NukiLock::handle_return_message(Command returnCode, unsigned char* data, ui
     case Command::KeyturnerStates : {
       print_buffer((uint8_t*)data, dataLen, false, "keyturnerStates", this->debug_nuki_hex_data_);
       memcpy(&this->key_turner_state_, data, dataLen);
+      this->key_turner_state_pushed_ = true;
       if (this->debug_nuki_readable_data_) {
         log_keyturner_state(this->key_turner_state_, true);
       }
