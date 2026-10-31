@@ -737,7 +737,9 @@ CmdResult NukiBle::cmd_state_machine(const TDeviceAction action) {
       break;
     }
     case CommandState::CmdSent: {
-      if ((esp_timer_get_time() / 1000) - this->time_now_ > this->command_timeout_duration_) {
+      // Only data requests (key turner state, battery report, ...) use this state machine -
+      // no motor movement, so the general timeout applies instead of the command timeout
+      if ((esp_timer_get_time() / 1000) - this->time_now_ > this->general_timeout_duration_) {
         ESP_LOGW(HPP_TAG, "Command failed: timeout");
         this->disconnect();
         this->nuki_command_state_ = CommandState::Idle;
