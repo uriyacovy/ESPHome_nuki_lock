@@ -328,7 +328,8 @@ bool NukiBle::parse_device(const esphome::esp32_ble_tracker::ESPBTDevice &device
     // of an active GATT connection. The address match above is already device-specific
     // enough on its own.
     if (this->debug_nuki_connect_) {
-      ESP_LOGD(TAG, "Nuki Advertising: %s", device.address_str().c_str());
+      char address[esphome::MAC_ADDRESS_PRETTY_BUFFER_SIZE];
+      ESP_LOGD(TAG, "Nuki Advertising: %s", device.address_str_to(address));
     }
 
     // Nuki repurposes the iBeacon "measured power" byte as a status-changed bit (bit 0),
@@ -381,7 +382,8 @@ bool NukiBle::parse_device(const esphome::esp32_ble_tracker::ESPBTDevice &device
     for (const auto &service_data : device.get_service_datas()) {
       if (service_data.uuid == this->pairing_service_uuid_) {
         if (this->debug_nuki_connect_) {
-          ESP_LOGD(TAG, "Found nuki in pairing state: %s addr: %s", device.get_name().c_str(), device.address_str().c_str());
+          char address[esphome::MAC_ADDRESS_PRETTY_BUFFER_SIZE];
+          ESP_LOGD(TAG, "Found nuki in pairing state: %s addr: %s", device.get_name().c_str(), device.address_str_to(address));
         }
         this->set_address(device.address_uint64());
         this->set_remote_addr_type(device.get_address_type());
@@ -391,7 +393,8 @@ bool NukiBle::parse_device(const esphome::esp32_ble_tracker::ESPBTDevice &device
         return true;
       } else if (service_data.uuid == this->pairing_service_ultra_uuid_) {
         if (this->debug_nuki_connect_) {
-          ESP_LOGD(TAG, "Found nuki ultra in pairing state: %s addr: %s", device.get_name().c_str(), device.address_str().c_str());
+          char address[esphome::MAC_ADDRESS_PRETTY_BUFFER_SIZE];
+          ESP_LOGD(TAG, "Found nuki ultra in pairing state: %s addr: %s", device.get_name().c_str(), device.address_str_to(address));
         }
 
         if (this->ultra_pin_code_ == 000000) {
