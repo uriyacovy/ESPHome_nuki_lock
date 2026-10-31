@@ -305,6 +305,21 @@ PairingModeOffTrigger = nuki_lock_ns.class_("PairingModeOffTrigger", automation.
 PairedTrigger = nuki_lock_ns.class_("PairedTrigger", automation.Trigger.template())
 EventLogReceivedTrigger = nuki_lock_ns.class_("EventLogReceivedTrigger", automation.Trigger.template())
 
+# The id is sent to the lock as authorization name, which has a fixed 32 byte field
+DEVICE_NAME_MAX_LEN = 32
+
+
+def _validate_device_name(config):
+    # Generated ids aren't assigned yet at this point; nuki_ble.cpp truncates those if needed
+    device_id = config[CONF_ID]
+    if device_id.is_manual and len(device_id.id) > DEVICE_NAME_MAX_LEN:
+        raise cv.Invalid(
+            f"The id is shown as name in the Nuki app and can have at most {DEVICE_NAME_MAX_LEN} characters",
+            path=[CONF_ID],
+        )
+    return config
+
+
 CONFIG_SCHEMA = cv.All(
     lock.lock_schema(NukiLockComponent).extend(
         esp32_ble_tracker.ESP_BLE_DEVICE_SCHEMA
@@ -724,6 +739,7 @@ CONFIG_SCHEMA = cv.All(
         }
     ),
     esp32_ble.consume_connection_slots(1, "nuki_lock"),
+    _validate_device_name,
 )
 
 

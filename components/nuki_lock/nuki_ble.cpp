@@ -1026,7 +1026,8 @@ PairingState NukiBle::pair_state_machine(const PairingState nukiPairingState) {
           authorizationDataId[1] = (this->device_id_ >> (8 * 1)) & 0xff;
           authorizationDataId[2] = (this->device_id_ >> (8 * 2)) & 0xff;
           authorizationDataId[3] = (this->device_id_ >> (8 * 3)) & 0xff;
-          memcpy(authorizationDataName, this->device_name_.c_str(), this->device_name_.size());
+          // The name field is fixed at 32 bytes (lock.py caps the id accordingly)
+          memcpy(authorizationDataName, this->device_name_.c_str(), std::min(this->device_name_.size(), sizeof(authorizationDataName)));
 
           //compose and send message
           unsigned char authorizationDataMessage[40];
@@ -1052,7 +1053,8 @@ PairingState NukiBle::pair_state_machine(const PairingState nukiPairingState) {
           authorizationDataId[1] = (this->device_id_ >> (8 * 1)) & 0xff;
           authorizationDataId[2] = (this->device_id_ >> (8 * 2)) & 0xff;
           authorizationDataId[3] = (this->device_id_ >> (8 * 3)) & 0xff;
-          memcpy(authorizationDataName, this->device_name_.c_str(), this->device_name_.size());
+          // The name field is fixed at 32 bytes (lock.py caps the id accordingly)
+          memcpy(authorizationDataName, this->device_name_.c_str(), std::min(this->device_name_.size(), sizeof(authorizationDataName)));
           generate_nonce(authorizationDataNonce, sizeof(authorizationDataNonce), this->debug_nuki_hex_data_);
 
           //calculate authenticator of message to send
