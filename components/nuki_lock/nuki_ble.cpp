@@ -261,6 +261,12 @@ void NukiBle::on_disconnect_complete(esp_err_t reason) {
   this->usdio_char_ = nullptr;
   this->notify_registered_ = false;
 
+  if (this->service_cache_invalid_) {
+    this->service_cache_invalid_ = false;
+    ESP_LOGD(TAG, "Clearing the cached GATT services, the next connection discovers them again");
+    esp_ble_gattc_cache_clean(this->get_remote_bda());
+  }
+
   if (reason == ESP_GATT_CONN_TIMEOUT) {
     if (this->debug_nuki_connect_) {
       ESP_LOGD(TAG, "Error while disconnecting BLE client");
@@ -269,6 +275,13 @@ void NukiBle::on_disconnect_complete(esp_err_t reason) {
       this->event_handler_->notify(EventType::BLE_ERROR_ON_DISCONNECT);
     }
   }
+}
+
+void NukiBle::invalidate_service_cache() {
+  if (!this->service_cache_invalid_) {
+    ESP_LOGW(TAG, "Cached GATT services don't match the lock, discovering them again on the next connection");
+  }
+  this->service_cache_invalid_ = true;
 }
 
 void NukiBle::set_disconnect_timeout(uint32_t timeoutMs) {
@@ -1258,6 +1271,7 @@ bool NukiBle::register_on_gdio_char() {
   auto *chr = this->get_characteristic(serviceUuid, charUuid);
   if (chr == nullptr) {
     ESP_LOGW(TAG, "Unable to get GDIO characteristic");
+    this->invalidate_service_cache();
     this->disconnect();
     return false;
   }
@@ -1266,6 +1280,7 @@ bool NukiBle::register_on_gdio_char() {
     if (this->debug_nuki_communication_) {
       ESP_LOGD(TAG, "GDIO characteristic canIndicate false, stop connecting");
     }
+    this->invalidate_service_cache();
     this->disconnect();
     return false;
   }
@@ -1274,6 +1289,7 @@ bool NukiBle::register_on_gdio_char() {
   auto status = esp_ble_gattc_register_for_notify(this->get_gattc_if(), this->get_remote_bda(), chr->handle);
   if (status != ESP_OK) {
     ESP_LOGW(TAG, "Unable to subscribe to GDIO characteristic");
+    this->invalidate_service_cache();
     this->disconnect();
     return false;
   }
@@ -1290,6 +1306,7 @@ bool NukiBle::register_on_usdio_char() {
   auto *chr = this->get_characteristic(this->device_service_uuid_, this->user_data_uuid_);
   if (chr == nullptr) {
     ESP_LOGW(TAG, "Unable to get USDIO characteristic");
+    this->invalidate_service_cache();
     this->disconnect();
     return false;
   }
@@ -1298,6 +1315,7 @@ bool NukiBle::register_on_usdio_char() {
     if (this->debug_nuki_communication_) {
       ESP_LOGD(TAG, "USDIO characteristic canIndicate false, stop connecting");
     }
+    this->invalidate_service_cache();
     this->disconnect();
     return false;
   }
@@ -1306,6 +1324,7 @@ bool NukiBle::register_on_usdio_char() {
   auto status = esp_ble_gattc_register_for_notify(this->get_gattc_if(), this->get_remote_bda(), chr->handle);
   if (status != ESP_OK) {
     ESP_LOGW(TAG, "Unable to subscribe to USDIO characteristic");
+    this->invalidate_service_cache();
     this->disconnect();
     return false;
   }
@@ -1350,8 +1369,19 @@ bool NukiBle::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gatt
           this->notify_registered_ = true;
         } else {
           ESP_LOGW(TAG, "Unable to subscribe characteristic (status %d)", param->reg_for_notify.status);
+          this->invalidate_service_cache();
           this->disconnect();
         }
+      }
+      break;
+    }
+    case ESP_GATTC_WRITE_CHAR_EVT:
+    case ESP_GATTC_WRITE_DESCR_EVT: {
+      // A handle from a stale service cache no longer exists on the lock
+      if (param->write.conn_id == this->get_conn_id() && param->write.status == ESP_GATT_INVALID_HANDLE) {
+        ESP_LOGW(TAG, "Writing handle 0x%x failed, invalid handle", param->write.handle);
+        this->invalidate_service_cache();
+        this->disconnect();
       }
       break;
     }

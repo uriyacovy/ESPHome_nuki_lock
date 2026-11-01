@@ -1270,6 +1270,12 @@ async def to_code(config):
     # duplicate-advertisement filtering must stay off.
     add_idf_sdkconfig_option("CONFIG_BTDM_BLE_SCAN_DUPL", False)
 
+    # Keep the lock's GATT services cached in NVS (like bluetooth_proxy's cache_services).
+    # Without it, ESPHome clears Bluedroid's cache after every disconnect and each
+    # connection runs a full service discovery (~5 s with Nuki locks) before a command
+    # can be sent. A cache that no longer fits the lock is dropped by NukiBle.
+    add_idf_sdkconfig_option("CONFIG_BT_GATTC_CACHE_NVS_FLASH", True)
+
     # Build flags
     cg.add_build_flag("-Wno-unused-result")
     cg.add_build_flag("-Wno-ignored-qualifiers")

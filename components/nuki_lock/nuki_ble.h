@@ -534,6 +534,13 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
     // takes several seconds). Reset by connect_ble() whenever a fresh connect() is kicked
     // off, so the next wait logs its one line again.
     bool not_connected_logged_ = false;
+    // The lock's GATT services are cached in NVS (CONFIG_BT_GATTC_CACHE_NVS_FLASH, see
+    // lock.py), so reconnects skip the full service discovery. Set when the cached services
+    // don't fit the lock (characteristic missing, subscribing failed, invalid handle - e.g.
+    // after a lock firmware update); on_disconnect_complete() then drops the cache so the
+    // next connection discovers the services again.
+    bool service_cache_invalid_ = false;
+    void invalidate_service_cache();
     esphome::esp32_ble_client::BLECharacteristic *gdio_char_ = nullptr;
     esphome::esp32_ble_client::BLECharacteristic *usdio_char_ = nullptr;
 

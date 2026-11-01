@@ -775,6 +775,10 @@ lock:
 **Crashes, reboots or out of memory**
 - BLE, WiFi and encrypted API together need a lot of RAM, and the build log warns about API encryption. Use a board with PSRAM and add `psram:`, or reduce other components.
 
+**Commands take several seconds before the lock moves**
+- Each command first connects to the lock. The lock's services are cached in flash, so only the first connection after flashing (or after a lock firmware update) runs the full service discovery of about 5 s. If the log shows `Service discovery complete` several seconds after `Connection open` on every command, the cache isn't used.
+- From idle, the lock can take a few seconds to accept the connection, right after a previous one it's almost instant. Weak signals make this worse, check `bt_signal_strength`.
+
 **Other Bluetooth devices react slower**
 - The component switches the whole BLE scanner to continuous active scanning, see [Requirements](#-requirements).
 
