@@ -120,24 +120,25 @@ PairingResult NukiBle::pair_nuki(AuthorizationIdType idType) {
   if (!this->pairing_in_progress_) {
     this->authorization_id_type_ = idType;
 
-    if (this->retrieve_credentials()) {
-      if (this->debug_nuki_connect_) {
-        ESP_LOGD(TAG, "Already paired");
-      }
-      this->is_paired_ = true;
+    // is_paired_ follows the stored credentials (initialize(), pairing, unpair_nuki()),
+    // no need to read them from flash again on every call
+    if (this->is_paired_) {
       return PairingResult::Success;
     }
 
     if (this->pairing_last_seen_ < (esp_timer_get_time() / 1000) - 2000) this->pairing_service_available_ = false;
 
     if (!(this->pairing_service_available_ && this->get_address() != 0)) {
-      if (this->debug_nuki_connect_) {
-        ESP_LOGD(TAG, "No nuki in pairing mode found");
+      // Called on every loop tick while waiting, log it once
+      if (this->debug_nuki_connect_ && !this->pairing_wait_logged_) {
+        ESP_LOGD(TAG, "[%s] Waiting for a lock in pairing mode", this->device_name_.c_str());
       }
+      this->pairing_wait_logged_ = true;
       return PairingResult::Pairing;
     }
 
     this->pairing_service_available_ = false;
+    this->pairing_wait_logged_ = false;
     if (this->debug_nuki_connect_) {
       ESP_LOGD(TAG, "Nuki in pairing mode found");
     }
@@ -884,16 +885,17 @@ bool NukiBle::retrieve_credentials() {
     }
     this->set_address(address);
 
+    // unpair_nuki() leaves the credentials empty
+    if (is_char_array_empty(this->secret_key_k_, sizeof(this->secret_key_k_)) || is_char_array_empty(this->authorization_id_, sizeof(this->authorization_id_))) {
+      ESP_LOGI(TAG, "[%s] Not paired", this->device_name_.c_str());
+      return false;
+    }
+
     if (this->debug_nuki_connect_) {
       ESP_LOGI(TAG, "[%s] Credentials retrieved:", this->device_name_.c_str());
       print_buffer(this->secret_key_k_, sizeof(this->secret_key_k_), false, SECRET_KEY_STORE_NAME, this->debug_nuki_hex_data_);
       ESP_LOGD(TAG, "bleAddress: %s", this->address_str());
       print_buffer(this->authorization_id_, sizeof(this->authorization_id_), false, AUTH_ID_STORE_NAME, this->debug_nuki_hex_data_);
-    }
-
-    if (is_char_array_empty(this->secret_key_k_, sizeof(this->secret_key_k_)) || is_char_array_empty(this->authorization_id_, sizeof(this->authorization_id_))) {
-      ESP_LOGW(TAG, "secret key OR authorization_id is empty: not paired");
-      return false;
     }
 
     bool isUltraLock = false;
@@ -914,7 +916,7 @@ bool NukiBle::retrieve_credentials() {
       }
     }
   } else {
-    ESP_LOGE(TAG, "No credentials found - not paired yet!");
+    ESP_LOGI(TAG, "[%s] Not paired yet", this->device_name_.c_str());
     return false;
   }
   return true;

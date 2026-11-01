@@ -406,7 +406,10 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
      *
      * @param active Set to true while pairing mode is active
      */
-    void set_pairing_mode_active(bool active) { this->pairing_mode_active_ = active; }
+    void set_pairing_mode_active(bool active) {
+      this->pairing_mode_active_ = active;
+      this->pairing_wait_logged_ = false;
+    }
 
   protected:
     // Connects (if needed) to the service relevant for `pairing` (pairing service/GDIO vs.
@@ -578,6 +581,8 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
     // parse_device()'s unpaired-device branch only reacts to pairing-mode advertisements
     // while we're actually trying to pair.
     bool pairing_mode_active_ = false;
+    // "Waiting for a lock in pairing mode" was logged for the current wait
+    bool pairing_wait_logged_ = false;
 
     // All NukiBle instances (one per nuki_lock: block), so pairing can skip locks another
     // instance is already paired with - see is_paired_by_other_instance()
