@@ -167,40 +167,40 @@ void log_lock_error_code(uint8_t errorCode, bool debug) {
 
 void log_config(Config config, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "nukiId: %d", (unsigned int)config.nukiId);
+    ESP_LOGD(TAG, "nukiId: %u", (unsigned int)config.nukiId);
     ESP_LOGD(TAG, "name: %s", (const char*)config.name);
     ESP_LOGD(TAG, "latitude: %f", (const float)config.latitude);
     ESP_LOGD(TAG, "longitude: %f", (const float)config.longitude);
-    ESP_LOGD(TAG, "autoUnlatch: %d", (unsigned int)config.autoUnlatch);
-    ESP_LOGD(TAG, "pairing_enabled: %d", (unsigned int)config.pairing_enabled);
-    ESP_LOGD(TAG, "buttonEnabled: %d", (unsigned int)config.buttonEnabled);
-    ESP_LOGD(TAG, "ledEnabled: %d", (unsigned int)config.ledEnabled);
-    ESP_LOGD(TAG, "ledBrightness: %d", (unsigned int)config.ledBrightness);
-    ESP_LOGD(TAG, "currentTime Year: %d", (unsigned int)config.currentTimeYear);
-    ESP_LOGD(TAG, "currentTime Month: %d", (unsigned int)config.currentTimeMonth);
-    ESP_LOGD(TAG, "currentTime Day: %d", (unsigned int)config.currentTimeDay);
-    ESP_LOGD(TAG, "currentTime Hour: %d", (unsigned int)config.currentTimeHour);
-    ESP_LOGD(TAG, "currentTime Minute: %d", (unsigned int)config.currentTimeMinute);
-    ESP_LOGD(TAG, "currentTime Second: %d", (unsigned int)config.currentTimeSecond);
-    ESP_LOGD(TAG, "timeZoneOffset: %d", (unsigned int)config.timeZoneOffset);
-    ESP_LOGD(TAG, "dstMode: %d", (unsigned int)config.dstMode);
-    ESP_LOGD(TAG, "hasFob: %d", (unsigned int)config.hasFob);
-    ESP_LOGD(TAG, "fobAction1: %d", (unsigned int)config.fobAction1);
-    ESP_LOGD(TAG, "fobAction2: %d", (unsigned int)config.fobAction2);
-    ESP_LOGD(TAG, "fobAction3: %d", (unsigned int)config.fobAction3);
-    ESP_LOGD(TAG, "singleLock: %d", (unsigned int)config.singleLock);
-    ESP_LOGD(TAG, "advertisingMode: %d", (unsigned int)config.advertisingMode);
-    ESP_LOGD(TAG, "hasKeypad: %d", (unsigned int)config.hasKeypad);
+    ESP_LOGD(TAG, "autoUnlatch: %u", (unsigned int)config.autoUnlatch);
+    ESP_LOGD(TAG, "pairing_enabled: %u", (unsigned int)config.pairing_enabled);
+    ESP_LOGD(TAG, "buttonEnabled: %u", (unsigned int)config.buttonEnabled);
+    ESP_LOGD(TAG, "ledEnabled: %u", (unsigned int)config.ledEnabled);
+    ESP_LOGD(TAG, "ledBrightness: %u", (unsigned int)config.ledBrightness);
+    ESP_LOGD(TAG, "currentTime Year: %u", (unsigned int)config.currentTimeYear);
+    ESP_LOGD(TAG, "currentTime Month: %u", (unsigned int)config.currentTimeMonth);
+    ESP_LOGD(TAG, "currentTime Day: %u", (unsigned int)config.currentTimeDay);
+    ESP_LOGD(TAG, "currentTime Hour: %u", (unsigned int)config.currentTimeHour);
+    ESP_LOGD(TAG, "currentTime Minute: %u", (unsigned int)config.currentTimeMinute);
+    ESP_LOGD(TAG, "currentTime Second: %u", (unsigned int)config.currentTimeSecond);
+    ESP_LOGD(TAG, "timeZoneOffset: %d", (int)config.timeZoneOffset);
+    ESP_LOGD(TAG, "dstMode: %u", (unsigned int)config.dstMode);
+    ESP_LOGD(TAG, "hasFob: %u", (unsigned int)config.hasFob);
+    ESP_LOGD(TAG, "fobAction1: %u", (unsigned int)config.fobAction1);
+    ESP_LOGD(TAG, "fobAction2: %u", (unsigned int)config.fobAction2);
+    ESP_LOGD(TAG, "fobAction3: %u", (unsigned int)config.fobAction3);
+    ESP_LOGD(TAG, "singleLock: %u", (unsigned int)config.singleLock);
+    ESP_LOGD(TAG, "advertisingMode: %u", (unsigned int)config.advertisingMode);
+    ESP_LOGD(TAG, "hasKeypad: %u", (unsigned int)config.hasKeypad);
     ESP_LOGD(TAG, "firmwareVersion: %d.%d.%d", config.firmwareVersion[0], config.firmwareVersion[1], config.firmwareVersion[2]);
     ESP_LOGD(TAG, "hardwareRevision: %d.%d", config.hardwareRevision[0], config.hardwareRevision[1]);
-    ESP_LOGD(TAG, "homeKitStatus: %d", (unsigned int)config.homeKitStatus);
-    ESP_LOGD(TAG, "timeZoneId: %d", (unsigned int)config.timeZoneId);
-    ESP_LOGD(TAG, "deviceType: %d", (unsigned int)config.deviceType);
-    ESP_LOGD(TAG, "wifiCapable: %d", (unsigned int)config.capabilities & 1);
-    ESP_LOGD(TAG, "threadCapable: %d", (unsigned int)(((unsigned int)config.capabilities & 2) != 0 ? 1:  0));
-    ESP_LOGD(TAG, "hasKeypadV2: %d", (unsigned int)config.hasKeypadV2);
-    ESP_LOGD(TAG, "matterStatus: %d", (unsigned int)config.matterStatus);
-    ESP_LOGD(TAG, "productVariant: %d", (unsigned int)config.productVariant);
+    ESP_LOGD(TAG, "homeKitStatus: %u", (unsigned int)config.homeKitStatus);
+    ESP_LOGD(TAG, "timeZoneId: %u", (unsigned int)config.timeZoneId);
+    ESP_LOGD(TAG, "deviceType: %u", (unsigned int)config.deviceType);
+    ESP_LOGD(TAG, "wifiCapable: %u", (unsigned int)config.capabilities & 1);
+    ESP_LOGD(TAG, "threadCapable: %u", (unsigned int)(((unsigned int)config.capabilities & 2) != 0 ? 1:  0));
+    ESP_LOGD(TAG, "hasKeypadV2: %u", (unsigned int)config.hasKeypadV2);
+    ESP_LOGD(TAG, "matterStatus: %u", (unsigned int)config.matterStatus);
+    ESP_LOGD(TAG, "productVariant: %u", (unsigned int)config.productVariant);
   }
 }
 
@@ -209,37 +209,37 @@ void log_new_config(NewConfig newConfig, bool debug) {
     ESP_LOGD(TAG, "name: %s", (const char*)newConfig.name);
     ESP_LOGD(TAG, "latitude: %f", (const float)newConfig.latitude);
     ESP_LOGD(TAG, "longitude: %f", (const float)newConfig.longitude);
-    ESP_LOGD(TAG, "autoUnlatch: %d", (unsigned int)newConfig.autoUnlatch);
-    ESP_LOGD(TAG, "pairing_enabled: %d", (unsigned int)newConfig.pairing_enabled);
-    ESP_LOGD(TAG, "buttonEnabled: %d", (unsigned int)newConfig.buttonEnabled);
-    ESP_LOGD(TAG, "ledEnabled: %d", (unsigned int)newConfig.ledEnabled);
-    ESP_LOGD(TAG, "ledBrightness: %d", (unsigned int)newConfig.ledBrightness);
-    ESP_LOGD(TAG, "timeZoneOffset: %d", (unsigned int)newConfig.timeZoneOffset);
-    ESP_LOGD(TAG, "dstMode: %d", (unsigned int)newConfig.dstMode);
-    ESP_LOGD(TAG, "fobAction1: %d", (unsigned int)newConfig.fobAction1);
-    ESP_LOGD(TAG, "fobAction2: %d", (unsigned int)newConfig.fobAction2);
-    ESP_LOGD(TAG, "fobAction3: %d", (unsigned int)newConfig.fobAction3);
-    ESP_LOGD(TAG, "singleLock: %d", (unsigned int)newConfig.singleLock);
-    ESP_LOGD(TAG, "advertisingMode: %d", (unsigned int)newConfig.advertisingMode);
-    ESP_LOGD(TAG, "timeZoneId: %d", (unsigned int)newConfig.timeZoneId);
+    ESP_LOGD(TAG, "autoUnlatch: %u", (unsigned int)newConfig.autoUnlatch);
+    ESP_LOGD(TAG, "pairing_enabled: %u", (unsigned int)newConfig.pairing_enabled);
+    ESP_LOGD(TAG, "buttonEnabled: %u", (unsigned int)newConfig.buttonEnabled);
+    ESP_LOGD(TAG, "ledEnabled: %u", (unsigned int)newConfig.ledEnabled);
+    ESP_LOGD(TAG, "ledBrightness: %u", (unsigned int)newConfig.ledBrightness);
+    ESP_LOGD(TAG, "timeZoneOffset: %d", (int)newConfig.timeZoneOffset);
+    ESP_LOGD(TAG, "dstMode: %u", (unsigned int)newConfig.dstMode);
+    ESP_LOGD(TAG, "fobAction1: %u", (unsigned int)newConfig.fobAction1);
+    ESP_LOGD(TAG, "fobAction2: %u", (unsigned int)newConfig.fobAction2);
+    ESP_LOGD(TAG, "fobAction3: %u", (unsigned int)newConfig.fobAction3);
+    ESP_LOGD(TAG, "singleLock: %u", (unsigned int)newConfig.singleLock);
+    ESP_LOGD(TAG, "advertisingMode: %u", (unsigned int)newConfig.advertisingMode);
+    ESP_LOGD(TAG, "timeZoneId: %u", (unsigned int)newConfig.timeZoneId);
   }
 }
 
 void log_new_time_control_entry(NewTimeControlEntry newTimeControlEntry, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "weekdays:%d", (unsigned int)newTimeControlEntry.weekdays);
-    ESP_LOGD(TAG, "time:%d:%d", (unsigned int)newTimeControlEntry.timeHour, newTimeControlEntry.timeMin);
-    ESP_LOGD(TAG, "lock_action:%d", (unsigned int)newTimeControlEntry.lock_action);
+    ESP_LOGD(TAG, "weekdays:%u", (unsigned int)newTimeControlEntry.weekdays);
+    ESP_LOGD(TAG, "time:%u:%u", (unsigned int)newTimeControlEntry.timeHour, (unsigned int)newTimeControlEntry.timeMin);
+    ESP_LOGD(TAG, "lock_action:%u", (unsigned int)newTimeControlEntry.lock_action);
   }
 }
 
 void log_time_control_entry(TimeControlEntry timeControlEntry, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "entryId:%d", (unsigned int)timeControlEntry.entryId);
-    ESP_LOGD(TAG, "enabled:%d", (unsigned int)timeControlEntry.enabled);
-    ESP_LOGD(TAG, "weekdays:%d", (unsigned int)timeControlEntry.weekdays);
-    ESP_LOGD(TAG, "time:%d:%d", (unsigned int)timeControlEntry.timeHour, timeControlEntry.timeMin);
-    ESP_LOGD(TAG, "lock_action:%d", (unsigned int)timeControlEntry.lock_action);
+    ESP_LOGD(TAG, "entryId:%u", (unsigned int)timeControlEntry.entryId);
+    ESP_LOGD(TAG, "enabled:%u", (unsigned int)timeControlEntry.enabled);
+    ESP_LOGD(TAG, "weekdays:%u", (unsigned int)timeControlEntry.weekdays);
+    ESP_LOGD(TAG, "time:%u:%u", (unsigned int)timeControlEntry.timeHour, (unsigned int)timeControlEntry.timeMin);
+    ESP_LOGD(TAG, "lock_action:%u", (unsigned int)timeControlEntry.lock_action);
   }
 }
 
@@ -351,68 +351,68 @@ void log_lock_action(LockAction lock_action, bool debug) {
 void log_keyturner_state(KeyTurnerState keyTurnerState, bool debug) {
   if (debug) {
     ESP_LOGD(TAG, "nukiState: %02x", (unsigned int)keyTurnerState.nukiState);
-    ESP_LOGD(TAG, "lockState: %d", (unsigned int)keyTurnerState.lockState);
+    ESP_LOGD(TAG, "lockState: %u", (unsigned int)keyTurnerState.lockState);
     log_nuki_trigger(keyTurnerState.trigger, debug);
-    ESP_LOGD(TAG, "currentTimeYear: %d", (unsigned int)keyTurnerState.currentTimeYear);
-    ESP_LOGD(TAG, "currentTimeMonth: %d", (unsigned int)keyTurnerState.currentTimeMonth);
-    ESP_LOGD(TAG, "currentTimeDay: %d", (unsigned int)keyTurnerState.currentTimeDay);
-    ESP_LOGD(TAG, "currentTimeHour: %d", (unsigned int)keyTurnerState.currentTimeHour);
-    ESP_LOGD(TAG, "currentTimeMinute: %d", (unsigned int)keyTurnerState.currentTimeMinute);
-    ESP_LOGD(TAG, "currentTimeSecond: %d", (unsigned int)keyTurnerState.currentTimeSecond);
-    ESP_LOGD(TAG, "timeZoneOffset: %d", (unsigned int)keyTurnerState.timeZoneOffset);
-    ESP_LOGD(TAG, "criticalBatteryState composed value: %d", (unsigned int)keyTurnerState.criticalBatteryState);
-    ESP_LOGD(TAG, "criticalBatteryState: %d", (unsigned int)(((unsigned int)keyTurnerState.criticalBatteryState) == 1 ? 1 : 0));
-    ESP_LOGD(TAG, "batteryCharging: %d", (unsigned int)(((unsigned int)keyTurnerState.criticalBatteryState & 2) == 2 ? 1 : 0));
-    ESP_LOGD(TAG, "batteryPercent: %d", (unsigned int)((keyTurnerState.criticalBatteryState & 0b11111100) >> 1));
-    ESP_LOGD(TAG, "configUpdateCount: %d", (unsigned int)keyTurnerState.configUpdateCount);
-    ESP_LOGD(TAG, "lockNgoTimer: %d", (unsigned int)keyTurnerState.lockNgoTimer);
+    ESP_LOGD(TAG, "currentTimeYear: %u", (unsigned int)keyTurnerState.currentTimeYear);
+    ESP_LOGD(TAG, "currentTimeMonth: %u", (unsigned int)keyTurnerState.currentTimeMonth);
+    ESP_LOGD(TAG, "currentTimeDay: %u", (unsigned int)keyTurnerState.currentTimeDay);
+    ESP_LOGD(TAG, "currentTimeHour: %u", (unsigned int)keyTurnerState.currentTimeHour);
+    ESP_LOGD(TAG, "currentTimeMinute: %u", (unsigned int)keyTurnerState.currentTimeMinute);
+    ESP_LOGD(TAG, "currentTimeSecond: %u", (unsigned int)keyTurnerState.currentTimeSecond);
+    ESP_LOGD(TAG, "timeZoneOffset: %d", (int)keyTurnerState.timeZoneOffset);
+    ESP_LOGD(TAG, "criticalBatteryState composed value: %u", (unsigned int)keyTurnerState.criticalBatteryState);
+    ESP_LOGD(TAG, "criticalBatteryState: %u", (unsigned int)(((unsigned int)keyTurnerState.criticalBatteryState) == 1 ? 1 : 0));
+    ESP_LOGD(TAG, "batteryCharging: %u", (unsigned int)(((unsigned int)keyTurnerState.criticalBatteryState & 2) == 2 ? 1 : 0));
+    ESP_LOGD(TAG, "batteryPercent: %u", (unsigned int)((keyTurnerState.criticalBatteryState & 0b11111100) >> 1));
+    ESP_LOGD(TAG, "configUpdateCount: %u", (unsigned int)keyTurnerState.configUpdateCount);
+    ESP_LOGD(TAG, "lockNgoTimer: %u", (unsigned int)keyTurnerState.lockNgoTimer);
     log_lock_action((LockAction)keyTurnerState.lastLockAction, debug);
-    ESP_LOGD(TAG, "lastLockActionTrigger: %d", (unsigned int)keyTurnerState.lastLockActionTrigger);
+    ESP_LOGD(TAG, "lastLockActionTrigger: %u", (unsigned int)keyTurnerState.lastLockActionTrigger);
     log_completion_status(keyTurnerState.lastLockActionCompletionStatus, debug);
-    ESP_LOGD(TAG, "doorSensorState: %d", (unsigned int)keyTurnerState.doorSensorState);
-    ESP_LOGD(TAG, "nightModeActive: %d", (unsigned int)keyTurnerState.nightModeActive);
-    ESP_LOGD(TAG, "accessoryBatteryState composed value: %d", (unsigned int)keyTurnerState.accessoryBatteryState);
-    ESP_LOGD(TAG, "Keypad bat critical feature supported: %d", (unsigned int)(((unsigned int)keyTurnerState.accessoryBatteryState & 1) == 1 ? 1 : 0));
-    ESP_LOGD(TAG, "Keypad Battery Critical: %d", (unsigned int)(((unsigned int)keyTurnerState.accessoryBatteryState & 3) == 3 ? 1 : 0));
-    ESP_LOGD(TAG, "Doorsensor bat critical feature supported: %d", (unsigned int)(((unsigned int)keyTurnerState.accessoryBatteryState & 4) == 4 ? 1 : 0));
-    ESP_LOGD(TAG, "Doorsensor Battery Critical: %d", (unsigned int)(((unsigned int)keyTurnerState.accessoryBatteryState & 12) == 12 ? 1 : 0));
-    ESP_LOGD(TAG, "remoteAccessStatus composed value: %d", (unsigned int)keyTurnerState.remoteAccessStatus);
-    ESP_LOGD(TAG, "remoteAccessEnabled: %d", (unsigned int)(((keyTurnerState.remoteAccessStatus & 1) == 1) ? 1 : 0));
-    ESP_LOGD(TAG, "bridgePaired: %d", (unsigned int)((((keyTurnerState.remoteAccessStatus >> 1) & 1) == 1) ? 1 : 0));
-    ESP_LOGD(TAG, "sseConnectedViaWifi: %d", (unsigned int)((((keyTurnerState.remoteAccessStatus >> 2) & 1) == 1) ? 1 : 0));
-    ESP_LOGD(TAG, "sseConnectionEstablished: %d", (unsigned int)((((keyTurnerState.remoteAccessStatus >> 3) & 1) == 1) ? 1 : 0));
-    ESP_LOGD(TAG, "isSseConnectedViaThread: %d", (unsigned int)((((keyTurnerState.remoteAccessStatus >> 4) & 1) == 1) ? 1 : 0));
-    ESP_LOGD(TAG, "threadSseUplinkEnabledByUser: %d", (unsigned int)((((keyTurnerState.remoteAccessStatus >> 5) & 1) == 1) ? 1 : 0));
-    ESP_LOGD(TAG, "nat64AvailableViaThread: %d", (unsigned int)((((keyTurnerState.remoteAccessStatus >> 6) & 1) == 1) ? 1 : 0));
-    ESP_LOGD(TAG, "bleConnectionStrength: %d", (unsigned int)keyTurnerState.bleConnectionStrength);
-    ESP_LOGD(TAG, "wifiConnectionStrength: %d", (unsigned int)keyTurnerState.wifiConnectionStrength);
-    ESP_LOGD(TAG, "wifiConnectionStatus composed value: %d", (unsigned int)keyTurnerState.wifiConnectionStatus);
-    ESP_LOGD(TAG, "wifiStatus: %d", (unsigned int)(keyTurnerState.wifiConnectionStatus & 3));
-    ESP_LOGD(TAG, "sseStatus: %d", (unsigned int)((keyTurnerState.wifiConnectionStatus >> 2) & 3));
-    ESP_LOGD(TAG, "wifiQuality: %d", (unsigned int)((keyTurnerState.wifiConnectionStatus >> 4) & 15));
-    ESP_LOGD(TAG, "mqttConnectionStatus composed value: %d", (unsigned int)keyTurnerState.mqttConnectionStatus);
-    ESP_LOGD(TAG, "mqttStatus: %d", (unsigned int)(keyTurnerState.mqttConnectionStatus & 3));
-    ESP_LOGD(TAG, "mqttConnectionChannel: %d", (unsigned int)((keyTurnerState.mqttConnectionStatus >> 2) & 1));
-    ESP_LOGD(TAG, "threadConnectionStatus composed value: %d", (unsigned int)keyTurnerState.threadConnectionStatus);
-    ESP_LOGD(TAG, "threadConnectionStatus: %d", (unsigned int)(keyTurnerState.threadConnectionStatus & 3));
-    ESP_LOGD(TAG, "threadSseStatus: %d", (unsigned int)((keyTurnerState.threadConnectionStatus >> 2) & 3));
-    ESP_LOGD(TAG, "isCommissioningModeActive: %d", (unsigned int)(((unsigned int)keyTurnerState.threadConnectionStatus & 16) != 0 ? 1 : 0));
-    ESP_LOGD(TAG, "isWifiDisabledBecauseOfThread: %d", (unsigned int)(((unsigned int)keyTurnerState.threadConnectionStatus & 32) != 0 ? 1 : 0));
+    ESP_LOGD(TAG, "doorSensorState: %u", (unsigned int)keyTurnerState.doorSensorState);
+    ESP_LOGD(TAG, "nightModeActive: %u", (unsigned int)keyTurnerState.nightModeActive);
+    ESP_LOGD(TAG, "accessoryBatteryState composed value: %u", (unsigned int)keyTurnerState.accessoryBatteryState);
+    ESP_LOGD(TAG, "Keypad bat critical feature supported: %u", (unsigned int)(((unsigned int)keyTurnerState.accessoryBatteryState & 1) == 1 ? 1 : 0));
+    ESP_LOGD(TAG, "Keypad Battery Critical: %u", (unsigned int)(((unsigned int)keyTurnerState.accessoryBatteryState & 3) == 3 ? 1 : 0));
+    ESP_LOGD(TAG, "Doorsensor bat critical feature supported: %u", (unsigned int)(((unsigned int)keyTurnerState.accessoryBatteryState & 4) == 4 ? 1 : 0));
+    ESP_LOGD(TAG, "Doorsensor Battery Critical: %u", (unsigned int)(((unsigned int)keyTurnerState.accessoryBatteryState & 12) == 12 ? 1 : 0));
+    ESP_LOGD(TAG, "remoteAccessStatus composed value: %u", (unsigned int)keyTurnerState.remoteAccessStatus);
+    ESP_LOGD(TAG, "remoteAccessEnabled: %u", (unsigned int)(((keyTurnerState.remoteAccessStatus & 1) == 1) ? 1 : 0));
+    ESP_LOGD(TAG, "bridgePaired: %u", (unsigned int)((((keyTurnerState.remoteAccessStatus >> 1) & 1) == 1) ? 1 : 0));
+    ESP_LOGD(TAG, "sseConnectedViaWifi: %u", (unsigned int)((((keyTurnerState.remoteAccessStatus >> 2) & 1) == 1) ? 1 : 0));
+    ESP_LOGD(TAG, "sseConnectionEstablished: %u", (unsigned int)((((keyTurnerState.remoteAccessStatus >> 3) & 1) == 1) ? 1 : 0));
+    ESP_LOGD(TAG, "isSseConnectedViaThread: %u", (unsigned int)((((keyTurnerState.remoteAccessStatus >> 4) & 1) == 1) ? 1 : 0));
+    ESP_LOGD(TAG, "threadSseUplinkEnabledByUser: %u", (unsigned int)((((keyTurnerState.remoteAccessStatus >> 5) & 1) == 1) ? 1 : 0));
+    ESP_LOGD(TAG, "nat64AvailableViaThread: %u", (unsigned int)((((keyTurnerState.remoteAccessStatus >> 6) & 1) == 1) ? 1 : 0));
+    ESP_LOGD(TAG, "bleConnectionStrength: %d", (int)keyTurnerState.bleConnectionStrength);
+    ESP_LOGD(TAG, "wifiConnectionStrength: %d", (int)keyTurnerState.wifiConnectionStrength);
+    ESP_LOGD(TAG, "wifiConnectionStatus composed value: %u", (unsigned int)keyTurnerState.wifiConnectionStatus);
+    ESP_LOGD(TAG, "wifiStatus: %u", (unsigned int)(keyTurnerState.wifiConnectionStatus & 3));
+    ESP_LOGD(TAG, "sseStatus: %u", (unsigned int)((keyTurnerState.wifiConnectionStatus >> 2) & 3));
+    ESP_LOGD(TAG, "wifiQuality: %u", (unsigned int)((keyTurnerState.wifiConnectionStatus >> 4) & 15));
+    ESP_LOGD(TAG, "mqttConnectionStatus composed value: %u", (unsigned int)keyTurnerState.mqttConnectionStatus);
+    ESP_LOGD(TAG, "mqttStatus: %u", (unsigned int)(keyTurnerState.mqttConnectionStatus & 3));
+    ESP_LOGD(TAG, "mqttConnectionChannel: %u", (unsigned int)((keyTurnerState.mqttConnectionStatus >> 2) & 1));
+    ESP_LOGD(TAG, "threadConnectionStatus composed value: %u", (unsigned int)keyTurnerState.threadConnectionStatus);
+    ESP_LOGD(TAG, "threadConnectionStatus: %u", (unsigned int)(keyTurnerState.threadConnectionStatus & 3));
+    ESP_LOGD(TAG, "threadSseStatus: %u", (unsigned int)((keyTurnerState.threadConnectionStatus >> 2) & 3));
+    ESP_LOGD(TAG, "isCommissioningModeActive: %u", (unsigned int)(((unsigned int)keyTurnerState.threadConnectionStatus & 16) != 0 ? 1 : 0));
+    ESP_LOGD(TAG, "isWifiDisabledBecauseOfThread: %u", (unsigned int)(((unsigned int)keyTurnerState.threadConnectionStatus & 32) != 0 ? 1 : 0));
   }
 }
 
 void log_battery_report(BatteryReport batteryReport, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "batteryDrain:%d", (unsigned int)batteryReport.batteryDrain);
-    ESP_LOGD(TAG, "batteryVoltage:%d", (unsigned int)batteryReport.batteryVoltage);
-    ESP_LOGD(TAG, "criticalBatteryState:%d", (unsigned int)batteryReport.criticalBatteryState);
-    ESP_LOGD(TAG, "lock_action:%d", (unsigned int)batteryReport.lock_action);
-    ESP_LOGD(TAG, "startVoltage:%d", (unsigned int)batteryReport.startVoltage);
-    ESP_LOGD(TAG, "lowestVoltage:%d", (unsigned int)batteryReport.lowestVoltage);
-    ESP_LOGD(TAG, "lockDistance:%d", (unsigned int)batteryReport.lockDistance);
-    ESP_LOGD(TAG, "startTemperature:%d", (unsigned int)batteryReport.startTemperature);
-    ESP_LOGD(TAG, "maxTurnCurrent:%d", (unsigned int)batteryReport.maxTurnCurrent);
-    ESP_LOGD(TAG, "batteryResistance:%d", (unsigned int)batteryReport.batteryResistance);
+    ESP_LOGD(TAG, "batteryDrain:%u", (unsigned int)batteryReport.batteryDrain);
+    ESP_LOGD(TAG, "batteryVoltage:%u", (unsigned int)batteryReport.batteryVoltage);
+    ESP_LOGD(TAG, "criticalBatteryState:%u", (unsigned int)batteryReport.criticalBatteryState);
+    ESP_LOGD(TAG, "lock_action:%u", (unsigned int)batteryReport.lock_action);
+    ESP_LOGD(TAG, "startVoltage:%u", (unsigned int)batteryReport.startVoltage);
+    ESP_LOGD(TAG, "lowestVoltage:%u", (unsigned int)batteryReport.lowestVoltage);
+    ESP_LOGD(TAG, "lockDistance:%u", (unsigned int)batteryReport.lockDistance);
+    ESP_LOGD(TAG, "startTemperature:%d", (int)batteryReport.startTemperature);
+    ESP_LOGD(TAG, "maxTurnCurrent:%u", (unsigned int)batteryReport.maxTurnCurrent);
+    ESP_LOGD(TAG, "batteryResistance:%u", (unsigned int)batteryReport.batteryResistance);
   }
 }
 
@@ -422,7 +422,7 @@ void log_log_entry(LogEntry logEntry, bool debug) {
 
   switch (logEntry.loggingType) {
     case LoggingType::LoggingEnabled: {
-      ESP_LOGD(TAG, "Logging enabled: %d", (unsigned int)logEntry.data[0]);
+      ESP_LOGD(TAG, "Logging enabled: %u", (unsigned int)logEntry.data[0]);
       break;
     }
     case LoggingType::LockAction:
@@ -430,17 +430,17 @@ void log_log_entry(LogEntry logEntry, bool debug) {
     case LoggingType::InitializationRun: {
       log_lock_action((LockAction)logEntry.data[0], debug);
       log_nuki_trigger((NukiTrigger)logEntry.data[1], debug);
-      ESP_LOGD(TAG, "Flags: %d", (unsigned int)logEntry.data[2]);
+      ESP_LOGD(TAG, "Flags: %u", (unsigned int)logEntry.data[2]);
       log_completion_status((CompletionStatus)logEntry.data[3], debug);
       break;
     }
     case LoggingType::KeypadAction: {
       log_lock_action((LockAction)logEntry.data[0], debug);
-      ESP_LOGD(TAG, "Source: %d", (unsigned int)logEntry.data[1]);
+      ESP_LOGD(TAG, "Source: %u", (unsigned int)logEntry.data[1]);
       log_completion_status((CompletionStatus)logEntry.data[2], debug);
       uint16_t codeId = 0;
       memcpy(&codeId, &logEntry.data[3], 2);
-      ESP_LOGD(TAG, "Code id: %d", (unsigned int)codeId);
+      ESP_LOGD(TAG, "Code id: %u", (unsigned int)codeId);
       break;
     }
     case LoggingType::DoorSensor: {
@@ -456,7 +456,7 @@ void log_log_entry(LogEntry logEntry, bool debug) {
       break;
     }
     case LoggingType::DoorSensorLoggingEnabled: {
-      ESP_LOGD(TAG, "Logging enabled: %d", (unsigned int)logEntry.data[0]);
+      ESP_LOGD(TAG, "Logging enabled: %u", (unsigned int)logEntry.data[0]);
       break;
     }
     default:
@@ -467,191 +467,191 @@ void log_log_entry(LogEntry logEntry, bool debug) {
 
 void log_advanced_config(AdvancedConfig advancedConfig, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "totalDegrees: %d", (unsigned int)advancedConfig.totalDegrees);
-    ESP_LOGD(TAG, "unlockedPositionOffsetDegrees: %d", (unsigned int)advancedConfig.unlockedPositionOffsetDegrees);
+    ESP_LOGD(TAG, "totalDegrees: %u", (unsigned int)advancedConfig.totalDegrees);
+    ESP_LOGD(TAG, "unlockedPositionOffsetDegrees: %d", (int)advancedConfig.unlockedPositionOffsetDegrees);
     ESP_LOGD(TAG, "lockedPositionOffsetDegrees: %f", (const float)advancedConfig.lockedPositionOffsetDegrees);
     ESP_LOGD(TAG, "singleLockedPositionOffsetDegrees: %f", (const float)advancedConfig.singleLockedPositionOffsetDegrees);
-    ESP_LOGD(TAG, "unlockedToLockedTransitionOffsetDegrees: %d", (unsigned int)advancedConfig.unlockedToLockedTransitionOffsetDegrees);
-    ESP_LOGD(TAG, "lockNgoTimeout: %d", (unsigned int)advancedConfig.lockNgoTimeout);
-    ESP_LOGD(TAG, "singleButtonPressAction: %d", (unsigned int)advancedConfig.singleButtonPressAction);
-    ESP_LOGD(TAG, "doubleButtonPressAction: %d", (unsigned int)advancedConfig.doubleButtonPressAction);
-    ESP_LOGD(TAG, "detachedCylinder: %d", (unsigned int)advancedConfig.detachedCylinder);
-    ESP_LOGD(TAG, "batteryType: %d", (unsigned int)advancedConfig.batteryType);
-    ESP_LOGD(TAG, "automaticBatteryTypeDetection: %d", (unsigned int)advancedConfig.automaticBatteryTypeDetection);
-    ESP_LOGD(TAG, "unlatchDuration: %d", (unsigned int)advancedConfig.unlatchDuration);
-    ESP_LOGD(TAG, "autoLockTimeOut: %d", (unsigned int)advancedConfig.autoLockTimeOut);
-    ESP_LOGD(TAG, "autoUnLockDisabled: %d", (unsigned int)advancedConfig.autoUnLockDisabled);
-    ESP_LOGD(TAG, "nightModeEnabled: %d", (unsigned int)advancedConfig.nightModeEnabled);
-    ESP_LOGD(TAG, "nightModeStartTime Hour: %d", (unsigned int)advancedConfig.nightModeStartTime[0]);
-    ESP_LOGD(TAG, "nightModeStartTime Minute: %d", (unsigned int)advancedConfig.nightModeStartTime[1]);
-    ESP_LOGD(TAG, "nightModeEndTime Hour: %d", (unsigned int)advancedConfig.nightModeEndTime[0]);
-    ESP_LOGD(TAG, "nightModeEndTime Minute: %d", (unsigned int)advancedConfig.nightModeEndTime[1]);
-    ESP_LOGD(TAG, "nightModeAutoLockEnabled: %d", (unsigned int)advancedConfig.nightModeAutoLockEnabled);
-    ESP_LOGD(TAG, "nightModeAutoUnlockDisabled: %d", (unsigned int)advancedConfig.nightModeAutoUnlockDisabled);
-    ESP_LOGD(TAG, "nightModeImmediateLockOnStart: %d", (unsigned int)advancedConfig.nightModeImmediateLockOnStart);
-    ESP_LOGD(TAG, "autoLockEnabled: %d", (unsigned int)advancedConfig.autoLockEnabled);
-    ESP_LOGD(TAG, "immediateAutoLockEnabled: %d", (unsigned int)advancedConfig.immediateAutoLockEnabled);
-    ESP_LOGD(TAG, "autoUpdateEnabled: %d", (unsigned int)advancedConfig.autoUpdateEnabled);
-    ESP_LOGD(TAG, "motorSpeed: %d", (unsigned int)advancedConfig.motorSpeed);
-    ESP_LOGD(TAG, "enable_slow_speed_during_night_mode: %d", (unsigned int)advancedConfig.enable_slow_speed_during_night_mode);
+    ESP_LOGD(TAG, "unlockedToLockedTransitionOffsetDegrees: %d", (int)advancedConfig.unlockedToLockedTransitionOffsetDegrees);
+    ESP_LOGD(TAG, "lockNgoTimeout: %u", (unsigned int)advancedConfig.lockNgoTimeout);
+    ESP_LOGD(TAG, "singleButtonPressAction: %u", (unsigned int)advancedConfig.singleButtonPressAction);
+    ESP_LOGD(TAG, "doubleButtonPressAction: %u", (unsigned int)advancedConfig.doubleButtonPressAction);
+    ESP_LOGD(TAG, "detachedCylinder: %u", (unsigned int)advancedConfig.detachedCylinder);
+    ESP_LOGD(TAG, "batteryType: %u", (unsigned int)advancedConfig.batteryType);
+    ESP_LOGD(TAG, "automaticBatteryTypeDetection: %u", (unsigned int)advancedConfig.automaticBatteryTypeDetection);
+    ESP_LOGD(TAG, "unlatchDuration: %u", (unsigned int)advancedConfig.unlatchDuration);
+    ESP_LOGD(TAG, "autoLockTimeOut: %u", (unsigned int)advancedConfig.autoLockTimeOut);
+    ESP_LOGD(TAG, "autoUnLockDisabled: %u", (unsigned int)advancedConfig.autoUnLockDisabled);
+    ESP_LOGD(TAG, "nightModeEnabled: %u", (unsigned int)advancedConfig.nightModeEnabled);
+    ESP_LOGD(TAG, "nightModeStartTime Hour: %u", (unsigned int)advancedConfig.nightModeStartTime[0]);
+    ESP_LOGD(TAG, "nightModeStartTime Minute: %u", (unsigned int)advancedConfig.nightModeStartTime[1]);
+    ESP_LOGD(TAG, "nightModeEndTime Hour: %u", (unsigned int)advancedConfig.nightModeEndTime[0]);
+    ESP_LOGD(TAG, "nightModeEndTime Minute: %u", (unsigned int)advancedConfig.nightModeEndTime[1]);
+    ESP_LOGD(TAG, "nightModeAutoLockEnabled: %u", (unsigned int)advancedConfig.nightModeAutoLockEnabled);
+    ESP_LOGD(TAG, "nightModeAutoUnlockDisabled: %u", (unsigned int)advancedConfig.nightModeAutoUnlockDisabled);
+    ESP_LOGD(TAG, "nightModeImmediateLockOnStart: %u", (unsigned int)advancedConfig.nightModeImmediateLockOnStart);
+    ESP_LOGD(TAG, "autoLockEnabled: %u", (unsigned int)advancedConfig.autoLockEnabled);
+    ESP_LOGD(TAG, "immediateAutoLockEnabled: %u", (unsigned int)advancedConfig.immediateAutoLockEnabled);
+    ESP_LOGD(TAG, "autoUpdateEnabled: %u", (unsigned int)advancedConfig.autoUpdateEnabled);
+    ESP_LOGD(TAG, "motorSpeed: %u", (unsigned int)advancedConfig.motorSpeed);
+    ESP_LOGD(TAG, "enable_slow_speed_during_night_mode: %u", (unsigned int)advancedConfig.enable_slow_speed_during_night_mode);
   }
 }
 
 void log_new_advanced_config(NewAdvancedConfig newAdvancedConfig, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "unlockedPositionOffsetDegrees: %d", (unsigned int)newAdvancedConfig.unlockedPositionOffsetDegrees);
+    ESP_LOGD(TAG, "unlockedPositionOffsetDegrees: %d", (int)newAdvancedConfig.unlockedPositionOffsetDegrees);
     ESP_LOGD(TAG, "lockedPositionOffsetDegrees: %f", (const float)newAdvancedConfig.lockedPositionOffsetDegrees);
     ESP_LOGD(TAG, "singleLockedPositionOffsetDegrees: %f", (const float)newAdvancedConfig.singleLockedPositionOffsetDegrees);
-    ESP_LOGD(TAG, "unlockedToLockedTransitionOffsetDegrees: %d", (unsigned int)newAdvancedConfig.unlockedToLockedTransitionOffsetDegrees);
-    ESP_LOGD(TAG, "lockNgoTimeout: %d", (unsigned int)newAdvancedConfig.lockNgoTimeout);
-    ESP_LOGD(TAG, "singleButtonPressAction: %d", (unsigned int)newAdvancedConfig.singleButtonPressAction);
-    ESP_LOGD(TAG, "doubleButtonPressAction: %d", (unsigned int)newAdvancedConfig.doubleButtonPressAction);
-    ESP_LOGD(TAG, "detachedCylinder: %d", (unsigned int)newAdvancedConfig.detachedCylinder);
-    ESP_LOGD(TAG, "batteryType: %d", (unsigned int)newAdvancedConfig.batteryType);
-    ESP_LOGD(TAG, "automaticBatteryTypeDetection: %d", (unsigned int)newAdvancedConfig.automaticBatteryTypeDetection);
-    ESP_LOGD(TAG, "unlatchDuration: %d", (unsigned int)newAdvancedConfig.unlatchDuration);
-    ESP_LOGD(TAG, "autoUnLockTimeOut: %d", (unsigned int)newAdvancedConfig.autoLockTimeOut);
-    ESP_LOGD(TAG, "autoUnLockDisabled: %d", (unsigned int)newAdvancedConfig.autoUnLockDisabled);
-    ESP_LOGD(TAG, "nightModeEnabled: %d", (unsigned int)newAdvancedConfig.nightModeEnabled);
-    ESP_LOGD(TAG, "nightModeStartTime Hour: %d", (unsigned int)newAdvancedConfig.nightModeStartTime[0]);
-    ESP_LOGD(TAG, "nightModeStartTime Minute: %d", (unsigned int)newAdvancedConfig.nightModeStartTime[1]);
-    ESP_LOGD(TAG, "nightModeEndTime Hour: %d", (unsigned int)newAdvancedConfig.nightModeEndTime[0]);
-    ESP_LOGD(TAG, "nightModeEndTime Minute: %d", (unsigned int)newAdvancedConfig.nightModeEndTime[1]);
-    ESP_LOGD(TAG, "nightModeAutoLockEnabled: %d", (unsigned int)newAdvancedConfig.nightModeAutoLockEnabled);
-    ESP_LOGD(TAG, "nightModeAutoUnlockDisabled: %d", (unsigned int)newAdvancedConfig.nightModeAutoUnlockDisabled);
-    ESP_LOGD(TAG, "nightModeImmediateLockOnStart: %d", (unsigned int)newAdvancedConfig.nightModeImmediateLockOnStart);
-    ESP_LOGD(TAG, "autoLockEnabled: %d", (unsigned int)newAdvancedConfig.autoLockEnabled);
-    ESP_LOGD(TAG, "immediateAutoLockEnabled: %d", (unsigned int)newAdvancedConfig.immediateAutoLockEnabled);
-    ESP_LOGD(TAG, "autoUpdateEnabled: %d", (unsigned int)newAdvancedConfig.autoUpdateEnabled);
+    ESP_LOGD(TAG, "unlockedToLockedTransitionOffsetDegrees: %d", (int)newAdvancedConfig.unlockedToLockedTransitionOffsetDegrees);
+    ESP_LOGD(TAG, "lockNgoTimeout: %u", (unsigned int)newAdvancedConfig.lockNgoTimeout);
+    ESP_LOGD(TAG, "singleButtonPressAction: %u", (unsigned int)newAdvancedConfig.singleButtonPressAction);
+    ESP_LOGD(TAG, "doubleButtonPressAction: %u", (unsigned int)newAdvancedConfig.doubleButtonPressAction);
+    ESP_LOGD(TAG, "detachedCylinder: %u", (unsigned int)newAdvancedConfig.detachedCylinder);
+    ESP_LOGD(TAG, "batteryType: %u", (unsigned int)newAdvancedConfig.batteryType);
+    ESP_LOGD(TAG, "automaticBatteryTypeDetection: %u", (unsigned int)newAdvancedConfig.automaticBatteryTypeDetection);
+    ESP_LOGD(TAG, "unlatchDuration: %u", (unsigned int)newAdvancedConfig.unlatchDuration);
+    ESP_LOGD(TAG, "autoUnLockTimeOut: %u", (unsigned int)newAdvancedConfig.autoLockTimeOut);
+    ESP_LOGD(TAG, "autoUnLockDisabled: %u", (unsigned int)newAdvancedConfig.autoUnLockDisabled);
+    ESP_LOGD(TAG, "nightModeEnabled: %u", (unsigned int)newAdvancedConfig.nightModeEnabled);
+    ESP_LOGD(TAG, "nightModeStartTime Hour: %u", (unsigned int)newAdvancedConfig.nightModeStartTime[0]);
+    ESP_LOGD(TAG, "nightModeStartTime Minute: %u", (unsigned int)newAdvancedConfig.nightModeStartTime[1]);
+    ESP_LOGD(TAG, "nightModeEndTime Hour: %u", (unsigned int)newAdvancedConfig.nightModeEndTime[0]);
+    ESP_LOGD(TAG, "nightModeEndTime Minute: %u", (unsigned int)newAdvancedConfig.nightModeEndTime[1]);
+    ESP_LOGD(TAG, "nightModeAutoLockEnabled: %u", (unsigned int)newAdvancedConfig.nightModeAutoLockEnabled);
+    ESP_LOGD(TAG, "nightModeAutoUnlockDisabled: %u", (unsigned int)newAdvancedConfig.nightModeAutoUnlockDisabled);
+    ESP_LOGD(TAG, "nightModeImmediateLockOnStart: %u", (unsigned int)newAdvancedConfig.nightModeImmediateLockOnStart);
+    ESP_LOGD(TAG, "autoLockEnabled: %u", (unsigned int)newAdvancedConfig.autoLockEnabled);
+    ESP_LOGD(TAG, "immediateAutoLockEnabled: %u", (unsigned int)newAdvancedConfig.immediateAutoLockEnabled);
+    ESP_LOGD(TAG, "autoUpdateEnabled: %u", (unsigned int)newAdvancedConfig.autoUpdateEnabled);
   }
 }
 
 void log_wifi_scan_entry(WifiScanEntry wifiScanEntry, bool debug) {
   if (debug) {
     ESP_LOGD(TAG, "ssid: %s", (const char*)wifiScanEntry.ssid);
-    ESP_LOGD(TAG, "type: %d", (unsigned int)wifiScanEntry.type);
-    ESP_LOGD(TAG, "signal raw: %d", (unsigned int)wifiScanEntry.signal);
-    ESP_LOGD(TAG, "signal: %d", (unsigned int)(wifiScanEntry.signal & 255));
+    ESP_LOGD(TAG, "type: %u", (unsigned int)wifiScanEntry.type);
+    ESP_LOGD(TAG, "signal raw: %u", (unsigned int)wifiScanEntry.signal);
+    ESP_LOGD(TAG, "signal: %u", (unsigned int)(wifiScanEntry.signal & 255));
   }
 }
 
 void log_mqtt_config(MqttConfig mqttConfig, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "enabled: %d", (unsigned int)mqttConfig.enabled);
+    ESP_LOGD(TAG, "enabled: %u", (unsigned int)mqttConfig.enabled);
     ESP_LOGD(TAG, "hostName: %s", (const char*)mqttConfig.hostName);
     ESP_LOGD(TAG, "userName: %s", (const char*)mqttConfig.userName);
-    ESP_LOGD(TAG, "secureConnection: %d", (unsigned int)mqttConfig.secureConnection);
-    ESP_LOGD(TAG, "autoDiscovery: %d", (unsigned int)mqttConfig.autoDiscovery);
-    ESP_LOGD(TAG, "lockingEnabled: %d", (unsigned int)mqttConfig.lockingEnabled);
+    ESP_LOGD(TAG, "secureConnection: %u", (unsigned int)mqttConfig.secureConnection);
+    ESP_LOGD(TAG, "autoDiscovery: %u", (unsigned int)mqttConfig.autoDiscovery);
+    ESP_LOGD(TAG, "lockingEnabled: %u", (unsigned int)mqttConfig.lockingEnabled);
   }
 }
 
 void log_mqtt_config_for_migration(MqttConfigForMigration mqttConfigForMigration, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "enabled: %d", (unsigned int)mqttConfigForMigration.enabled);
+    ESP_LOGD(TAG, "enabled: %u", (unsigned int)mqttConfigForMigration.enabled);
     ESP_LOGD(TAG, "hostName: %s", (const char*)mqttConfigForMigration.hostName);
     ESP_LOGD(TAG, "userName: %s", (const char*)mqttConfigForMigration.userName);
-    ESP_LOGD(TAG, "secureConnection: %d", (unsigned int)mqttConfigForMigration.secureConnection);
-    ESP_LOGD(TAG, "autoDiscovery: %d", (unsigned int)mqttConfigForMigration.autoDiscovery);
-    ESP_LOGD(TAG, "lockingEnabled: %d", (unsigned int)mqttConfigForMigration.lockingEnabled);
+    ESP_LOGD(TAG, "secureConnection: %u", (unsigned int)mqttConfigForMigration.secureConnection);
+    ESP_LOGD(TAG, "autoDiscovery: %u", (unsigned int)mqttConfigForMigration.autoDiscovery);
+    ESP_LOGD(TAG, "lockingEnabled: %u", (unsigned int)mqttConfigForMigration.lockingEnabled);
     ESP_LOGD(TAG, "passphrase: %s", (const char*)mqttConfigForMigration.passphrase);
   }
 }
 
 void log_wifi_config(WifiConfig wifiConfig, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "serverBridgeId: %d", (unsigned int)wifiConfig.serverBridgeId);
-    ESP_LOGD(TAG, "wifiEnabled: %d", (unsigned int)wifiConfig.wifiEnabled);
-    ESP_LOGD(TAG, "wifiExpertSettings composed value: %d", (unsigned int)wifiConfig.wifiExpertSettings);
-    ESP_LOGD(TAG, "expertSettingsMode: %d", (unsigned int)(wifiConfig.wifiExpertSettings & 3));
-    ESP_LOGD(TAG, "broadcastFilterSettings: %d", (unsigned int)((wifiConfig.wifiExpertSettings >> 2) & 3));
-    ESP_LOGD(TAG, "dtimSkipSettings: %d", (unsigned int)((wifiConfig.wifiExpertSettings >> 4) & 7));
-    ESP_LOGD(TAG, "sseSkipSettings: %d", (unsigned int)((wifiConfig.wifiExpertSettings >> 7) & 7));
-    ESP_LOGD(TAG, "powersafeMode: %d", (unsigned int)((wifiConfig.wifiExpertSettings >> 10) & 3));
-    ESP_LOGD(TAG, "activePingEnabled: %d", (unsigned int)((wifiConfig.wifiExpertSettings >> 12) & 1));
+    ESP_LOGD(TAG, "serverBridgeId: %u", (unsigned int)wifiConfig.serverBridgeId);
+    ESP_LOGD(TAG, "wifiEnabled: %u", (unsigned int)wifiConfig.wifiEnabled);
+    ESP_LOGD(TAG, "wifiExpertSettings composed value: %u", (unsigned int)wifiConfig.wifiExpertSettings);
+    ESP_LOGD(TAG, "expertSettingsMode: %u", (unsigned int)(wifiConfig.wifiExpertSettings & 3));
+    ESP_LOGD(TAG, "broadcastFilterSettings: %u", (unsigned int)((wifiConfig.wifiExpertSettings >> 2) & 3));
+    ESP_LOGD(TAG, "dtimSkipSettings: %u", (unsigned int)((wifiConfig.wifiExpertSettings >> 4) & 7));
+    ESP_LOGD(TAG, "sseSkipSettings: %u", (unsigned int)((wifiConfig.wifiExpertSettings >> 7) & 7));
+    ESP_LOGD(TAG, "powersafeMode: %u", (unsigned int)((wifiConfig.wifiExpertSettings >> 10) & 3));
+    ESP_LOGD(TAG, "activePingEnabled: %u", (unsigned int)((wifiConfig.wifiExpertSettings >> 12) & 1));
   }
 }
 
 void log_wifi_config_for_migration(WifiConfigForMigration wifiConfigForMigration, bool debug) {
   if (debug) {
     ESP_LOGD(TAG, "ssid: %s", (const char*)wifiConfigForMigration.ssid);
-    ESP_LOGD(TAG, "type: %d", (unsigned int)wifiConfigForMigration.type);
+    ESP_LOGD(TAG, "type: %u", (unsigned int)wifiConfigForMigration.type);
     ESP_LOGD(TAG, "passphrase: %s", (const char*)wifiConfigForMigration.passphrase);
   }
 }
 
 void log_door_sensor_config(DoorSensorConfig doorSensorConfig, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "enabled: %d", (unsigned int)doorSensorConfig.enabled);
-    ESP_LOGD(TAG, "doorAjarTimeout: %d", (unsigned int)doorSensorConfig.doorAjarTimeout);
-    ESP_LOGD(TAG, "doorAjarLoggingEnabled: %d", (unsigned int)doorSensorConfig.doorAjarLoggingEnabled);
-    ESP_LOGD(TAG, "doorStatusMismatchLoggingEnabled: %d", (unsigned int)doorSensorConfig.doorStatusMismatchLoggingEnabled);
+    ESP_LOGD(TAG, "enabled: %u", (unsigned int)doorSensorConfig.enabled);
+    ESP_LOGD(TAG, "doorAjarTimeout: %u", (unsigned int)doorSensorConfig.doorAjarTimeout);
+    ESP_LOGD(TAG, "doorAjarLoggingEnabled: %u", (unsigned int)doorSensorConfig.doorAjarLoggingEnabled);
+    ESP_LOGD(TAG, "doorStatusMismatchLoggingEnabled: %u", (unsigned int)doorSensorConfig.doorStatusMismatchLoggingEnabled);
   }
 }
 
 void log_daily_statistics(DailyStatistics dailyStatistics, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "dateYear: %d", (unsigned int)dailyStatistics.dateYear);
-    ESP_LOGD(TAG, "dateMonth: %d", (unsigned int)dailyStatistics.dateMonth);
-    ESP_LOGD(TAG, "dateDay: %d", (unsigned int)dailyStatistics.dateDay);
-    //ESP_LOGD(TAG, "dateHour: %d", (unsigned int)dailyStatistics.dateHour);
-    //ESP_LOGD(TAG, "dateMinute: %d", (unsigned int)dailyStatistics.dateMinute);
-    //ESP_LOGD(TAG, "dateSecond: %d", (unsigned int)dailyStatistics.dateSecond);
-    ESP_LOGD(TAG, "version: %d", (unsigned int)dailyStatistics.version);
-    ESP_LOGD(TAG, "countSuccessfulLockActions: %d", (unsigned int)dailyStatistics.countSuccessfulLockActions);
-    ESP_LOGD(TAG, "countErroneousLockActions: %d", (unsigned int)dailyStatistics.countErroneousLockActions);
-    ESP_LOGD(TAG, "avgCurrentConsumptionLock: %d", (unsigned int)dailyStatistics.avgCurrentConsumptionLock);
-    ESP_LOGD(TAG, "maxCurrentConsumptionLock: %d", (unsigned int)dailyStatistics.maxCurrentConsumptionLock);
-    ESP_LOGD(TAG, "batteryMinStartVoltageLock: %d", (unsigned int)dailyStatistics.batteryMinStartVoltageLock);
-    ESP_LOGD(TAG, "countSuccessfulUnlatchActions: %d", (unsigned int)dailyStatistics.countSuccessfulUnlatchActions);
-    ESP_LOGD(TAG, "countErroneousUnlatchActions: %d", (unsigned int)dailyStatistics.countErroneousUnlatchActions);
-    ESP_LOGD(TAG, "avgCurrentConsumptionUnlatch: %d", (unsigned int)dailyStatistics.avgCurrentConsumptionUnlatch);
-    ESP_LOGD(TAG, "maxCurrentConsumptionUnlatch: %d", (unsigned int)dailyStatistics.maxCurrentConsumptionUnlatch);
-    ESP_LOGD(TAG, "batteryMinStartVoltageUnlatch: %d", (unsigned int)dailyStatistics.batteryMinStartVoltageUnlatch);
-    ESP_LOGD(TAG, "incomingCommands: %d", (unsigned int)dailyStatistics.incomingCommands);
-    ESP_LOGD(TAG, "outgoingCommands: %d", (unsigned int)dailyStatistics.outgoingCommands);
-    ESP_LOGD(TAG, "maxTemperature: %d", (unsigned int)dailyStatistics.maxTemperature);
-    ESP_LOGD(TAG, "minTemperature: %d", (unsigned int)dailyStatistics.minTemperature);
-    ESP_LOGD(TAG, "avgTemperature: %d", (unsigned int)dailyStatistics.avgTemperature);
-    ESP_LOGD(TAG, "numDoorSensorStatusChanges: %d", (unsigned int)dailyStatistics.numDoorSensorStatusChanges);
-    ESP_LOGD(TAG, "maxBatteryPercentage: %d", (unsigned int)dailyStatistics.maxBatteryPercentage);
-    ESP_LOGD(TAG, "minBatteryPercentage: %d", (unsigned int)dailyStatistics.minBatteryPercentage);
-    ESP_LOGD(TAG, "idleTime: %d", (unsigned int)dailyStatistics.idleTime);
-    ESP_LOGD(TAG, "connectionTime: %d", (unsigned int)dailyStatistics.connectionTime);
-    ESP_LOGD(TAG, "actionTime: %d", (unsigned int)dailyStatistics.actionTime);
+    ESP_LOGD(TAG, "dateYear: %u", (unsigned int)dailyStatistics.dateYear);
+    ESP_LOGD(TAG, "dateMonth: %u", (unsigned int)dailyStatistics.dateMonth);
+    ESP_LOGD(TAG, "dateDay: %u", (unsigned int)dailyStatistics.dateDay);
+    //ESP_LOGD(TAG, "dateHour: %u", (unsigned int)dailyStatistics.dateHour);
+    //ESP_LOGD(TAG, "dateMinute: %u", (unsigned int)dailyStatistics.dateMinute);
+    //ESP_LOGD(TAG, "dateSecond: %u", (unsigned int)dailyStatistics.dateSecond);
+    ESP_LOGD(TAG, "version: %u", (unsigned int)dailyStatistics.version);
+    ESP_LOGD(TAG, "countSuccessfulLockActions: %u", (unsigned int)dailyStatistics.countSuccessfulLockActions);
+    ESP_LOGD(TAG, "countErroneousLockActions: %u", (unsigned int)dailyStatistics.countErroneousLockActions);
+    ESP_LOGD(TAG, "avgCurrentConsumptionLock: %u", (unsigned int)dailyStatistics.avgCurrentConsumptionLock);
+    ESP_LOGD(TAG, "maxCurrentConsumptionLock: %u", (unsigned int)dailyStatistics.maxCurrentConsumptionLock);
+    ESP_LOGD(TAG, "batteryMinStartVoltageLock: %u", (unsigned int)dailyStatistics.batteryMinStartVoltageLock);
+    ESP_LOGD(TAG, "countSuccessfulUnlatchActions: %u", (unsigned int)dailyStatistics.countSuccessfulUnlatchActions);
+    ESP_LOGD(TAG, "countErroneousUnlatchActions: %u", (unsigned int)dailyStatistics.countErroneousUnlatchActions);
+    ESP_LOGD(TAG, "avgCurrentConsumptionUnlatch: %u", (unsigned int)dailyStatistics.avgCurrentConsumptionUnlatch);
+    ESP_LOGD(TAG, "maxCurrentConsumptionUnlatch: %u", (unsigned int)dailyStatistics.maxCurrentConsumptionUnlatch);
+    ESP_LOGD(TAG, "batteryMinStartVoltageUnlatch: %u", (unsigned int)dailyStatistics.batteryMinStartVoltageUnlatch);
+    ESP_LOGD(TAG, "incomingCommands: %u", (unsigned int)dailyStatistics.incomingCommands);
+    ESP_LOGD(TAG, "outgoingCommands: %u", (unsigned int)dailyStatistics.outgoingCommands);
+    ESP_LOGD(TAG, "maxTemperature: %u", (unsigned int)dailyStatistics.maxTemperature);
+    ESP_LOGD(TAG, "minTemperature: %u", (unsigned int)dailyStatistics.minTemperature);
+    ESP_LOGD(TAG, "avgTemperature: %u", (unsigned int)dailyStatistics.avgTemperature);
+    ESP_LOGD(TAG, "numDoorSensorStatusChanges: %u", (unsigned int)dailyStatistics.numDoorSensorStatusChanges);
+    ESP_LOGD(TAG, "maxBatteryPercentage: %u", (unsigned int)dailyStatistics.maxBatteryPercentage);
+    ESP_LOGD(TAG, "minBatteryPercentage: %u", (unsigned int)dailyStatistics.minBatteryPercentage);
+    ESP_LOGD(TAG, "idleTime: %u", (unsigned int)dailyStatistics.idleTime);
+    ESP_LOGD(TAG, "connectionTime: %u", (unsigned int)dailyStatistics.connectionTime);
+    ESP_LOGD(TAG, "actionTime: %u", (unsigned int)dailyStatistics.actionTime);
   }
 }
 
 void log_general_statistics(GeneralStatistics generalStatistics, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "version: %d", (unsigned int)generalStatistics.version);
-    ESP_LOGD(TAG, "firstCalibrationYear: %d", (unsigned int)generalStatistics.firstCalibrationYear);
-    ESP_LOGD(TAG, "firstCalibrationMonth: %d", (unsigned int)generalStatistics.firstCalibrationMonth);
-    ESP_LOGD(TAG, "firstCalibrationDay: %d", (unsigned int)generalStatistics.firstCalibrationDay);
-    ESP_LOGD(TAG, "calibrationCount: %d", (unsigned int)generalStatistics.calibrationCount);
-    ESP_LOGD(TAG, "lockActionCount: %d", (unsigned int)generalStatistics.lockActionCount);
-    ESP_LOGD(TAG, "unlatchCount: %d", (unsigned int)generalStatistics.unlatchCount);
-    ESP_LOGD(TAG, "lastRebootDateYear: %d", (unsigned int)generalStatistics.lastRebootDateYear);
-    ESP_LOGD(TAG, "lastRebootDateMonth: %d", (unsigned int)generalStatistics.lastRebootDateMonth);
-    ESP_LOGD(TAG, "lastRebootDateDay: %d", (unsigned int)generalStatistics.lastRebootDateDay);
-    ESP_LOGD(TAG, "lastRebootDateHour: %d", (unsigned int)generalStatistics.lastRebootDateHour);
-    ESP_LOGD(TAG, "lastRebootDateMinute: %d", (unsigned int)generalStatistics.lastRebootDateMinute);
-    ESP_LOGD(TAG, "lastRebootDateSecond: %d", (unsigned int)generalStatistics.lastRebootDateSecond);
-    ESP_LOGD(TAG, "lastChargeDateYear: %d", (unsigned int)generalStatistics.lastChargeDateYear);
-    ESP_LOGD(TAG, "lastChargeDateMonth: %d", (unsigned int)generalStatistics.lastChargeDateMonth);
-    ESP_LOGD(TAG, "lastChargeDateDay: %d", (unsigned int)generalStatistics.lastChargeDateDay);
-    ESP_LOGD(TAG, "lastChargeDateHour: %d", (unsigned int)generalStatistics.lastChargeDateHour);
-    ESP_LOGD(TAG, "lastChargeDateMinute: %d", (unsigned int)generalStatistics.lastChargeDateMinute);
-    ESP_LOGD(TAG, "lastChargeDateSecond: %d", (unsigned int)generalStatistics.lastChargeDateSecond);
-    ESP_LOGD(TAG, "initialBatteryVoltage: %d", (unsigned int)generalStatistics.initialBatteryVoltage);
-    ESP_LOGD(TAG, "numActionsDuringBatteryCycle: %d", (unsigned int)generalStatistics.numActionsDuringBatteryCycle);
-    ESP_LOGD(TAG, "numUnexpectedReboots: %d", (unsigned int)generalStatistics.numUnexpectedReboots);
+    ESP_LOGD(TAG, "version: %u", (unsigned int)generalStatistics.version);
+    ESP_LOGD(TAG, "firstCalibrationYear: %u", (unsigned int)generalStatistics.firstCalibrationYear);
+    ESP_LOGD(TAG, "firstCalibrationMonth: %u", (unsigned int)generalStatistics.firstCalibrationMonth);
+    ESP_LOGD(TAG, "firstCalibrationDay: %u", (unsigned int)generalStatistics.firstCalibrationDay);
+    ESP_LOGD(TAG, "calibrationCount: %u", (unsigned int)generalStatistics.calibrationCount);
+    ESP_LOGD(TAG, "lockActionCount: %u", (unsigned int)generalStatistics.lockActionCount);
+    ESP_LOGD(TAG, "unlatchCount: %u", (unsigned int)generalStatistics.unlatchCount);
+    ESP_LOGD(TAG, "lastRebootDateYear: %u", (unsigned int)generalStatistics.lastRebootDateYear);
+    ESP_LOGD(TAG, "lastRebootDateMonth: %u", (unsigned int)generalStatistics.lastRebootDateMonth);
+    ESP_LOGD(TAG, "lastRebootDateDay: %u", (unsigned int)generalStatistics.lastRebootDateDay);
+    ESP_LOGD(TAG, "lastRebootDateHour: %u", (unsigned int)generalStatistics.lastRebootDateHour);
+    ESP_LOGD(TAG, "lastRebootDateMinute: %u", (unsigned int)generalStatistics.lastRebootDateMinute);
+    ESP_LOGD(TAG, "lastRebootDateSecond: %u", (unsigned int)generalStatistics.lastRebootDateSecond);
+    ESP_LOGD(TAG, "lastChargeDateYear: %u", (unsigned int)generalStatistics.lastChargeDateYear);
+    ESP_LOGD(TAG, "lastChargeDateMonth: %u", (unsigned int)generalStatistics.lastChargeDateMonth);
+    ESP_LOGD(TAG, "lastChargeDateDay: %u", (unsigned int)generalStatistics.lastChargeDateDay);
+    ESP_LOGD(TAG, "lastChargeDateHour: %u", (unsigned int)generalStatistics.lastChargeDateHour);
+    ESP_LOGD(TAG, "lastChargeDateMinute: %u", (unsigned int)generalStatistics.lastChargeDateMinute);
+    ESP_LOGD(TAG, "lastChargeDateSecond: %u", (unsigned int)generalStatistics.lastChargeDateSecond);
+    ESP_LOGD(TAG, "initialBatteryVoltage: %u", (unsigned int)generalStatistics.initialBatteryVoltage);
+    ESP_LOGD(TAG, "numActionsDuringBatteryCycle: %u", (unsigned int)generalStatistics.numActionsDuringBatteryCycle);
+    ESP_LOGD(TAG, "numUnexpectedReboots: %u", (unsigned int)generalStatistics.numUnexpectedReboots);
   }
 }
 
 void log_internal_log_entry(InternalLogEntry internalLogEntry, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "[%d] type: %d authId: %d %d-%d-%d %d:%d:%d",
+    ESP_LOGD(TAG, "[%u] type: %u authId: %u %d-%d-%d %d:%d:%d",
       (unsigned int)internalLogEntry.index,
       (unsigned int)internalLogEntry.loggingType,
       (unsigned int)internalLogEntry.authId,
@@ -662,7 +662,7 @@ void log_internal_log_entry(InternalLogEntry internalLogEntry, bool debug) {
       internalLogEntry.timeStampMinute,
       internalLogEntry.timeStampSecond
     );
-    ESP_LOGD(TAG, "data: %d", (unsigned int)internalLogEntry.data);
+    ESP_LOGD(TAG, "data: %u", (unsigned int)internalLogEntry.data);
   }
 }
 

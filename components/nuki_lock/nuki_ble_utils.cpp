@@ -115,95 +115,95 @@ bool crc_valid(uint8_t* pData, uint16_t length, bool debug) {
 
 void log_authorization_entry(AuthorizationEntry authorizationEntry, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "id:%d", (unsigned int)authorizationEntry.authId);
-    ESP_LOGD(TAG, "idType:%d", (unsigned int)authorizationEntry.idType);
+    ESP_LOGD(TAG, "id:%u", (unsigned int)authorizationEntry.authId);
+    ESP_LOGD(TAG, "idType:%u", (unsigned int)authorizationEntry.idType);
     ESP_LOGD(TAG, "name:%s", (const char*)authorizationEntry.name);
-    ESP_LOGD(TAG, "enabled:%d", (unsigned int)authorizationEntry.enabled);
-    ESP_LOGD(TAG, "remoteAllowed:%d", (unsigned int)authorizationEntry.remoteAllowed);
-    ESP_LOGD(TAG, "createdYear:%d", (unsigned int)authorizationEntry.createdYear);
-    ESP_LOGD(TAG, "createdMonth:%d", (unsigned int)authorizationEntry.createdMonth);
-    ESP_LOGD(TAG, "createdDay:%d", (unsigned int)authorizationEntry.createdDay);
-    ESP_LOGD(TAG, "createdHour:%d", (unsigned int)authorizationEntry.createdHour);
-    ESP_LOGD(TAG, "createdMin:%d", (unsigned int)authorizationEntry.createdMinute);
-    ESP_LOGD(TAG, "createdSec:%d", (unsigned int)authorizationEntry.createdSecond);
-    ESP_LOGD(TAG, "lastactYear:%d", (unsigned int)authorizationEntry.lastActYear);
-    ESP_LOGD(TAG, "lastactMonth:%d", (unsigned int)authorizationEntry.lastActMonth);
-    ESP_LOGD(TAG, "lastactDay:%d", (unsigned int)authorizationEntry.lastActDay);
-    ESP_LOGD(TAG, "lastactHour:%d", (unsigned int)authorizationEntry.lastActHour);
-    ESP_LOGD(TAG, "lastactMin:%d", (unsigned int)authorizationEntry.lastActMinute);
-    ESP_LOGD(TAG, "lastactSec:%d", (unsigned int)authorizationEntry.lastActSecond);
-    ESP_LOGD(TAG, "lockCount:%d", (unsigned int)authorizationEntry.lockCount);
-    ESP_LOGD(TAG, "timeLimited:%d", (unsigned int)authorizationEntry.timeLimited);
-    ESP_LOGD(TAG, "allowedFromYear:%d", (unsigned int)authorizationEntry.allowedFromYear);
-    ESP_LOGD(TAG, "allowedFromMonth:%d", (unsigned int)authorizationEntry.allowedFromMonth);
-    ESP_LOGD(TAG, "allowedFromDay:%d", (unsigned int)authorizationEntry.allowedFromDay);
-    ESP_LOGD(TAG, "allowedFromHour:%d", (unsigned int)authorizationEntry.allowedFromHour);
-    ESP_LOGD(TAG, "allowedFromMin:%d", (unsigned int)authorizationEntry.allowedFromMinute);
-    ESP_LOGD(TAG, "allowedFromSec:%d", (unsigned int)authorizationEntry.allowedFromSecond);
-    ESP_LOGD(TAG, "allowedUntilYear:%d", (unsigned int)authorizationEntry.allowedUntilYear);
-    ESP_LOGD(TAG, "allowedUntilMonth:%d", (unsigned int)authorizationEntry.allowedUntilMonth);
-    ESP_LOGD(TAG, "allowedUntilDay:%d", (unsigned int)authorizationEntry.allowedUntilDay);
-    ESP_LOGD(TAG, "allowedUntilHour:%d", (unsigned int)authorizationEntry.allowedUntilHour);
-    ESP_LOGD(TAG, "allowedUntilMin:%d", (unsigned int)authorizationEntry.allowedUntilMinute);
-    ESP_LOGD(TAG, "allowedUntilSec:%d", (unsigned int)authorizationEntry.allowedUntilSecond);
-    ESP_LOGD(TAG, "allowedWeekdays:%d", (unsigned int)authorizationEntry.allowedWeekdays);
-    ESP_LOGD(TAG, "allowedFromTimeHour:%d", (unsigned int)authorizationEntry.allowedFromTimeHour);
-    ESP_LOGD(TAG, "allowedFromTimeMin:%d", (unsigned int)authorizationEntry.allowedFromTimeMin);
-    ESP_LOGD(TAG, "allowedUntilTimeHour:%d", (unsigned int)authorizationEntry.allowedUntilTimeHour);
-    ESP_LOGD(TAG, "allowedUntilTimeMin:%d", (unsigned int)authorizationEntry.allowedUntilTimeMin);
+    ESP_LOGD(TAG, "enabled:%u", (unsigned int)authorizationEntry.enabled);
+    ESP_LOGD(TAG, "remoteAllowed:%u", (unsigned int)authorizationEntry.remoteAllowed);
+    ESP_LOGD(TAG, "createdYear:%u", (unsigned int)authorizationEntry.createdYear);
+    ESP_LOGD(TAG, "createdMonth:%u", (unsigned int)authorizationEntry.createdMonth);
+    ESP_LOGD(TAG, "createdDay:%u", (unsigned int)authorizationEntry.createdDay);
+    ESP_LOGD(TAG, "createdHour:%u", (unsigned int)authorizationEntry.createdHour);
+    ESP_LOGD(TAG, "createdMin:%u", (unsigned int)authorizationEntry.createdMinute);
+    ESP_LOGD(TAG, "createdSec:%u", (unsigned int)authorizationEntry.createdSecond);
+    ESP_LOGD(TAG, "lastactYear:%u", (unsigned int)authorizationEntry.lastActYear);
+    ESP_LOGD(TAG, "lastactMonth:%u", (unsigned int)authorizationEntry.lastActMonth);
+    ESP_LOGD(TAG, "lastactDay:%u", (unsigned int)authorizationEntry.lastActDay);
+    ESP_LOGD(TAG, "lastactHour:%u", (unsigned int)authorizationEntry.lastActHour);
+    ESP_LOGD(TAG, "lastactMin:%u", (unsigned int)authorizationEntry.lastActMinute);
+    ESP_LOGD(TAG, "lastactSec:%u", (unsigned int)authorizationEntry.lastActSecond);
+    ESP_LOGD(TAG, "lockCount:%u", (unsigned int)authorizationEntry.lockCount);
+    ESP_LOGD(TAG, "timeLimited:%u", (unsigned int)authorizationEntry.timeLimited);
+    ESP_LOGD(TAG, "allowedFromYear:%u", (unsigned int)authorizationEntry.allowedFromYear);
+    ESP_LOGD(TAG, "allowedFromMonth:%u", (unsigned int)authorizationEntry.allowedFromMonth);
+    ESP_LOGD(TAG, "allowedFromDay:%u", (unsigned int)authorizationEntry.allowedFromDay);
+    ESP_LOGD(TAG, "allowedFromHour:%u", (unsigned int)authorizationEntry.allowedFromHour);
+    ESP_LOGD(TAG, "allowedFromMin:%u", (unsigned int)authorizationEntry.allowedFromMinute);
+    ESP_LOGD(TAG, "allowedFromSec:%u", (unsigned int)authorizationEntry.allowedFromSecond);
+    ESP_LOGD(TAG, "allowedUntilYear:%u", (unsigned int)authorizationEntry.allowedUntilYear);
+    ESP_LOGD(TAG, "allowedUntilMonth:%u", (unsigned int)authorizationEntry.allowedUntilMonth);
+    ESP_LOGD(TAG, "allowedUntilDay:%u", (unsigned int)authorizationEntry.allowedUntilDay);
+    ESP_LOGD(TAG, "allowedUntilHour:%u", (unsigned int)authorizationEntry.allowedUntilHour);
+    ESP_LOGD(TAG, "allowedUntilMin:%u", (unsigned int)authorizationEntry.allowedUntilMinute);
+    ESP_LOGD(TAG, "allowedUntilSec:%u", (unsigned int)authorizationEntry.allowedUntilSecond);
+    ESP_LOGD(TAG, "allowedWeekdays:%u", (unsigned int)authorizationEntry.allowedWeekdays);
+    ESP_LOGD(TAG, "allowedFromTimeHour:%u", (unsigned int)authorizationEntry.allowedFromTimeHour);
+    ESP_LOGD(TAG, "allowedFromTimeMin:%u", (unsigned int)authorizationEntry.allowedFromTimeMin);
+    ESP_LOGD(TAG, "allowedUntilTimeHour:%u", (unsigned int)authorizationEntry.allowedUntilTimeHour);
+    ESP_LOGD(TAG, "allowedUntilTimeMin:%u", (unsigned int)authorizationEntry.allowedUntilTimeMin);
   }
 }
 
 void log_new_authorization_entry(NewAuthorizationEntry newAuthorizationEntry, bool debug) {
   if (debug) {
     ESP_LOGD(TAG, "name:%s", (const char*)newAuthorizationEntry.name);
-    ESP_LOGD(TAG, "idType:%d", (unsigned int)newAuthorizationEntry.idType);
-    ESP_LOGD(TAG, "remoteAllowed:%d", (unsigned int)newAuthorizationEntry.remoteAllowed);
-    ESP_LOGD(TAG, "timeLimited:%d", (unsigned int)newAuthorizationEntry.timeLimited);
-    ESP_LOGD(TAG, "allowedFromYear:%d", (unsigned int)newAuthorizationEntry.allowedFromYear);
-    ESP_LOGD(TAG, "allowedFromMonth:%d", (unsigned int)newAuthorizationEntry.allowedFromMonth);
-    ESP_LOGD(TAG, "allowedFromDay:%d", (unsigned int)newAuthorizationEntry.allowedFromDay);
-    ESP_LOGD(TAG, "allowedFromHour:%d", (unsigned int)newAuthorizationEntry.allowedFromHour);
-    ESP_LOGD(TAG, "allowedFromMin:%d", (unsigned int)newAuthorizationEntry.allowedFromMinute);
-    ESP_LOGD(TAG, "allowedFromSec:%d", (unsigned int)newAuthorizationEntry.allowedFromSecond);
-    ESP_LOGD(TAG, "allowedUntilYear:%d", (unsigned int)newAuthorizationEntry.allowedUntilYear);
-    ESP_LOGD(TAG, "allowedUntilMonth:%d", (unsigned int)newAuthorizationEntry.allowedUntilMonth);
-    ESP_LOGD(TAG, "allowedUntilDay:%d", (unsigned int)newAuthorizationEntry.allowedUntilDay);
-    ESP_LOGD(TAG, "allowedUntilHour:%d", (unsigned int)newAuthorizationEntry.allowedUntilHour);
-    ESP_LOGD(TAG, "allowedUntilMin:%d", (unsigned int)newAuthorizationEntry.allowedUntilMinute);
-    ESP_LOGD(TAG, "allowedUntilSec:%d", (unsigned int)newAuthorizationEntry.allowedUntilSecond);
-    ESP_LOGD(TAG, "allowedWeekdays:%d", (unsigned int)newAuthorizationEntry.allowedWeekdays);
-    ESP_LOGD(TAG, "allowedFromTimeHour:%d", (unsigned int)newAuthorizationEntry.allowedFromTimeHour);
-    ESP_LOGD(TAG, "allowedFromTimeMin:%d", (unsigned int)newAuthorizationEntry.allowedFromTimeMin);
-    ESP_LOGD(TAG, "allowedUntilTimeHour:%d", (unsigned int)newAuthorizationEntry.allowedUntilTimeHour);
-    ESP_LOGD(TAG, "allowedUntilTimeMin:%d", (unsigned int)newAuthorizationEntry.allowedUntilTimeMin);
+    ESP_LOGD(TAG, "idType:%u", (unsigned int)newAuthorizationEntry.idType);
+    ESP_LOGD(TAG, "remoteAllowed:%u", (unsigned int)newAuthorizationEntry.remoteAllowed);
+    ESP_LOGD(TAG, "timeLimited:%u", (unsigned int)newAuthorizationEntry.timeLimited);
+    ESP_LOGD(TAG, "allowedFromYear:%u", (unsigned int)newAuthorizationEntry.allowedFromYear);
+    ESP_LOGD(TAG, "allowedFromMonth:%u", (unsigned int)newAuthorizationEntry.allowedFromMonth);
+    ESP_LOGD(TAG, "allowedFromDay:%u", (unsigned int)newAuthorizationEntry.allowedFromDay);
+    ESP_LOGD(TAG, "allowedFromHour:%u", (unsigned int)newAuthorizationEntry.allowedFromHour);
+    ESP_LOGD(TAG, "allowedFromMin:%u", (unsigned int)newAuthorizationEntry.allowedFromMinute);
+    ESP_LOGD(TAG, "allowedFromSec:%u", (unsigned int)newAuthorizationEntry.allowedFromSecond);
+    ESP_LOGD(TAG, "allowedUntilYear:%u", (unsigned int)newAuthorizationEntry.allowedUntilYear);
+    ESP_LOGD(TAG, "allowedUntilMonth:%u", (unsigned int)newAuthorizationEntry.allowedUntilMonth);
+    ESP_LOGD(TAG, "allowedUntilDay:%u", (unsigned int)newAuthorizationEntry.allowedUntilDay);
+    ESP_LOGD(TAG, "allowedUntilHour:%u", (unsigned int)newAuthorizationEntry.allowedUntilHour);
+    ESP_LOGD(TAG, "allowedUntilMin:%u", (unsigned int)newAuthorizationEntry.allowedUntilMinute);
+    ESP_LOGD(TAG, "allowedUntilSec:%u", (unsigned int)newAuthorizationEntry.allowedUntilSecond);
+    ESP_LOGD(TAG, "allowedWeekdays:%u", (unsigned int)newAuthorizationEntry.allowedWeekdays);
+    ESP_LOGD(TAG, "allowedFromTimeHour:%u", (unsigned int)newAuthorizationEntry.allowedFromTimeHour);
+    ESP_LOGD(TAG, "allowedFromTimeMin:%u", (unsigned int)newAuthorizationEntry.allowedFromTimeMin);
+    ESP_LOGD(TAG, "allowedUntilTimeHour:%u", (unsigned int)newAuthorizationEntry.allowedUntilTimeHour);
+    ESP_LOGD(TAG, "allowedUntilTimeMin:%u", (unsigned int)newAuthorizationEntry.allowedUntilTimeMin);
   }
 }
 
 void log_updated_authorization_entry(UpdatedAuthorizationEntry updatedAuthorizationEntry, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "id:%d", (unsigned int)updatedAuthorizationEntry.authId);
+    ESP_LOGD(TAG, "id:%u", (unsigned int)updatedAuthorizationEntry.authId);
     ESP_LOGD(TAG, "name:%s", (const char*)updatedAuthorizationEntry.name);
-    ESP_LOGD(TAG, "enabled:%d", (unsigned int)updatedAuthorizationEntry.enabled);
-    ESP_LOGD(TAG, "remoteAllowed:%d", (unsigned int)updatedAuthorizationEntry.remoteAllowed);
-    ESP_LOGD(TAG, "timeLimited:%d", (unsigned int)updatedAuthorizationEntry.timeLimited);
-    ESP_LOGD(TAG, "allowedFromYear:%d", (unsigned int)updatedAuthorizationEntry.allowedFromYear);
-    ESP_LOGD(TAG, "allowedFromMonth:%d", (unsigned int)updatedAuthorizationEntry.allowedFromMonth);
-    ESP_LOGD(TAG, "allowedFromDay:%d", (unsigned int)updatedAuthorizationEntry.allowedFromDay);
-    ESP_LOGD(TAG, "allowedFromHour:%d", (unsigned int)updatedAuthorizationEntry.allowedFromHour);
-    ESP_LOGD(TAG, "allowedFromMin:%d", (unsigned int)updatedAuthorizationEntry.allowedFromMinute);
-    ESP_LOGD(TAG, "allowedFromSec:%d", (unsigned int)updatedAuthorizationEntry.allowedFromSecond);
-    ESP_LOGD(TAG, "allowedUntilYear:%d", (unsigned int)updatedAuthorizationEntry.allowedUntilYear);
-    ESP_LOGD(TAG, "allowedUntilMonth:%d", (unsigned int)updatedAuthorizationEntry.allowedUntilMonth);
-    ESP_LOGD(TAG, "allowedUntilDay:%d", (unsigned int)updatedAuthorizationEntry.allowedUntilDay);
-    ESP_LOGD(TAG, "allowedUntilHour:%d", (unsigned int)updatedAuthorizationEntry.allowedUntilHour);
-    ESP_LOGD(TAG, "allowedUntilMin:%d", (unsigned int)updatedAuthorizationEntry.allowedUntilMinute);
-    ESP_LOGD(TAG, "allowedUntilSec:%d", (unsigned int)updatedAuthorizationEntry.allowedUntilSecond);
-    ESP_LOGD(TAG, "allowedWeekdays:%d", (unsigned int)updatedAuthorizationEntry.allowedWeekdays);
-    ESP_LOGD(TAG, "allowedFromTimeHour:%d", (unsigned int)updatedAuthorizationEntry.allowedFromTimeHour);
-    ESP_LOGD(TAG, "allowedFromTimeMin:%d", (unsigned int)updatedAuthorizationEntry.allowedFromTimeMin);
-    ESP_LOGD(TAG, "allowedUntilTimeHour:%d", (unsigned int)updatedAuthorizationEntry.allowedUntilTimeHour);
-    ESP_LOGD(TAG, "allowedUntilTimeMin:%d", (unsigned int)updatedAuthorizationEntry.allowedUntilTimeMin);
+    ESP_LOGD(TAG, "enabled:%u", (unsigned int)updatedAuthorizationEntry.enabled);
+    ESP_LOGD(TAG, "remoteAllowed:%u", (unsigned int)updatedAuthorizationEntry.remoteAllowed);
+    ESP_LOGD(TAG, "timeLimited:%u", (unsigned int)updatedAuthorizationEntry.timeLimited);
+    ESP_LOGD(TAG, "allowedFromYear:%u", (unsigned int)updatedAuthorizationEntry.allowedFromYear);
+    ESP_LOGD(TAG, "allowedFromMonth:%u", (unsigned int)updatedAuthorizationEntry.allowedFromMonth);
+    ESP_LOGD(TAG, "allowedFromDay:%u", (unsigned int)updatedAuthorizationEntry.allowedFromDay);
+    ESP_LOGD(TAG, "allowedFromHour:%u", (unsigned int)updatedAuthorizationEntry.allowedFromHour);
+    ESP_LOGD(TAG, "allowedFromMin:%u", (unsigned int)updatedAuthorizationEntry.allowedFromMinute);
+    ESP_LOGD(TAG, "allowedFromSec:%u", (unsigned int)updatedAuthorizationEntry.allowedFromSecond);
+    ESP_LOGD(TAG, "allowedUntilYear:%u", (unsigned int)updatedAuthorizationEntry.allowedUntilYear);
+    ESP_LOGD(TAG, "allowedUntilMonth:%u", (unsigned int)updatedAuthorizationEntry.allowedUntilMonth);
+    ESP_LOGD(TAG, "allowedUntilDay:%u", (unsigned int)updatedAuthorizationEntry.allowedUntilDay);
+    ESP_LOGD(TAG, "allowedUntilHour:%u", (unsigned int)updatedAuthorizationEntry.allowedUntilHour);
+    ESP_LOGD(TAG, "allowedUntilMin:%u", (unsigned int)updatedAuthorizationEntry.allowedUntilMinute);
+    ESP_LOGD(TAG, "allowedUntilSec:%u", (unsigned int)updatedAuthorizationEntry.allowedUntilSecond);
+    ESP_LOGD(TAG, "allowedWeekdays:%u", (unsigned int)updatedAuthorizationEntry.allowedWeekdays);
+    ESP_LOGD(TAG, "allowedFromTimeHour:%u", (unsigned int)updatedAuthorizationEntry.allowedFromTimeHour);
+    ESP_LOGD(TAG, "allowedFromTimeMin:%u", (unsigned int)updatedAuthorizationEntry.allowedFromTimeMin);
+    ESP_LOGD(TAG, "allowedUntilTimeHour:%u", (unsigned int)updatedAuthorizationEntry.allowedUntilTimeHour);
+    ESP_LOGD(TAG, "allowedUntilTimeMin:%u", (unsigned int)updatedAuthorizationEntry.allowedUntilTimeMin);
   }
 }
 

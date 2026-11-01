@@ -5,6 +5,7 @@
 #include "nuki_ble_utils.h"
 
 #include <algorithm>
+#include <cinttypes>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -18,93 +19,93 @@ static const char *const TAG = "nuki_accessories";
 
 void log_new_keypad_entry(NewKeypadEntry newKeypadEntry, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "code:%d", (unsigned int)newKeypadEntry.code);
+    ESP_LOGD(TAG, "code:%u", (unsigned int)newKeypadEntry.code);
     ESP_LOGD(TAG, "name:%s", (const char*)newKeypadEntry.name);
-    ESP_LOGD(TAG, "timeLimited:%d", (unsigned int)newKeypadEntry.timeLimited);
-    ESP_LOGD(TAG, "allowedFromYear:%d", (unsigned int)newKeypadEntry.allowedFromYear);
-    ESP_LOGD(TAG, "allowedFromMonth:%d", (unsigned int)newKeypadEntry.allowedFromMonth);
-    ESP_LOGD(TAG, "allowedFromDay:%d", (unsigned int)newKeypadEntry.allowedFromDay);
-    ESP_LOGD(TAG, "allowedFromHour:%d", (unsigned int)newKeypadEntry.allowedFromHour);
-    ESP_LOGD(TAG, "allowedFromMin:%d", (unsigned int)newKeypadEntry.allowedFromMin);
-    ESP_LOGD(TAG, "allowedFromSec:%d", (unsigned int)newKeypadEntry.allowedFromSec);
-    ESP_LOGD(TAG, "allowedUntilYear:%d", (unsigned int)newKeypadEntry.allowedUntilYear);
-    ESP_LOGD(TAG, "allowedUntilMonth:%d", (unsigned int)newKeypadEntry.allowedUntilMonth);
-    ESP_LOGD(TAG, "allowedUntilDay:%d", (unsigned int)newKeypadEntry.allowedUntilDay);
-    ESP_LOGD(TAG, "allowedUntilHour:%d", (unsigned int)newKeypadEntry.allowedUntilHour);
-    ESP_LOGD(TAG, "allowedUntilMin:%d", (unsigned int)newKeypadEntry.allowedUntilMin);
-    ESP_LOGD(TAG, "allowedUntilSec:%d", (unsigned int)newKeypadEntry.allowedUntilSec);
-    ESP_LOGD(TAG, "allowedWeekdays:%d", (unsigned int)newKeypadEntry.allowedWeekdays);
-    ESP_LOGD(TAG, "allowedFromTimeHour:%d", (unsigned int)newKeypadEntry.allowedFromTimeHour);
-    ESP_LOGD(TAG, "allowedFromTimeMin:%d", (unsigned int)newKeypadEntry.allowedFromTimeMin);
-    ESP_LOGD(TAG, "allowedUntilTimeHour:%d", (unsigned int)newKeypadEntry.allowedUntilTimeHour);
-    ESP_LOGD(TAG, "allowedUntilTimeMin:%d", (unsigned int)newKeypadEntry.allowedUntilTimeMin);
+    ESP_LOGD(TAG, "timeLimited:%u", (unsigned int)newKeypadEntry.timeLimited);
+    ESP_LOGD(TAG, "allowedFromYear:%u", (unsigned int)newKeypadEntry.allowedFromYear);
+    ESP_LOGD(TAG, "allowedFromMonth:%u", (unsigned int)newKeypadEntry.allowedFromMonth);
+    ESP_LOGD(TAG, "allowedFromDay:%u", (unsigned int)newKeypadEntry.allowedFromDay);
+    ESP_LOGD(TAG, "allowedFromHour:%u", (unsigned int)newKeypadEntry.allowedFromHour);
+    ESP_LOGD(TAG, "allowedFromMin:%u", (unsigned int)newKeypadEntry.allowedFromMin);
+    ESP_LOGD(TAG, "allowedFromSec:%u", (unsigned int)newKeypadEntry.allowedFromSec);
+    ESP_LOGD(TAG, "allowedUntilYear:%u", (unsigned int)newKeypadEntry.allowedUntilYear);
+    ESP_LOGD(TAG, "allowedUntilMonth:%u", (unsigned int)newKeypadEntry.allowedUntilMonth);
+    ESP_LOGD(TAG, "allowedUntilDay:%u", (unsigned int)newKeypadEntry.allowedUntilDay);
+    ESP_LOGD(TAG, "allowedUntilHour:%u", (unsigned int)newKeypadEntry.allowedUntilHour);
+    ESP_LOGD(TAG, "allowedUntilMin:%u", (unsigned int)newKeypadEntry.allowedUntilMin);
+    ESP_LOGD(TAG, "allowedUntilSec:%u", (unsigned int)newKeypadEntry.allowedUntilSec);
+    ESP_LOGD(TAG, "allowedWeekdays:%u", (unsigned int)newKeypadEntry.allowedWeekdays);
+    ESP_LOGD(TAG, "allowedFromTimeHour:%u", (unsigned int)newKeypadEntry.allowedFromTimeHour);
+    ESP_LOGD(TAG, "allowedFromTimeMin:%u", (unsigned int)newKeypadEntry.allowedFromTimeMin);
+    ESP_LOGD(TAG, "allowedUntilTimeHour:%u", (unsigned int)newKeypadEntry.allowedUntilTimeHour);
+    ESP_LOGD(TAG, "allowedUntilTimeMin:%u", (unsigned int)newKeypadEntry.allowedUntilTimeMin);
   }
 }
 
 void log_keypad_entry(KeypadEntry keypadEntry, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "codeId:%d", (unsigned int)keypadEntry.codeId);
-    ESP_LOGD(TAG, "code:%d", (unsigned int)keypadEntry.code);
+    ESP_LOGD(TAG, "codeId:%u", (unsigned int)keypadEntry.codeId);
+    ESP_LOGD(TAG, "code:%u", (unsigned int)keypadEntry.code);
     ESP_LOGD(TAG, "name:%s", (const char*)keypadEntry.name);
-    ESP_LOGD(TAG, "enabled:%d", (unsigned int)keypadEntry.enabled);
-    ESP_LOGD(TAG, "dateCreatedYear:%d", (unsigned int)keypadEntry.dateCreatedYear);
-    ESP_LOGD(TAG, "dateCreatedMonth:%d", (unsigned int)keypadEntry.dateCreatedMonth);
-    ESP_LOGD(TAG, "dateCreatedDay:%d", (unsigned int)keypadEntry.dateCreatedDay);
-    ESP_LOGD(TAG, "dateCreatedHour:%d", (unsigned int)keypadEntry.dateCreatedHour);
-    ESP_LOGD(TAG, "dateCreatedMin:%d", (unsigned int)keypadEntry.dateCreatedMin);
-    ESP_LOGD(TAG, "dateCreatedSec:%d", (unsigned int)keypadEntry.dateCreatedSec);
-    ESP_LOGD(TAG, "dateLastActiveYear:%d", (unsigned int)keypadEntry.dateLastActiveYear);
-    ESP_LOGD(TAG, "dateLastActiveMonth:%d", (unsigned int)keypadEntry.dateLastActiveMonth);
-    ESP_LOGD(TAG, "dateLastActiveDay:%d", (unsigned int)keypadEntry.dateLastActiveDay);
-    ESP_LOGD(TAG, "dateLastActiveHour:%d", (unsigned int)keypadEntry.dateLastActiveHour);
-    ESP_LOGD(TAG, "dateLastActiveMin:%d", (unsigned int)keypadEntry.dateLastActiveMin);
-    ESP_LOGD(TAG, "dateLastActiveSec:%d", (unsigned int)keypadEntry.dateLastActiveSec);
-    ESP_LOGD(TAG, "lockCount:%d", (unsigned int)keypadEntry.lockCount);
-    ESP_LOGD(TAG, "timeLimited:%d", (unsigned int)keypadEntry.timeLimited);
-    ESP_LOGD(TAG, "allowedFromYear:%d", (unsigned int)keypadEntry.allowedFromYear);
-    ESP_LOGD(TAG, "allowedFromMonth:%d", (unsigned int)keypadEntry.allowedFromMonth);
-    ESP_LOGD(TAG, "allowedFromDay:%d", (unsigned int)keypadEntry.allowedFromDay);
-    ESP_LOGD(TAG, "allowedFromHour:%d", (unsigned int)keypadEntry.allowedFromHour);
-    ESP_LOGD(TAG, "allowedFromMin:%d", (unsigned int)keypadEntry.allowedFromMin);
-    ESP_LOGD(TAG, "allowedFromSec:%d", (unsigned int)keypadEntry.allowedFromSec);
-    ESP_LOGD(TAG, "allowedUntilYear:%d", (unsigned int)keypadEntry.allowedUntilYear);
-    ESP_LOGD(TAG, "allowedUntilMonth:%d", (unsigned int)keypadEntry.allowedUntilMonth);
-    ESP_LOGD(TAG, "allowedUntilDay:%d", (unsigned int)keypadEntry.allowedUntilDay);
-    ESP_LOGD(TAG, "allowedUntilHour:%d", (unsigned int)keypadEntry.allowedUntilHour);
-    ESP_LOGD(TAG, "allowedUntilMin:%d", (unsigned int)keypadEntry.allowedUntilMin);
-    ESP_LOGD(TAG, "allowedUntilSec:%d", (unsigned int)keypadEntry.allowedUntilSec);
-    ESP_LOGD(TAG, "allowedWeekdays:%d", (unsigned int)keypadEntry.allowedWeekdays);
-    ESP_LOGD(TAG, "allowedFromTimeHour:%d", (unsigned int)keypadEntry.allowedFromTimeHour);
-    ESP_LOGD(TAG, "allowedFromTimeMin:%d", (unsigned int)keypadEntry.allowedFromTimeMin);
-    ESP_LOGD(TAG, "allowedUntilTimeHour:%d", (unsigned int)keypadEntry.allowedUntilTimeHour);
-    ESP_LOGD(TAG, "allowedUntilTimeMin:%d", (unsigned int)keypadEntry.allowedUntilTimeMin);
+    ESP_LOGD(TAG, "enabled:%u", (unsigned int)keypadEntry.enabled);
+    ESP_LOGD(TAG, "dateCreatedYear:%u", (unsigned int)keypadEntry.dateCreatedYear);
+    ESP_LOGD(TAG, "dateCreatedMonth:%u", (unsigned int)keypadEntry.dateCreatedMonth);
+    ESP_LOGD(TAG, "dateCreatedDay:%u", (unsigned int)keypadEntry.dateCreatedDay);
+    ESP_LOGD(TAG, "dateCreatedHour:%u", (unsigned int)keypadEntry.dateCreatedHour);
+    ESP_LOGD(TAG, "dateCreatedMin:%u", (unsigned int)keypadEntry.dateCreatedMin);
+    ESP_LOGD(TAG, "dateCreatedSec:%u", (unsigned int)keypadEntry.dateCreatedSec);
+    ESP_LOGD(TAG, "dateLastActiveYear:%u", (unsigned int)keypadEntry.dateLastActiveYear);
+    ESP_LOGD(TAG, "dateLastActiveMonth:%u", (unsigned int)keypadEntry.dateLastActiveMonth);
+    ESP_LOGD(TAG, "dateLastActiveDay:%u", (unsigned int)keypadEntry.dateLastActiveDay);
+    ESP_LOGD(TAG, "dateLastActiveHour:%u", (unsigned int)keypadEntry.dateLastActiveHour);
+    ESP_LOGD(TAG, "dateLastActiveMin:%u", (unsigned int)keypadEntry.dateLastActiveMin);
+    ESP_LOGD(TAG, "dateLastActiveSec:%u", (unsigned int)keypadEntry.dateLastActiveSec);
+    ESP_LOGD(TAG, "lockCount:%u", (unsigned int)keypadEntry.lockCount);
+    ESP_LOGD(TAG, "timeLimited:%u", (unsigned int)keypadEntry.timeLimited);
+    ESP_LOGD(TAG, "allowedFromYear:%u", (unsigned int)keypadEntry.allowedFromYear);
+    ESP_LOGD(TAG, "allowedFromMonth:%u", (unsigned int)keypadEntry.allowedFromMonth);
+    ESP_LOGD(TAG, "allowedFromDay:%u", (unsigned int)keypadEntry.allowedFromDay);
+    ESP_LOGD(TAG, "allowedFromHour:%u", (unsigned int)keypadEntry.allowedFromHour);
+    ESP_LOGD(TAG, "allowedFromMin:%u", (unsigned int)keypadEntry.allowedFromMin);
+    ESP_LOGD(TAG, "allowedFromSec:%u", (unsigned int)keypadEntry.allowedFromSec);
+    ESP_LOGD(TAG, "allowedUntilYear:%u", (unsigned int)keypadEntry.allowedUntilYear);
+    ESP_LOGD(TAG, "allowedUntilMonth:%u", (unsigned int)keypadEntry.allowedUntilMonth);
+    ESP_LOGD(TAG, "allowedUntilDay:%u", (unsigned int)keypadEntry.allowedUntilDay);
+    ESP_LOGD(TAG, "allowedUntilHour:%u", (unsigned int)keypadEntry.allowedUntilHour);
+    ESP_LOGD(TAG, "allowedUntilMin:%u", (unsigned int)keypadEntry.allowedUntilMin);
+    ESP_LOGD(TAG, "allowedUntilSec:%u", (unsigned int)keypadEntry.allowedUntilSec);
+    ESP_LOGD(TAG, "allowedWeekdays:%u", (unsigned int)keypadEntry.allowedWeekdays);
+    ESP_LOGD(TAG, "allowedFromTimeHour:%u", (unsigned int)keypadEntry.allowedFromTimeHour);
+    ESP_LOGD(TAG, "allowedFromTimeMin:%u", (unsigned int)keypadEntry.allowedFromTimeMin);
+    ESP_LOGD(TAG, "allowedUntilTimeHour:%u", (unsigned int)keypadEntry.allowedUntilTimeHour);
+    ESP_LOGD(TAG, "allowedUntilTimeMin:%u", (unsigned int)keypadEntry.allowedUntilTimeMin);
   }
 }
 
 void log_updated_keypad_entry(UpdatedKeypadEntry updatedKeypadEntry, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "codeId:%d", (unsigned int)updatedKeypadEntry.codeId);
-    ESP_LOGD(TAG, "code:%d", (unsigned int)updatedKeypadEntry.code);
+    ESP_LOGD(TAG, "codeId:%u", (unsigned int)updatedKeypadEntry.codeId);
+    ESP_LOGD(TAG, "code:%u", (unsigned int)updatedKeypadEntry.code);
     ESP_LOGD(TAG, "name:%s", (const char*)updatedKeypadEntry.name);
-    ESP_LOGD(TAG, "enabled:%d", (unsigned int)updatedKeypadEntry.enabled);
-    ESP_LOGD(TAG, "timeLimited:%d", (unsigned int)updatedKeypadEntry.timeLimited);
-    ESP_LOGD(TAG, "allowedFromYear:%d", (unsigned int)updatedKeypadEntry.allowedFromYear);
-    ESP_LOGD(TAG, "allowedFromMonth:%d", (unsigned int)updatedKeypadEntry.allowedFromMonth);
-    ESP_LOGD(TAG, "allowedFromDay:%d", (unsigned int)updatedKeypadEntry.allowedFromDay);
-    ESP_LOGD(TAG, "allowedFromHour:%d", (unsigned int)updatedKeypadEntry.allowedFromHour);
-    ESP_LOGD(TAG, "allowedFromMin:%d", (unsigned int)updatedKeypadEntry.allowedFromMin);
-    ESP_LOGD(TAG, "allowedFromSec:%d", (unsigned int)updatedKeypadEntry.allowedFromSec);
-    ESP_LOGD(TAG, "allowedUntilYear:%d", (unsigned int)updatedKeypadEntry.allowedUntilYear);
-    ESP_LOGD(TAG, "allowedUntilMonth:%d", (unsigned int)updatedKeypadEntry.allowedUntilMonth);
-    ESP_LOGD(TAG, "allowedUntilDay:%d", (unsigned int)updatedKeypadEntry.allowedUntilDay);
-    ESP_LOGD(TAG, "allowedUntilHour:%d", (unsigned int)updatedKeypadEntry.allowedUntilHour);
-    ESP_LOGD(TAG, "allowedUntilMin:%d", (unsigned int)updatedKeypadEntry.allowedUntilMin);
-    ESP_LOGD(TAG, "allowedUntilSec:%d", (unsigned int)updatedKeypadEntry.allowedUntilSec);
-    ESP_LOGD(TAG, "allowedWeekdays:%d", (unsigned int)updatedKeypadEntry.allowedWeekdays);
-    ESP_LOGD(TAG, "allowedFromTimeHour:%d", (unsigned int)updatedKeypadEntry.allowedFromTimeHour);
-    ESP_LOGD(TAG, "allowedFromTimeMin:%d", (unsigned int)updatedKeypadEntry.allowedFromTimeMin);
-    ESP_LOGD(TAG, "allowedUntilTimeHour:%d", (unsigned int)updatedKeypadEntry.allowedUntilTimeHour);
-    ESP_LOGD(TAG, "allowedUntilTimeMin:%d", (unsigned int)updatedKeypadEntry.allowedUntilTimeMin);
+    ESP_LOGD(TAG, "enabled:%u", (unsigned int)updatedKeypadEntry.enabled);
+    ESP_LOGD(TAG, "timeLimited:%u", (unsigned int)updatedKeypadEntry.timeLimited);
+    ESP_LOGD(TAG, "allowedFromYear:%u", (unsigned int)updatedKeypadEntry.allowedFromYear);
+    ESP_LOGD(TAG, "allowedFromMonth:%u", (unsigned int)updatedKeypadEntry.allowedFromMonth);
+    ESP_LOGD(TAG, "allowedFromDay:%u", (unsigned int)updatedKeypadEntry.allowedFromDay);
+    ESP_LOGD(TAG, "allowedFromHour:%u", (unsigned int)updatedKeypadEntry.allowedFromHour);
+    ESP_LOGD(TAG, "allowedFromMin:%u", (unsigned int)updatedKeypadEntry.allowedFromMin);
+    ESP_LOGD(TAG, "allowedFromSec:%u", (unsigned int)updatedKeypadEntry.allowedFromSec);
+    ESP_LOGD(TAG, "allowedUntilYear:%u", (unsigned int)updatedKeypadEntry.allowedUntilYear);
+    ESP_LOGD(TAG, "allowedUntilMonth:%u", (unsigned int)updatedKeypadEntry.allowedUntilMonth);
+    ESP_LOGD(TAG, "allowedUntilDay:%u", (unsigned int)updatedKeypadEntry.allowedUntilDay);
+    ESP_LOGD(TAG, "allowedUntilHour:%u", (unsigned int)updatedKeypadEntry.allowedUntilHour);
+    ESP_LOGD(TAG, "allowedUntilMin:%u", (unsigned int)updatedKeypadEntry.allowedUntilMin);
+    ESP_LOGD(TAG, "allowedUntilSec:%u", (unsigned int)updatedKeypadEntry.allowedUntilSec);
+    ESP_LOGD(TAG, "allowedWeekdays:%u", (unsigned int)updatedKeypadEntry.allowedWeekdays);
+    ESP_LOGD(TAG, "allowedFromTimeHour:%u", (unsigned int)updatedKeypadEntry.allowedFromTimeHour);
+    ESP_LOGD(TAG, "allowedFromTimeMin:%u", (unsigned int)updatedKeypadEntry.allowedFromTimeMin);
+    ESP_LOGD(TAG, "allowedUntilTimeHour:%u", (unsigned int)updatedKeypadEntry.allowedUntilTimeHour);
+    ESP_LOGD(TAG, "allowedUntilTimeMin:%u", (unsigned int)updatedKeypadEntry.allowedUntilTimeMin);
   }
 }
 
@@ -117,36 +118,36 @@ void log_fingerprint_entry(FingerprintEntry fingerprintEntry, bool debug) {
     hexString[64] = '\0';
 
     ESP_LOGD(TAG, "fingerprintId: %s", hexString);
-    ESP_LOGD(TAG, "keypadCodeId: %d", (unsigned int)fingerprintEntry.keypadCodeId);
+    ESP_LOGD(TAG, "keypadCodeId: %u", (unsigned int)fingerprintEntry.keypadCodeId);
     ESP_LOGD(TAG, "name: %s", fingerprintEntry.name);
   }
 }
 
 void log_keypad2_config(Keypad2Config keypad2Config, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "updatePending: %d", (unsigned int)keypad2Config.updatePending);
-    ESP_LOGD(TAG, "ledBrightness: %d", (unsigned int)keypad2Config.ledBrightness);
-    ESP_LOGD(TAG, "batteryType: %d", (unsigned int)keypad2Config.batteryType);
-    ESP_LOGD(TAG, "buttonMode: %d", (unsigned int)keypad2Config.buttonMode);
-    ESP_LOGD(TAG, "lockAction: %d", (unsigned int)keypad2Config.lockAction);
+    ESP_LOGD(TAG, "updatePending: %u", (unsigned int)keypad2Config.updatePending);
+    ESP_LOGD(TAG, "ledBrightness: %u", (unsigned int)keypad2Config.ledBrightness);
+    ESP_LOGD(TAG, "batteryType: %u", (unsigned int)keypad2Config.batteryType);
+    ESP_LOGD(TAG, "buttonMode: %u", (unsigned int)keypad2Config.buttonMode);
+    ESP_LOGD(TAG, "lockAction: %u", (unsigned int)keypad2Config.lockAction);
   }
 }
 
 void log_accessory_info(AccessoryInfo accessoryInfo, bool debug) {
   if (debug) {
-    ESP_LOGD(TAG, "dateYear: %d", (unsigned int)accessoryInfo.dateYear);
-    ESP_LOGD(TAG, "dateMonth: %d", (unsigned int)accessoryInfo.dateMonth);
-    ESP_LOGD(TAG, "dateDay: %d", (unsigned int)accessoryInfo.dateDay);
-    ESP_LOGD(TAG, "dateHour: %d", (unsigned int)accessoryInfo.dateHour);
-    ESP_LOGD(TAG, "dateMinute: %d", (unsigned int)accessoryInfo.dateMinute);
-    ESP_LOGD(TAG, "dateSecond: %d", (unsigned int)accessoryInfo.dateSecond);
-    ESP_LOGD(TAG, "accessoryNukiId: %d", (unsigned int)accessoryInfo.accessoryNukiId);
-    ESP_LOGD(TAG, "accessoryType: %d", (unsigned int)accessoryInfo.accessoryType);
+    ESP_LOGD(TAG, "dateYear: %u", (unsigned int)accessoryInfo.dateYear);
+    ESP_LOGD(TAG, "dateMonth: %u", (unsigned int)accessoryInfo.dateMonth);
+    ESP_LOGD(TAG, "dateDay: %u", (unsigned int)accessoryInfo.dateDay);
+    ESP_LOGD(TAG, "dateHour: %u", (unsigned int)accessoryInfo.dateHour);
+    ESP_LOGD(TAG, "dateMinute: %u", (unsigned int)accessoryInfo.dateMinute);
+    ESP_LOGD(TAG, "dateSecond: %u", (unsigned int)accessoryInfo.dateSecond);
+    ESP_LOGD(TAG, "accessoryNukiId: %u", (unsigned int)accessoryInfo.accessoryNukiId);
+    ESP_LOGD(TAG, "accessoryType: %u", (unsigned int)accessoryInfo.accessoryType);
     ESP_LOGD(TAG, "firmwareVersion: %d.%d.%d", accessoryInfo.firmwareVersion[0], accessoryInfo.firmwareVersion[1], accessoryInfo.firmwareVersion[2]);
     ESP_LOGD(TAG, "hardwareRevision: %d.%d", accessoryInfo.hardwareRevision[0], accessoryInfo.hardwareRevision[1]);
-    ESP_LOGD(TAG, "productVariantDifferentiator: %d", (unsigned int)accessoryInfo.productVariantDifferentiator);
-    ESP_LOGD(TAG, "mostRecentBatteryVoltage: %d", (unsigned int)accessoryInfo.mostRecentBatteryVoltage);
-    ESP_LOGD(TAG, "mostRecentTemperature: %d", (unsigned int)accessoryInfo.mostRecentTemperature);
+    ESP_LOGD(TAG, "productVariantDifferentiator: %u", (unsigned int)accessoryInfo.productVariantDifferentiator);
+    ESP_LOGD(TAG, "mostRecentBatteryVoltage: %u", (unsigned int)accessoryInfo.mostRecentBatteryVoltage);
+    ESP_LOGD(TAG, "mostRecentTemperature: %u", (unsigned int)accessoryInfo.mostRecentTemperature);
   }
 }
 
@@ -252,7 +253,7 @@ CmdResult NukiBle::add_keypad_entry(NewKeypadEntry newKeypadEntry) {
   CmdResult result = this->execute_action(action);
   if (result == CmdResult::Success) {
     if (this->debug_nuki_readable_data_) {
-      ESP_LOGD(TAG, "addKeyPadEntry, payloadlen: %d", sizeof(NewKeypadEntry));
+      ESP_LOGD(TAG, "addKeyPadEntry, payloadlen: %zu", sizeof(NewKeypadEntry));
       print_buffer(action.payload, sizeof(NewKeypadEntry), false, "addKeyPadCode content: ", this->debug_nuki_hex_data_);
       log_new_keypad_entry(newKeypadEntry, this->debug_nuki_readable_data_);
     }
@@ -272,7 +273,7 @@ CmdResult NukiBle::update_keypad_entry(UpdatedKeypadEntry updatedKeyPadEntry) {
   CmdResult result = this->execute_action(action);
   if (result == CmdResult::Success) {
     if (this->debug_nuki_readable_data_) {
-      ESP_LOGD(TAG, "addKeyPadEntry, payloadlen: %d", sizeof(UpdatedKeypadEntry));
+      ESP_LOGD(TAG, "addKeyPadEntry, payloadlen: %zu", sizeof(UpdatedKeypadEntry));
       print_buffer(action.payload, sizeof(UpdatedKeypadEntry), false, "updatedKeypad content: ", this->debug_nuki_hex_data_);
       log_updated_keypad_entry(updatedKeyPadEntry, this->debug_nuki_readable_data_);
     }
@@ -346,7 +347,7 @@ bool NukiLock::is_keypad_battery_critical() {
 bool NukiLockComponent::valid_keypad_id(int32_t id) {
     bool is_valid = std::find(keypad_code_ids_.begin(), keypad_code_ids_.end(), id) != keypad_code_ids_.end();
     if (!is_valid) {
-        ESP_LOGE(TAG, "Keypad id %d unknown.", id);
+        ESP_LOGE(TAG, "Keypad id %" PRId32 " unknown.", id);
     }
     return is_valid;
 }
@@ -362,7 +363,7 @@ bool NukiLockComponent::valid_keypad_name(std::string name) {
 bool NukiLockComponent::valid_keypad_code(int32_t code) {
     bool code_valid = (code > 100000 && code < 1000000 && (std::to_string(code).find('0') == std::string::npos));
     if (!code_valid) {
-        ESP_LOGE(TAG, "Keypad code %d is invalid. Code must be 6 digits, without 0.", code);
+        ESP_LOGE(TAG, "Keypad code %" PRId32 " is invalid. Code must be 6 digits, without 0.", code);
     }
     return code_valid;
 }

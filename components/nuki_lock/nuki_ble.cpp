@@ -183,7 +183,7 @@ PairingResult NukiBle::pair_nuki(AuthorizationIdType idType) {
   this->pairing_in_progress_ = false;
 
   if (this->debug_nuki_connect_) {
-    ESP_LOGD(TAG, "pairing result %d", (unsigned int)result);
+    ESP_LOGD(TAG, "pairing result %u", (unsigned int)result);
   }
 
   this->is_paired_ = (result == PairingResult::Success);
@@ -535,7 +535,7 @@ CmdResult NukiBle::add_authorization_entry(NewAuthorizationEntry newAuthorizatio
   CmdResult result = this->execute_action(action);
   if (result == CmdResult::Success) {
     if (this->debug_nuki_readable_data_) {
-      ESP_LOGD(TAG, "add_authorization_entry, payloadlen: %d", sizeof(NewAuthorizationEntry));
+      ESP_LOGD(TAG, "add_authorization_entry, payloadlen: %zu", sizeof(NewAuthorizationEntry));
       print_buffer(action.payload, sizeof(NewAuthorizationEntry), false, "add_authorization_entry content: ", this->debug_nuki_hex_data_);
       log_new_authorization_entry(newAuthorizationEntry, this->debug_nuki_readable_data_);
     }
@@ -570,7 +570,7 @@ CmdResult NukiBle::update_authorization_entry(UpdatedAuthorizationEntry updatedA
   CmdResult result = this->execute_action(action);
   if (result == CmdResult::Success) {
     if (this->debug_nuki_readable_data_) {
-      ESP_LOGD(TAG, "add_authorization_entry, payloadlen: %d", sizeof(UpdatedAuthorizationEntry));
+      ESP_LOGD(TAG, "add_authorization_entry, payloadlen: %zu", sizeof(UpdatedAuthorizationEntry));
       print_buffer(action.payload, sizeof(UpdatedAuthorizationEntry), false, "updatedKeypad content: ", this->debug_nuki_hex_data_);
       log_updated_authorization_entry(updatedAuthorizationEntry, this->debug_nuki_readable_data_);
     }
@@ -774,7 +774,7 @@ void NukiBle::save_credentials() {
       print_buffer(this->authorization_id_, sizeof(this->authorization_id_), false, AUTH_ID_STORE_NAME, this->debug_nuki_hex_data_);
 
       if (this->is_lock_ultra()) {
-        ESP_LOGD(TAG, "pincode: %d", (unsigned int)this->ultra_pin_code_);
+        ESP_LOGD(TAG, "pincode: %u", (unsigned int)this->ultra_pin_code_);
       } else {
         ESP_LOGD(TAG, "pincode: %d", this->pin_code_);
       }
@@ -944,6 +944,7 @@ PairingState NukiBle::pair_state_machine(const PairingState nukiPairingState) {
       this->received_status_ = 0xff;
       this->time_now_ = (esp_timer_get_time() / 1000);
       this->nuki_pairing_result_state_ = PairingState::ReqRemPubKey;
+      [[fallthrough]];
     }
     case PairingState::ReqRemPubKey: {
       //Request remote public key (Sent message should be 0100030027A7)
@@ -955,6 +956,7 @@ PairingState NukiBle::pair_state_machine(const PairingState nukiPairingState) {
       memcpy(buff, &cmd, sizeof(Command));
       this->send_plain_message(Command::RequestData, buff, sizeof(Command));
       this->nuki_pairing_result_state_ = PairingState::RecRemPubKey;
+      [[fallthrough]];
     }
     case PairingState::RecRemPubKey: {
       if (is_char_array_not_empty(this->remote_public_key_, sizeof(this->remote_public_key_))) {
@@ -968,6 +970,7 @@ PairingState NukiBle::pair_state_machine(const PairingState nukiPairingState) {
       }
       this->send_plain_message(Command::PublicKey, this->my_public_key_, sizeof(this->my_public_key_));
       this->nuki_pairing_result_state_ = PairingState::GenKeyPair;
+      [[fallthrough]];
     }
     case PairingState::GenKeyPair: {
       if (this->debug_nuki_connect_) {
@@ -986,6 +989,7 @@ PairingState NukiBle::pair_state_machine(const PairingState nukiPairingState) {
       crypto_core_hsalsa20(this->secret_key_k_, in, sharedKeyS, sigma);
       print_buffer(this->secret_key_k_, sizeof(this->secret_key_k_), false, "Secret key k", this->debug_nuki_hex_data_);
       this->nuki_pairing_result_state_ = PairingState::CalculateAuth;
+      [[fallthrough]];
     }
     case PairingState::CalculateAuth: {
       if (is_char_array_not_empty(this->challenge_nonce_k_, sizeof(this->challenge_nonce_k_))) {
@@ -1012,6 +1016,7 @@ PairingState NukiBle::pair_state_machine(const PairingState nukiPairingState) {
       this->send_plain_message(Command::AuthorizationAuthenticator, this->authenticator_, sizeof(this->authenticator_));
       this->ultra_auth_info_command_received_ = false;
       this->nuki_pairing_result_state_ = PairingState::SendAuthData;
+      [[fallthrough]];
     }
     case PairingState::SendAuthData: {
       if (this->is_lock_ultra()) {
@@ -1157,7 +1162,7 @@ bool NukiBle::send_encrypted_message(Command commandIdentifier, const unsigned c
 
   if (this->debug_nuki_hex_data_) {
     ESP_LOGD(TAG, "payloadlen: %d", payloadLen);
-    ESP_LOGD(TAG, "sizeof(plainData): %d", sizeof(plainData));
+    ESP_LOGD(TAG, "sizeof(plainData): %zu", sizeof(plainData));
     ESP_LOGD(TAG, "CRC: %02x", dataCrc);
   }
   print_buffer((uint8_t*)plainDataWithCrc, sizeof(plainDataWithCrc), false, "Plain data with CRC: ", this->debug_nuki_hex_data_);

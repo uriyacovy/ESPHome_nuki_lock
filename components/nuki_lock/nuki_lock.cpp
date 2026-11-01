@@ -7,6 +7,7 @@
 #endif
 
 #include <algorithm>
+#include <cinttypes>
 #include <map>
 #include <vector>
 
@@ -45,7 +46,7 @@ void NukiLockComponent::process_key_turner_state() {
 
     ESP_LOGI(TAG, "Lock state: %s (%d), Battery (state: %#x, critical: %d, level: %d, charging: %s), Time: %d:%d:%d",
         current_lock_state_as_string,
-        current_lock_state,
+        (int)current_lock_state,
         this->retrieved_key_turner_state_.criticalBatteryState,
         this->nuki_lock_.is_battery_critical(),
         this->nuki_lock_.get_battery_perc(),
@@ -487,7 +488,7 @@ void NukiLockComponent::process_auth_data() {
         return;
     }
 
-    ESP_LOGD(TAG, "Authorization Entry Count: %d", authEntries.size());
+    ESP_LOGD(TAG, "Authorization Entry Count: %zu", authEntries.size());
 
     std::sort(authEntries.begin(), authEntries.end(), [](const AuthorizationEntry& a, const AuthorizationEntry& b) {
         return a.authId < b.authId;
@@ -509,7 +510,7 @@ void NukiLockComponent::process_auth_data() {
         strncpy(auth_entry.name, reinterpret_cast<const char*>(entry.name), MAX_NAME_LEN - 1);
         auth_entry.name[MAX_NAME_LEN - 1] = '\0';
 
-        ESP_LOGD(TAG, "Authorization entry[%d] type: %d name: %s", entry.authId, entry.idType, entry.name);
+        ESP_LOGD(TAG, "Authorization entry[%" PRIu32 "] type: %d name: %s", entry.authId, entry.idType, entry.name);
 
         this->auth_entries_count_++;
     }
@@ -615,7 +616,7 @@ void NukiLockComponent::process_log_entries() {
         return;
     }
 
-    ESP_LOGD(TAG, "Log Entry Count: %d", log_entries.size());
+    ESP_LOGD(TAG, "Log Entry Count: %zu", log_entries.size());
 
     if (log_entries.size() > MAX_EVENT_LOG_ENTRIES) {
         log_entries.resize(MAX_EVENT_LOG_ENTRIES);
@@ -662,10 +663,10 @@ void NukiLockComponent::process_log_entries() {
         }
 
         if (this->send_events_) {
-            snprintf(num_buffer, sizeof(num_buffer), "%u", log.index);
+            snprintf(num_buffer, sizeof(num_buffer), "%" PRIu32, log.index);
             event_data["index"] = num_buffer;
 
-            snprintf(num_buffer, sizeof(num_buffer), "%u", log.authId);
+            snprintf(num_buffer, sizeof(num_buffer), "%" PRIu32, log.authId);
             event_data["authorizationId"] = num_buffer;
 
             const char* authName = get_auth_name(log.authId);
@@ -735,6 +736,9 @@ void NukiLockComponent::process_log_entries() {
                         default: event_data["action"] = "Unknown"; break;
                     }
                     break;
+
+                default:
+                    break;
             }
 
             if (log.index > this->last_rolling_log_id) {
@@ -803,7 +807,7 @@ void NukiLockComponent::execute_lock_action_step() {
 
         char currentlock_action_as_string[30] = {0};
         lock_action_to_string(this->executing_lock_action_, currentlock_action_as_string);
-        ESP_LOGD(TAG, "Executing lock action %s (%d)... (%d attempts left)", currentlock_action_as_string, this->executing_lock_action_, this->action_attempts_);
+        ESP_LOGD(TAG, "Executing lock action %s (%d)... (%d attempts left)", currentlock_action_as_string, (int)this->executing_lock_action_, this->action_attempts_);
 
         this->publish_assumed_lock_state(this->executing_lock_action_);
     }
@@ -830,7 +834,7 @@ void NukiLockComponent::execute_lock_action_step() {
 
     bool is_execution_successful = (result == CmdResult::Success);
     if (is_execution_successful) {
-        ESP_LOGI(TAG, "lock_action %s (%d) has resulted in %s (%d)", lock_action_as_string, this->executing_lock_action_, result_as_string, result);
+        ESP_LOGI(TAG, "lock_action %s (%d) has resulted in %s (%d)", lock_action_as_string, (int)this->executing_lock_action_, result_as_string, result);
 
         if (this->lock_action_ == this->executing_lock_action_) {
             // Stop action attempts only if no new action was received in the meantime.
@@ -838,7 +842,7 @@ void NukiLockComponent::execute_lock_action_step() {
             this->action_attempts_ = 0;
         }
     } else {
-        ESP_LOGE(TAG, "lock_action %s (%d) has resulted in %s (%d)", lock_action_as_string, this->executing_lock_action_, result_as_string, result);
+        ESP_LOGE(TAG, "lock_action %s (%d) has resulted in %s (%d)", lock_action_as_string, (int)this->executing_lock_action_, result_as_string, result);
 
         if (this->action_attempts_ == 0) {
             this->connected_ = false;
@@ -878,10 +882,10 @@ void NukiLockComponent::execute_lock_action_step() {
 }
 
 void NukiLockComponent::set_security_pin(uint32_t new_pin) {
-    ESP_LOGI(TAG, "Setting security pin: %u", new_pin);
+    ESP_LOGI(TAG, "Setting security pin: %" PRIu32, new_pin);
 
     if (new_pin > 999999) {
-        ESP_LOGE(TAG, "Invalid pin: %u (max. 6 digits/999999) - abort.", new_pin);
+        ESP_LOGE(TAG, "Invalid pin: %" PRIu32 " (max. 6 digits/999999) - abort.", new_pin);
         return;
     }
 
@@ -1006,7 +1010,7 @@ void NukiLockComponent::process_pending_nuki_command() {
 
     if (result != CmdResult::Success && this->pending_command_retries_left_ > 0) {
         this->pending_command_retries_left_--;
-        ESP_LOGW(TAG, "Queued Nuki command failed (result %d), retrying in %ums (%d attempts left)",
+        ESP_LOGW(TAG, "Queued Nuki command failed (result %d), retrying in %" PRIu32 "ms (%d attempts left)",
             result, this->command_retry_delay_millis_, this->pending_command_retries_left_);
         this->command_cooldown_millis = this->command_retry_delay_millis_;
         return;  // pending_nuki_command_/_done_ stay set - process_pending_nuki_command()
@@ -1246,10 +1250,10 @@ void NukiLockComponent::setup() {
     uint32_t pin_to_use = 0;
     if (this->security_pin_ != 0) {
         ESP_LOGW(TAG, "Note: Using security pin override, not yaml config pin!");
-        ESP_LOGD(TAG, "Security pin: %u (override)", this->security_pin_);
+        ESP_LOGD(TAG, "Security pin: %" PRIu32 " (override)", this->security_pin_);
         pin_to_use = this->security_pin_;
     } else if(this->security_pin_config_.value_or(0) != 0) {
-        ESP_LOGD(TAG, "Security pin: %u (yaml config)", this->security_pin_config_.value_or(0));
+        ESP_LOGD(TAG, "Security pin: %" PRIu32 " (yaml config)", this->security_pin_config_.value_or(0));
         pin_to_use = this->security_pin_config_.value_or(0);
     } else {
         this->pin_state_ = PinState::NotSet;
@@ -1262,7 +1266,7 @@ void NukiLockComponent::setup() {
             this->pin_state_ = PinState::Invalid;
             this->save_settings();
         } else {
-            ESP_LOGD(TAG, "Set security pin before init: %u", pin_to_use);
+            ESP_LOGD(TAG, "Set security pin before init: %" PRIu32, pin_to_use);
             this->nuki_lock_.save_ultra_pincode((unsigned int)pin_to_use, false);
         }
     }
@@ -1371,7 +1375,7 @@ void NukiLockComponent::setup_lock(bool new_pairing) {
             ESP_LOGE(TAG, "Invalid security pin detected! Maximum is 6 digits (999999)");
             this->pin_state_ = PinState::Invalid;
         } else if (!this->nuki_lock_.is_lock_ultra() && pin_to_use > 65535) {
-            ESP_LOGE(TAG, "Security pin exceeds maximum of 65535 for 1st to 4th Gen Smart Locks", pin_to_use);
+            ESP_LOGE(TAG, "Security pin exceeds maximum of 65535 for 1st to 4th Gen Smart Locks");
             this->pin_state_ = PinState::Invalid;
         } else {
             const bool result = this->nuki_lock_.is_lock_ultra() ? this->nuki_lock_.save_ultra_pincode(pin_to_use) : this->nuki_lock_.save_security_pincode(static_cast<uint16_t>(pin_to_use));
@@ -1480,7 +1484,7 @@ void NukiLockComponent::control(const lock::LockCall &call) {
     char lock_action_as_string[30] = {0};
     lock_action_to_string(this->lock_action_, lock_action_as_string);
     lock_action_as_string[sizeof(lock_action_as_string) - 1] = '\0';
-    ESP_LOGI(TAG, "New lock action received: %s (%d)", lock_action_as_string, this->lock_action_);
+    ESP_LOGI(TAG, "New lock action received: %s (%d)", lock_action_as_string, (int)this->lock_action_);
 
     #ifdef USE_NUKI_LOCK_HYBRID
     if (this->hybrid_send_lock_action(this->lock_action_)) {
@@ -1520,19 +1524,19 @@ void NukiLockComponent::dump_config() {
     #ifdef USE_NUKI_LOCK_HYBRID
     ESP_LOGCONFIG(TAG, "  Hybrid mode: %s", this->hybrid_topic_prefix_len_ == 0 ? "waiting for Nuki ID" : this->hybrid_topic_prefix_);
     ESP_LOGCONFIG(TAG, "    Send actions: %s", YESNO(this->hybrid_send_actions_));
-    ESP_LOGCONFIG(TAG, "    BLE fallback: %s (after %ums)", YESNO(this->hybrid_ble_fallback_), this->hybrid_fallback_timeout_millis_);
-    ESP_LOGCONFIG(TAG, "    Offline update interval: %us", this->hybrid_offline_update_interval_);
+    ESP_LOGCONFIG(TAG, "    BLE fallback: %s (after %" PRIu32 "ms)", YESNO(this->hybrid_ble_fallback_), this->hybrid_fallback_timeout_millis_);
+    ESP_LOGCONFIG(TAG, "    Offline update interval: %" PRIu32 "s", this->hybrid_offline_update_interval_);
     #endif
 
-    ESP_LOGCONFIG(TAG, "  Pairing mode timeout: %us", this->pairing_mode_timeout_);
-    ESP_LOGCONFIG(TAG, "  Configuration query interval: %us", this->query_interval_config_);
-    ESP_LOGCONFIG(TAG, "  Auth Data query interval: %us", this->query_interval_auth_data_);
-    ESP_LOGCONFIG(TAG, "  Battery Report query interval: %us", this->query_interval_battery_report_);
-    ESP_LOGCONFIG(TAG, "  BLE general timeout: %us", this->ble_general_timeout_);
-    ESP_LOGCONFIG(TAG, "  BLE command timeout: %us", this->ble_command_timeout_);
+    ESP_LOGCONFIG(TAG, "  Pairing mode timeout: %" PRIu32 "s", this->pairing_mode_timeout_);
+    ESP_LOGCONFIG(TAG, "  Configuration query interval: %" PRIu32 "s", this->query_interval_config_);
+    ESP_LOGCONFIG(TAG, "  Auth Data query interval: %" PRIu32 "s", this->query_interval_auth_data_);
+    ESP_LOGCONFIG(TAG, "  Battery Report query interval: %" PRIu32 "s", this->query_interval_battery_report_);
+    ESP_LOGCONFIG(TAG, "  BLE general timeout: %" PRIu32 "s", this->ble_general_timeout_);
+    ESP_LOGCONFIG(TAG, "  BLE command timeout: %" PRIu32 "s", this->ble_command_timeout_);
     ESP_LOGCONFIG(TAG, "  Command retries: %u", this->command_retries_);
-    ESP_LOGCONFIG(TAG, "  Command retry delay: %ums", this->command_retry_delay_millis_);
-    ESP_LOGCONFIG(TAG, "  Config cache TTL: %us", this->config_cache_ttl_);
+    ESP_LOGCONFIG(TAG, "  Command retry delay: %" PRIu32 "ms", this->command_retry_delay_millis_);
+    ESP_LOGCONFIG(TAG, "  Config cache TTL: %" PRIu32 "s", this->config_cache_ttl_);
 
     char pin_state_as_string[30] = {0};
     nuki_lock::pin_state_to_string(this->pin_state_, pin_state_as_string);
@@ -1619,7 +1623,7 @@ void NukiLockComponent::dump_config() {
 }
 
 void NukiLockComponent::notify(EventType event_type) {
-    ESP_LOGI(TAG, "Event notified %d", event_type);
+    ESP_LOGI(TAG, "Event notified %d", (int)event_type);
 
     if(event_type == EventType::KeyTurnerStatusReset) {
         // IDK
@@ -1629,9 +1633,9 @@ void NukiLockComponent::notify(EventType event_type) {
         ESP_LOGW(TAG, "Nuki reported an invalid security PIN");
 
         ESP_LOGD(TAG, "NVS PIN 1st-4th Gen: %d", this->nuki_lock_.get_security_pincode());
-        ESP_LOGD(TAG, "NVS PIN 5th Gen (Ultra / Go / Pro): %d", this->nuki_lock_.get_ultra_pincode());
-        ESP_LOGD(TAG, "ESPHome PIN (override): %d", this->security_pin_);
-        ESP_LOGD(TAG, "ESPHome PIN (YAML): %d", this->security_pin_config_.value_or(0));
+        ESP_LOGD(TAG, "NVS PIN 5th Gen (Ultra / Go / Pro): %" PRIu32, this->nuki_lock_.get_ultra_pincode());
+        ESP_LOGD(TAG, "ESPHome PIN (override): %" PRIu32, this->security_pin_);
+        ESP_LOGD(TAG, "ESPHome PIN (YAML): %" PRIu32, this->security_pin_config_.value_or(0));
 
         const uint32_t saved_pin = this->nuki_lock_.is_lock_ultra() ? this->nuki_lock_.get_ultra_pincode() : this->nuki_lock_.get_security_pincode();
         const uint32_t actual_pin = this->security_pin_ != 0 ? this->security_pin_ : this->security_pin_config_.value_or(0);
@@ -1750,7 +1754,7 @@ void NukiLockComponent::set_pairing_mode(bool enabled) {
     cancel_timeout("pairing_mode_timeout");
 
     if (enabled) {
-        ESP_LOGI(TAG, "Pairing Mode turned on for %d seconds", this->pairing_mode_timeout_);
+        ESP_LOGI(TAG, "Pairing Mode turned on for %" PRIu32 " seconds", this->pairing_mode_timeout_);
         this->pairing_mode_on_callback_.call();
 
         if (this->security_pin_ != 0) {
@@ -1762,9 +1766,9 @@ void NukiLockComponent::set_pairing_mode(bool enabled) {
         }
 
         ESP_LOGD(TAG, "NVS PIN 1st-4th Gen: %d", this->nuki_lock_.get_security_pincode());
-        ESP_LOGD(TAG, "NVS PIN 5th Gen (Ultra / Go / Pro): %d", this->nuki_lock_.get_ultra_pincode());
-        ESP_LOGD(TAG, "ESPHome PIN (override): %d", this->security_pin_);
-        ESP_LOGD(TAG, "ESPHome PIN (YAML): %d", this->security_pin_config_.value_or(0));
+        ESP_LOGD(TAG, "NVS PIN 5th Gen (Ultra / Go / Pro): %" PRIu32, this->nuki_lock_.get_ultra_pincode());
+        ESP_LOGD(TAG, "ESPHome PIN (override): %" PRIu32, this->security_pin_);
+        ESP_LOGD(TAG, "ESPHome PIN (YAML): %" PRIu32, this->security_pin_config_.value_or(0));
 
         ESP_LOGI(TAG, "Waiting for Nuki to enter pairing mode...");
 
