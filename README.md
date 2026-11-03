@@ -393,6 +393,7 @@ Recommendation: 1st–4th Gen without official bridge → **bridge**. Ultra / 5t
 | `config_cache_ttl` | Changing a setting reuses lock settings read within this time instead of reading them again (fewer BLE round-trips, but can overwrite a change made in the Nuki app in that window). `0s` always reads fresh. | `1min` |
 | `door_sensor_input` | Binary sensor whose state (`true` = open) is reported to the lock, see [door sensor emulation](#-door-sensor-emulation) | — |
 | `hybrid_mode` | [Hybrid mode](#-hybrid-mode-official-mqtt--ble) | — |
+| `debug` | Extra debug logging, see [Troubleshooting](#%EF%B8%8F-troubleshooting) | all off |
 
 ---
 
@@ -738,6 +739,21 @@ All entities are optional, add the ones you need under the `lock:` block with a 
 
 # 🛠️ Troubleshooting
 
+**Debug logging**
+
+For bug reports, turn on the extra logging of the Bluetooth protocol (logged at `DEBUG` level, so `logger:` must be at `DEBUG` or lower). Turn it off again afterwards: `connect` alone logs every advertisement, about once per second.
+
+```yaml
+lock:
+  - platform: nuki_lock
+    debug:
+      connect: true          # connection, pairing, credentials, advertisements
+      communication: true    # command flow (challenge, accept, complete)
+      readable_data: false   # received data decoded (states, config, log entries, ...)
+      hex_data: false        # raw messages as hex dumps
+      command: false         # keypad code retrieval progress
+```
+
 **Pairing doesn't work**
 - Bluetooth pairing must be enabled in the Nuki app, and the LED ring must stay lit when you turn on pairing mode.
 - Ultra / 5th Gen / Go / Pro: `pairing_as_app: true` and the 6-digit `security_pin` must be flashed **before** pairing.
@@ -758,6 +774,10 @@ All entities are optional, add the ones you need under the `lock:` block with a 
 
 **Crashes, reboots or out of memory**
 - BLE, WiFi and encrypted API together need a lot of RAM, and the build log warns about API encryption. Use a board with PSRAM and add `psram:`, or reduce other components.
+
+**Commands take several seconds before the lock moves**
+- Each command first connects to the lock. The lock's services are cached in flash, so only the first connection after flashing (or after a lock firmware update) runs the full service discovery of about 5 s. If the log shows `Service discovery complete` several seconds after `Connection open` on every command, the cache isn't used.
+- From idle, the lock can take a few seconds to accept the connection, right after a previous one it's almost instant. Weak signals make this worse, check `bt_signal_strength`.
 
 **Other Bluetooth devices react slower**
 - The component switches the whole BLE scanner to continuous active scanning, see [Requirements](#-requirements).

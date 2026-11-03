@@ -71,22 +71,6 @@ NukiBle::NukiBle(const std::string& device_name,
   this->last_received_beacon_ts_ = 0;
   this->last_heartbeat_ = 0;
 
-  #ifdef DEBUG_NUKI_CONNECT
-  this->debug_nuki_connect_ = true;
-  #endif
-  #ifdef DEBUG_NUKI_COMMUNICATION
-  this->debug_nuki_communication_ = true;
-  #endif
-  #ifdef DEBUG_NUKI_READABLE_DATA
-  this->debug_nuki_readable_data_ = true;
-  #endif
-  #ifdef DEBUG_NUKI_HEX_DATA
-  this->debug_nuki_hex_data_ = true;
-  #endif
-  #ifdef DEBUG_NUKI_COMMAND
-  this->debug_nuki_command_ = true;
-  #endif
-
   this->next_instance_ = first_instance_;
   first_instance_ = this;
 }
@@ -136,24 +120,25 @@ PairingResult NukiBle::pair_nuki(AuthorizationIdType idType) {
   if (!this->pairing_in_progress_) {
     this->authorization_id_type_ = idType;
 
-    if (this->retrieve_credentials()) {
-      if (this->debug_nuki_connect_) {
-        ESP_LOGD(TAG, "Already paired");
-      }
-      this->is_paired_ = true;
+    // is_paired_ follows the stored credentials (initialize(), pairing, unpair_nuki()),
+    // no need to read them from flash again on every call
+    if (this->is_paired_) {
       return PairingResult::Success;
     }
 
     if (this->pairing_last_seen_ < (esp_timer_get_time() / 1000) - 2000) this->pairing_service_available_ = false;
 
     if (!(this->pairing_service_available_ && this->get_address() != 0)) {
-      if (this->debug_nuki_connect_) {
-        ESP_LOGD(TAG, "No nuki in pairing mode found");
+      // Called on every loop tick while waiting, log it once
+      if (this->debug_nuki_connect_ && !this->pairing_wait_logged_) {
+        ESP_LOGD(TAG, "[%s] Waiting for a lock in pairing mode", this->device_name_.c_str());
       }
+      this->pairing_wait_logged_ = true;
       return PairingResult::Pairing;
     }
 
     this->pairing_service_available_ = false;
+    this->pairing_wait_logged_ = false;
     if (this->debug_nuki_connect_) {
       ESP_LOGD(TAG, "Nuki in pairing mode found");
     }
@@ -198,7 +183,7 @@ PairingResult NukiBle::pair_nuki(AuthorizationIdType idType) {
   this->pairing_in_progress_ = false;
 
   if (this->debug_nuki_connect_) {
-    ESP_LOGD(TAG, "pairing result %d", (unsigned int)result);
+    ESP_LOGD(TAG, "pairing result %u", (unsigned int)result);
   }
 
   this->is_paired_ = (result == PairingResult::Success);
@@ -277,6 +262,12 @@ void NukiBle::on_disconnect_complete(esp_err_t reason) {
   this->usdio_char_ = nullptr;
   this->notify_registered_ = false;
 
+  if (this->service_cache_invalid_) {
+    this->service_cache_invalid_ = false;
+    ESP_LOGD(TAG, "Clearing the cached GATT services, the next connection discovers them again");
+    esp_ble_gattc_cache_clean(this->get_remote_bda());
+  }
+
   if (reason == ESP_GATT_CONN_TIMEOUT) {
     if (this->debug_nuki_connect_) {
       ESP_LOGD(TAG, "Error while disconnecting BLE client");
@@ -285,6 +276,13 @@ void NukiBle::on_disconnect_complete(esp_err_t reason) {
       this->event_handler_->notify(EventType::BLE_ERROR_ON_DISCONNECT);
     }
   }
+}
+
+void NukiBle::invalidate_service_cache() {
+  if (!this->service_cache_invalid_) {
+    ESP_LOGW(TAG, "Cached GATT services don't match the lock, discovering them again on the next connection");
+  }
+  this->service_cache_invalid_ = true;
 }
 
 void NukiBle::set_disconnect_timeout(uint32_t timeoutMs) {
@@ -328,7 +326,8 @@ bool NukiBle::parse_device(const esphome::esp32_ble_tracker::ESPBTDevice &device
     // of an active GATT connection. The address match above is already device-specific
     // enough on its own.
     if (this->debug_nuki_connect_) {
-      ESP_LOGD(TAG, "Nuki Advertising: %s", device.address_str().c_str());
+      char address[esphome::MAC_ADDRESS_PRETTY_BUFFER_SIZE];
+      ESP_LOGD(TAG, "Nuki Advertising: %s", device.address_str_to(address));
     }
 
     // Nuki repurposes the iBeacon "measured power" byte as a status-changed bit (bit 0),
@@ -381,7 +380,8 @@ bool NukiBle::parse_device(const esphome::esp32_ble_tracker::ESPBTDevice &device
     for (const auto &service_data : device.get_service_datas()) {
       if (service_data.uuid == this->pairing_service_uuid_) {
         if (this->debug_nuki_connect_) {
-          ESP_LOGD(TAG, "Found nuki in pairing state: %s addr: %s", device.get_name().c_str(), device.address_str().c_str());
+          char address[esphome::MAC_ADDRESS_PRETTY_BUFFER_SIZE];
+          ESP_LOGD(TAG, "Found nuki in pairing state: %s addr: %s", device.get_name().c_str(), device.address_str_to(address));
         }
         this->set_address(device.address_uint64());
         this->set_remote_addr_type(device.get_address_type());
@@ -391,7 +391,8 @@ bool NukiBle::parse_device(const esphome::esp32_ble_tracker::ESPBTDevice &device
         return true;
       } else if (service_data.uuid == this->pairing_service_ultra_uuid_) {
         if (this->debug_nuki_connect_) {
-          ESP_LOGD(TAG, "Found nuki ultra in pairing state: %s addr: %s", device.get_name().c_str(), device.address_str().c_str());
+          char address[esphome::MAC_ADDRESS_PRETTY_BUFFER_SIZE];
+          ESP_LOGD(TAG, "Found nuki ultra in pairing state: %s addr: %s", device.get_name().c_str(), device.address_str_to(address));
         }
 
         if (this->ultra_pin_code_ == 000000) {
@@ -534,7 +535,7 @@ CmdResult NukiBle::add_authorization_entry(NewAuthorizationEntry newAuthorizatio
   CmdResult result = this->execute_action(action);
   if (result == CmdResult::Success) {
     if (this->debug_nuki_readable_data_) {
-      ESP_LOGD(TAG, "add_authorization_entry, payloadlen: %d", sizeof(NewAuthorizationEntry));
+      ESP_LOGD(TAG, "add_authorization_entry, payloadlen: %zu", sizeof(NewAuthorizationEntry));
       print_buffer(action.payload, sizeof(NewAuthorizationEntry), false, "add_authorization_entry content: ", this->debug_nuki_hex_data_);
       log_new_authorization_entry(newAuthorizationEntry, this->debug_nuki_readable_data_);
     }
@@ -569,7 +570,7 @@ CmdResult NukiBle::update_authorization_entry(UpdatedAuthorizationEntry updatedA
   CmdResult result = this->execute_action(action);
   if (result == CmdResult::Success) {
     if (this->debug_nuki_readable_data_) {
-      ESP_LOGD(TAG, "add_authorization_entry, payloadlen: %d", sizeof(UpdatedAuthorizationEntry));
+      ESP_LOGD(TAG, "add_authorization_entry, payloadlen: %zu", sizeof(UpdatedAuthorizationEntry));
       print_buffer(action.payload, sizeof(UpdatedAuthorizationEntry), false, "updatedKeypad content: ", this->debug_nuki_hex_data_);
       log_updated_authorization_entry(updatedAuthorizationEntry, this->debug_nuki_readable_data_);
     }
@@ -773,7 +774,7 @@ void NukiBle::save_credentials() {
       print_buffer(this->authorization_id_, sizeof(this->authorization_id_), false, AUTH_ID_STORE_NAME, this->debug_nuki_hex_data_);
 
       if (this->is_lock_ultra()) {
-        ESP_LOGD(TAG, "pincode: %d", (unsigned int)this->ultra_pin_code_);
+        ESP_LOGD(TAG, "pincode: %u", (unsigned int)this->ultra_pin_code_);
       } else {
         ESP_LOGD(TAG, "pincode: %d", this->pin_code_);
       }
@@ -884,16 +885,17 @@ bool NukiBle::retrieve_credentials() {
     }
     this->set_address(address);
 
+    // unpair_nuki() leaves the credentials empty
+    if (is_char_array_empty(this->secret_key_k_, sizeof(this->secret_key_k_)) || is_char_array_empty(this->authorization_id_, sizeof(this->authorization_id_))) {
+      ESP_LOGI(TAG, "[%s] Not paired", this->device_name_.c_str());
+      return false;
+    }
+
     if (this->debug_nuki_connect_) {
       ESP_LOGI(TAG, "[%s] Credentials retrieved:", this->device_name_.c_str());
       print_buffer(this->secret_key_k_, sizeof(this->secret_key_k_), false, SECRET_KEY_STORE_NAME, this->debug_nuki_hex_data_);
       ESP_LOGD(TAG, "bleAddress: %s", this->address_str());
       print_buffer(this->authorization_id_, sizeof(this->authorization_id_), false, AUTH_ID_STORE_NAME, this->debug_nuki_hex_data_);
-    }
-
-    if (is_char_array_empty(this->secret_key_k_, sizeof(this->secret_key_k_)) || is_char_array_empty(this->authorization_id_, sizeof(this->authorization_id_))) {
-      ESP_LOGW(TAG, "secret key OR authorization_id is empty: not paired");
-      return false;
     }
 
     bool isUltraLock = false;
@@ -914,7 +916,7 @@ bool NukiBle::retrieve_credentials() {
       }
     }
   } else {
-    ESP_LOGE(TAG, "No credentials found - not paired yet!");
+    ESP_LOGI(TAG, "[%s] Not paired yet", this->device_name_.c_str());
     return false;
   }
   return true;
@@ -942,6 +944,7 @@ PairingState NukiBle::pair_state_machine(const PairingState nukiPairingState) {
       this->received_status_ = 0xff;
       this->time_now_ = (esp_timer_get_time() / 1000);
       this->nuki_pairing_result_state_ = PairingState::ReqRemPubKey;
+      [[fallthrough]];
     }
     case PairingState::ReqRemPubKey: {
       //Request remote public key (Sent message should be 0100030027A7)
@@ -953,6 +956,7 @@ PairingState NukiBle::pair_state_machine(const PairingState nukiPairingState) {
       memcpy(buff, &cmd, sizeof(Command));
       this->send_plain_message(Command::RequestData, buff, sizeof(Command));
       this->nuki_pairing_result_state_ = PairingState::RecRemPubKey;
+      [[fallthrough]];
     }
     case PairingState::RecRemPubKey: {
       if (is_char_array_not_empty(this->remote_public_key_, sizeof(this->remote_public_key_))) {
@@ -966,6 +970,7 @@ PairingState NukiBle::pair_state_machine(const PairingState nukiPairingState) {
       }
       this->send_plain_message(Command::PublicKey, this->my_public_key_, sizeof(this->my_public_key_));
       this->nuki_pairing_result_state_ = PairingState::GenKeyPair;
+      [[fallthrough]];
     }
     case PairingState::GenKeyPair: {
       if (this->debug_nuki_connect_) {
@@ -984,6 +989,7 @@ PairingState NukiBle::pair_state_machine(const PairingState nukiPairingState) {
       crypto_core_hsalsa20(this->secret_key_k_, in, sharedKeyS, sigma);
       print_buffer(this->secret_key_k_, sizeof(this->secret_key_k_), false, "Secret key k", this->debug_nuki_hex_data_);
       this->nuki_pairing_result_state_ = PairingState::CalculateAuth;
+      [[fallthrough]];
     }
     case PairingState::CalculateAuth: {
       if (is_char_array_not_empty(this->challenge_nonce_k_, sizeof(this->challenge_nonce_k_))) {
@@ -1010,6 +1016,7 @@ PairingState NukiBle::pair_state_machine(const PairingState nukiPairingState) {
       this->send_plain_message(Command::AuthorizationAuthenticator, this->authenticator_, sizeof(this->authenticator_));
       this->ultra_auth_info_command_received_ = false;
       this->nuki_pairing_result_state_ = PairingState::SendAuthData;
+      [[fallthrough]];
     }
     case PairingState::SendAuthData: {
       if (this->is_lock_ultra()) {
@@ -1026,7 +1033,8 @@ PairingState NukiBle::pair_state_machine(const PairingState nukiPairingState) {
           authorizationDataId[1] = (this->device_id_ >> (8 * 1)) & 0xff;
           authorizationDataId[2] = (this->device_id_ >> (8 * 2)) & 0xff;
           authorizationDataId[3] = (this->device_id_ >> (8 * 3)) & 0xff;
-          memcpy(authorizationDataName, this->device_name_.c_str(), this->device_name_.size());
+          // The name field is fixed at 32 bytes (lock.py caps the id accordingly)
+          memcpy(authorizationDataName, this->device_name_.c_str(), std::min(this->device_name_.size(), sizeof(authorizationDataName)));
 
           //compose and send message
           unsigned char authorizationDataMessage[40];
@@ -1052,7 +1060,8 @@ PairingState NukiBle::pair_state_machine(const PairingState nukiPairingState) {
           authorizationDataId[1] = (this->device_id_ >> (8 * 1)) & 0xff;
           authorizationDataId[2] = (this->device_id_ >> (8 * 2)) & 0xff;
           authorizationDataId[3] = (this->device_id_ >> (8 * 3)) & 0xff;
-          memcpy(authorizationDataName, this->device_name_.c_str(), this->device_name_.size());
+          // The name field is fixed at 32 bytes (lock.py caps the id accordingly)
+          memcpy(authorizationDataName, this->device_name_.c_str(), std::min(this->device_name_.size(), sizeof(authorizationDataName)));
           generate_nonce(authorizationDataNonce, sizeof(authorizationDataNonce), this->debug_nuki_hex_data_);
 
           //calculate authenticator of message to send
@@ -1153,7 +1162,7 @@ bool NukiBle::send_encrypted_message(Command commandIdentifier, const unsigned c
 
   if (this->debug_nuki_hex_data_) {
     ESP_LOGD(TAG, "payloadlen: %d", payloadLen);
-    ESP_LOGD(TAG, "sizeof(plainData): %d", sizeof(plainData));
+    ESP_LOGD(TAG, "sizeof(plainData): %zu", sizeof(plainData));
     ESP_LOGD(TAG, "CRC: %02x", dataCrc);
   }
   print_buffer((uint8_t*)plainDataWithCrc, sizeof(plainDataWithCrc), false, "Plain data with CRC: ", this->debug_nuki_hex_data_);
@@ -1269,6 +1278,7 @@ bool NukiBle::register_on_gdio_char() {
   auto *chr = this->get_characteristic(serviceUuid, charUuid);
   if (chr == nullptr) {
     ESP_LOGW(TAG, "Unable to get GDIO characteristic");
+    this->invalidate_service_cache();
     this->disconnect();
     return false;
   }
@@ -1277,6 +1287,7 @@ bool NukiBle::register_on_gdio_char() {
     if (this->debug_nuki_communication_) {
       ESP_LOGD(TAG, "GDIO characteristic canIndicate false, stop connecting");
     }
+    this->invalidate_service_cache();
     this->disconnect();
     return false;
   }
@@ -1285,6 +1296,7 @@ bool NukiBle::register_on_gdio_char() {
   auto status = esp_ble_gattc_register_for_notify(this->get_gattc_if(), this->get_remote_bda(), chr->handle);
   if (status != ESP_OK) {
     ESP_LOGW(TAG, "Unable to subscribe to GDIO characteristic");
+    this->invalidate_service_cache();
     this->disconnect();
     return false;
   }
@@ -1301,6 +1313,7 @@ bool NukiBle::register_on_usdio_char() {
   auto *chr = this->get_characteristic(this->device_service_uuid_, this->user_data_uuid_);
   if (chr == nullptr) {
     ESP_LOGW(TAG, "Unable to get USDIO characteristic");
+    this->invalidate_service_cache();
     this->disconnect();
     return false;
   }
@@ -1309,6 +1322,7 @@ bool NukiBle::register_on_usdio_char() {
     if (this->debug_nuki_communication_) {
       ESP_LOGD(TAG, "USDIO characteristic canIndicate false, stop connecting");
     }
+    this->invalidate_service_cache();
     this->disconnect();
     return false;
   }
@@ -1317,6 +1331,7 @@ bool NukiBle::register_on_usdio_char() {
   auto status = esp_ble_gattc_register_for_notify(this->get_gattc_if(), this->get_remote_bda(), chr->handle);
   if (status != ESP_OK) {
     ESP_LOGW(TAG, "Unable to subscribe to USDIO characteristic");
+    this->invalidate_service_cache();
     this->disconnect();
     return false;
   }
@@ -1361,8 +1376,19 @@ bool NukiBle::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gatt
           this->notify_registered_ = true;
         } else {
           ESP_LOGW(TAG, "Unable to subscribe characteristic (status %d)", param->reg_for_notify.status);
+          this->invalidate_service_cache();
           this->disconnect();
         }
+      }
+      break;
+    }
+    case ESP_GATTC_WRITE_CHAR_EVT:
+    case ESP_GATTC_WRITE_DESCR_EVT: {
+      // A handle from a stale service cache no longer exists on the lock
+      if (param->write.conn_id == this->get_conn_id() && param->write.status == ESP_GATT_INVALID_HANDLE) {
+        ESP_LOGW(TAG, "Writing handle 0x%x failed, invalid handle", param->write.handle);
+        this->invalidate_service_cache();
+        this->disconnect();
       }
       break;
     }

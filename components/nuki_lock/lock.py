@@ -202,6 +202,12 @@ CONF_QUERY_INTERVAL_BATTERY_REPORT = "query_interval_battery_report"
 CONF_COMMAND_RETRIES = "command_retries"
 CONF_COMMAND_RETRY_DELAY = "command_retry_delay"
 CONF_CONFIG_CACHE_TTL = "config_cache_ttl"
+CONF_DEBUG = "debug"
+CONF_DEBUG_CONNECT = "connect"
+CONF_DEBUG_COMMUNICATION = "communication"
+CONF_DEBUG_READABLE_DATA = "readable_data"
+CONF_DEBUG_HEX_DATA = "hex_data"
+CONF_DEBUG_COMMAND = "command"
 CONF_DOOR_SENSOR_INPUT = "door_sensor_input"
 CONF_BLE_GENERAL_TIMEOUT = "ble_general_timeout"
 CONF_BLE_COMMAND_TIMEOUT = "ble_command_timeout"
@@ -304,6 +310,21 @@ PairingModeOnTrigger = nuki_lock_ns.class_("PairingModeOnTrigger", automation.Tr
 PairingModeOffTrigger = nuki_lock_ns.class_("PairingModeOffTrigger", automation.Trigger.template())
 PairedTrigger = nuki_lock_ns.class_("PairedTrigger", automation.Trigger.template())
 EventLogReceivedTrigger = nuki_lock_ns.class_("EventLogReceivedTrigger", automation.Trigger.template())
+
+# The id is sent to the lock as authorization name, which has a fixed 32 byte field
+DEVICE_NAME_MAX_LEN = 32
+
+
+def _validate_device_name(config):
+    # Generated ids aren't assigned yet at this point; nuki_ble.cpp truncates those if needed
+    device_id = config[CONF_ID]
+    if device_id.is_manual and len(device_id.id) > DEVICE_NAME_MAX_LEN:
+        raise cv.Invalid(
+            f"The id is shown as name in the Nuki app and can have at most {DEVICE_NAME_MAX_LEN} characters",
+            path=[CONF_ID],
+        )
+    return config
+
 
 CONFIG_SCHEMA = cv.All(
     lock.lock_schema(NukiLockComponent).extend(
@@ -674,6 +695,21 @@ CONFIG_SCHEMA = cv.All(
             # of overwriting a change made elsewhere (Nuki app, another authorized device) in
             # that window. 0 always fetches fresh.
             cv.Optional(CONF_CONFIG_CACHE_TTL, default="1min"): cv.positive_time_period_seconds,
+            # Extra debug logging of the BLE protocol (logged at DEBUG level)
+            cv.Optional(CONF_DEBUG, default={}): cv.Schema(
+                {
+                    # Connection, pairing, credentials and advertisements
+                    cv.Optional(CONF_DEBUG_CONNECT, default=False): cv.boolean,
+                    # Command state machines (challenge, accept, complete)
+                    cv.Optional(CONF_DEBUG_COMMUNICATION, default=False): cv.boolean,
+                    # Received data decoded (states, config, log entries, ...)
+                    cv.Optional(CONF_DEBUG_READABLE_DATA, default=False): cv.boolean,
+                    # Raw data as hex dumps
+                    cv.Optional(CONF_DEBUG_HEX_DATA, default=False): cv.boolean,
+                    # Keypad code retrieval progress
+                    cv.Optional(CONF_DEBUG_COMMAND, default=False): cv.boolean,
+                }
+            ),
             # Door sensor emulation: every state of this binary sensor (true = open) is
             # reported to the lock
             cv.Optional(CONF_DOOR_SENSOR_INPUT): cv.use_id(binary_sensor.BinarySensor),
@@ -724,6 +760,7 @@ CONFIG_SCHEMA = cv.All(
         }
     ),
     esp32_ble.consume_connection_slots(1, "nuki_lock"),
+    _validate_device_name,
 )
 
 
@@ -811,6 +848,15 @@ async def to_code(config):
 
     if CONF_CONFIG_CACHE_TTL in config:
         cg.add(var.set_config_cache_ttl(config[CONF_CONFIG_CACHE_TTL]))
+
+    debug = config[CONF_DEBUG]
+    cg.add(var.set_debug(
+        debug[CONF_DEBUG_CONNECT],
+        debug[CONF_DEBUG_COMMUNICATION],
+        debug[CONF_DEBUG_READABLE_DATA],
+        debug[CONF_DEBUG_HEX_DATA],
+        debug[CONF_DEBUG_COMMAND],
+    ))
 
     if door_sensor_input_id := config.get(CONF_DOOR_SENSOR_INPUT):
         door_sensor_input = await cg.get_variable(door_sensor_input_id)
@@ -1223,6 +1269,12 @@ async def to_code(config):
     # (a status bit inside the manufacturer data - see NukiBle::parse_device()), so
     # duplicate-advertisement filtering must stay off.
     add_idf_sdkconfig_option("CONFIG_BTDM_BLE_SCAN_DUPL", False)
+
+    # Keep the lock's GATT services cached in NVS (like bluetooth_proxy's cache_services).
+    # Without it, ESPHome clears Bluedroid's cache after every disconnect and each
+    # connection runs a full service discovery (~5 s with Nuki locks) before a command
+    # can be sent. A cache that no longer fits the lock is dropped by NukiBle.
+    add_idf_sdkconfig_option("CONFIG_BT_GATTC_CACHE_NVS_FLASH", True)
 
     # Build flags
     cg.add_build_flag("-Wno-unused-result")

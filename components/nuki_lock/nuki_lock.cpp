@@ -7,6 +7,7 @@
 #endif
 
 #include <algorithm>
+#include <cinttypes>
 #include <map>
 #include <vector>
 
@@ -31,6 +32,154 @@ void NukiLockComponent::save_settings() {
     }
 }
 
+// Publishes retrieved_key_turner_state_: from a status request (update_status()) or the
+// state the lock pushes on its own during a lock action (execute_lock_action_step()).
+void NukiLockComponent::process_key_turner_state() {
+    char str[50] = {0};
+
+    this->status_update_consecutive_errors_ = 0;
+    this->connected_ = true;
+
+    LockState current_lock_state = this->retrieved_key_turner_state_.lockState;
+    char current_lock_state_as_string[30] = {0};
+    lock_state_to_string(current_lock_state, current_lock_state_as_string);
+
+    ESP_LOGI(TAG, "Lock state: %s (%d), Battery (state: %#x, critical: %d, level: %d, charging: %s), Time: %d:%d:%d",
+        current_lock_state_as_string,
+        (int)current_lock_state,
+        this->retrieved_key_turner_state_.criticalBatteryState,
+        this->nuki_lock_.is_battery_critical(),
+        this->nuki_lock_.get_battery_perc(),
+        YESNO(this->nuki_lock_.is_battery_charging()),
+        this->retrieved_key_turner_state_.currentTimeHour,
+        this->retrieved_key_turner_state_.currentTimeMinute,
+        this->retrieved_key_turner_state_.currentTimeSecond
+    );
+
+    this->publish_state(nuki_lock::nuki_to_lock_state(this->retrieved_key_turner_state_.lockState));
+
+    #ifdef USE_BINARY_SENSOR
+    if (this->connected_binary_sensor_ != nullptr) {
+        this->connected_binary_sensor_->publish_state(this->connected_);
+    }
+    
+    if (this->battery_critical_binary_sensor_ != nullptr) {
+        this->battery_critical_binary_sensor_->publish_state(this->nuki_lock_.is_battery_critical());
+    }
+
+    if (this->battery_charging_binary_sensor_ != nullptr) {
+        this->battery_charging_binary_sensor_->publish_state(this->nuki_lock_.is_battery_charging());
+    }
+
+    if (this->keypad_battery_critical_binary_sensor_ != nullptr) {
+        this->keypad_battery_critical_binary_sensor_->publish_state(this->nuki_lock_.is_keypad_battery_critical());
+    }
+
+    if (this->door_sensor_battery_critical_binary_sensor_ != nullptr) {
+        this->door_sensor_battery_critical_binary_sensor_->publish_state(this->nuki_lock_.is_door_sensor_battery_critical());
+    }
+
+    // Whether the lock's remote-access (cloud/SSE) uplink is currently connected, via
+    // any transport (bridge, the lock's own WiFi, or Thread) - only supported by Smart
+    // Lock 4th Generation and Ultra; 255 is the struct's default-init sentinel.
+    if (this->remote_access_connected_binary_sensor_ != nullptr) {
+        uint8_t remote_access_status = this->retrieved_key_turner_state_.remoteAccessStatus;
+        if (remote_access_status != 255) {
+            this->remote_access_connected_binary_sensor_->publish_state((remote_access_status & 8) == 8);
+        } else {
+            this->remote_access_connected_binary_sensor_->invalidate_state();
+        }
+    }
+
+    // If pin needs validation, validate now
+    if(this->pin_state_ == PinState::Set) {
+        validate_pin();
+    }
+    
+    if (this->door_sensor_binary_sensor_ != nullptr) {
+        DoorSensorState door_sensor_state = this->retrieved_key_turner_state_.doorSensorState;
+        if(door_sensor_state != DoorSensorState::Unavailable) {
+            this->door_sensor_binary_sensor_->publish_state(nuki_lock::nuki_doorsensor_to_binary(door_sensor_state));
+        } else {
+            this->door_sensor_binary_sensor_->invalidate_state();
+        }
+    }
+    #endif
+    #ifdef USE_SENSOR
+    if (this->battery_level_sensor_ != nullptr) {
+        this->battery_level_sensor_->publish_state(this->nuki_lock_.get_battery_perc());
+    }
+    if (this->bt_signal_sensor_ != nullptr) {
+        this->bt_signal_sensor_->publish_state(this->nuki_lock_.get_rssi());
+    }
+    // Only supported by Smart Lock 4th Generation and Ultra; negative values are the
+    // actual RSSI, 0 means invalid and 1 means not supported.
+    if (this->wifi_connection_strength_sensor_ != nullptr) {
+        int8_t wifi_connection_strength = this->retrieved_key_turner_state_.wifiConnectionStrength;
+        if (wifi_connection_strength < 0) {
+            this->wifi_connection_strength_sensor_->publish_state(wifi_connection_strength);
+        } else {
+            this->wifi_connection_strength_sensor_->publish_state(NAN);
+        }
+    }
+    #endif
+    #ifdef USE_TEXT_SENSOR
+    if (this->door_sensor_state_text_sensor_ != nullptr){
+        memset(str, 0, sizeof(str));
+        door_sensor_state_to_string(this->retrieved_key_turner_state_.doorSensorState, str);
+        this->door_sensor_state_text_sensor_->publish_state(str);
+    }
+
+    if (this->last_lock_action_text_sensor_ != nullptr) {
+        memset(str, 0, sizeof(str));
+        lock_action_to_string(this->retrieved_key_turner_state_.lastLockAction, str);
+        this->last_lock_action_text_sensor_->publish_state(str);
+    }
+
+    if (this->last_lock_action_trigger_text_sensor_ != nullptr) {
+        memset(str, 0, sizeof(str));
+        trigger_to_string(this->retrieved_key_turner_state_.lastLockActionTrigger, str);
+        this->last_lock_action_trigger_text_sensor_->publish_state(str);
+    }
+
+    if (this->last_unlock_user_text_sensor_ != nullptr && this->retrieved_key_turner_state_.lastLockActionTrigger == NukiTrigger::Manual)
+    {
+        this->last_unlock_user_text_sensor_->publish_state("Manual");
+    }
+
+    // WiFi/MQTT/Thread connection status - only supported by Smart Lock 4th Generation
+    // and Ultra; 255 is the struct's default-init sentinel for "not received yet".
+    char status_str[80] = {0};
+    if (this->wifi_connection_status_text_sensor_ != nullptr &&
+        this->retrieved_key_turner_state_.wifiConnectionStatus != 255) {
+        wifi_connection_status_to_string(this->retrieved_key_turner_state_.wifiConnectionStatus, status_str);
+        this->wifi_connection_status_text_sensor_->publish_state(status_str);
+    }
+    if (this->mqtt_connection_status_text_sensor_ != nullptr &&
+        this->retrieved_key_turner_state_.mqttConnectionStatus != 255) {
+        mqtt_connection_status_to_string(this->retrieved_key_turner_state_.mqttConnectionStatus, status_str);
+        this->mqtt_connection_status_text_sensor_->publish_state(status_str);
+    }
+    if (this->thread_connection_status_text_sensor_ != nullptr &&
+        this->retrieved_key_turner_state_.threadConnectionStatus != 255) {
+        thread_connection_status_to_string(this->retrieved_key_turner_state_.threadConnectionStatus, status_str);
+        this->thread_connection_status_text_sensor_->publish_state(status_str);
+    }
+    #endif
+
+    if (this->retrieved_key_turner_state_.lockState == LockState::Locking ||
+        this->retrieved_key_turner_state_.lockState == LockState::Unlocking ||
+        this->retrieved_key_turner_state_.lockState == LockState::Calibration) {
+        // Schedule a status update without waiting for the next advertisement because the lock
+        // is in a transition state. This will speed up the feedback.
+        this->status_update_ = true;
+        
+        if (this->send_events_) {
+            this->event_log_update_ = true;
+        }
+    }
+}
+
 void NukiLockComponent::update_status() {
     CmdResult cmd_result = this->nuki_lock_.request_key_turner_state(&(this->retrieved_key_turner_state_));
     if (cmd_result == CmdResult::Working) {
@@ -47,147 +196,7 @@ void NukiLockComponent::update_status() {
     if (cmd_result == CmdResult::Success) {
         ESP_LOGD(TAG, "request_key_turner_state has resulted in %s (%d)", str, cmd_result);
 
-        this->status_update_consecutive_errors_ = 0;
-        this->connected_ = true;
-
-        LockState current_lock_state = this->retrieved_key_turner_state_.lockState;
-        char current_lock_state_as_string[30] = {0};
-        lock_state_to_string(current_lock_state, current_lock_state_as_string);
-
-        ESP_LOGI(TAG, "Lock state: %s (%d), Battery (state: %#x, critical: %d, level: %d, charging: %s), Time: %d:%d:%d",
-            current_lock_state_as_string,
-            current_lock_state,
-            this->retrieved_key_turner_state_.criticalBatteryState,
-            this->nuki_lock_.is_battery_critical(),
-            this->nuki_lock_.get_battery_perc(),
-            YESNO(this->nuki_lock_.is_battery_charging()),
-            this->retrieved_key_turner_state_.currentTimeHour,
-            this->retrieved_key_turner_state_.currentTimeMinute,
-            this->retrieved_key_turner_state_.currentTimeSecond
-        );
-
-        this->publish_state(nuki_lock::nuki_to_lock_state(this->retrieved_key_turner_state_.lockState));
-
-        #ifdef USE_BINARY_SENSOR
-        if (this->connected_binary_sensor_ != nullptr) {
-            this->connected_binary_sensor_->publish_state(this->connected_);
-        }
-        
-        if (this->battery_critical_binary_sensor_ != nullptr) {
-            this->battery_critical_binary_sensor_->publish_state(this->nuki_lock_.is_battery_critical());
-        }
-
-        if (this->battery_charging_binary_sensor_ != nullptr) {
-            this->battery_charging_binary_sensor_->publish_state(this->nuki_lock_.is_battery_charging());
-        }
-
-        if (this->keypad_battery_critical_binary_sensor_ != nullptr) {
-            this->keypad_battery_critical_binary_sensor_->publish_state(this->nuki_lock_.is_keypad_battery_critical());
-        }
-
-        if (this->door_sensor_battery_critical_binary_sensor_ != nullptr) {
-            this->door_sensor_battery_critical_binary_sensor_->publish_state(this->nuki_lock_.is_door_sensor_battery_critical());
-        }
-
-        // Whether the lock's remote-access (cloud/SSE) uplink is currently connected, via
-        // any transport (bridge, the lock's own WiFi, or Thread) - only supported by Smart
-        // Lock 4th Generation and Ultra; 255 is the struct's default-init sentinel.
-        if (this->remote_access_connected_binary_sensor_ != nullptr) {
-            uint8_t remote_access_status = this->retrieved_key_turner_state_.remoteAccessStatus;
-            if (remote_access_status != 255) {
-                this->remote_access_connected_binary_sensor_->publish_state((remote_access_status & 8) == 8);
-            } else {
-                this->remote_access_connected_binary_sensor_->invalidate_state();
-            }
-        }
-
-        // If pin needs validation, validate now
-        if(this->pin_state_ == PinState::Set) {
-            validate_pin();
-        }
-        
-        if (this->door_sensor_binary_sensor_ != nullptr) {
-            DoorSensorState door_sensor_state = this->retrieved_key_turner_state_.doorSensorState;
-            if(door_sensor_state != DoorSensorState::Unavailable) {
-                this->door_sensor_binary_sensor_->publish_state(nuki_lock::nuki_doorsensor_to_binary(door_sensor_state));
-            } else {
-                this->door_sensor_binary_sensor_->invalidate_state();
-            }
-        }
-        #endif
-        #ifdef USE_SENSOR
-        if (this->battery_level_sensor_ != nullptr) {
-            this->battery_level_sensor_->publish_state(this->nuki_lock_.get_battery_perc());
-        }
-        if (this->bt_signal_sensor_ != nullptr) {
-            this->bt_signal_sensor_->publish_state(this->nuki_lock_.get_rssi());
-        }
-        // Only supported by Smart Lock 4th Generation and Ultra; negative values are the
-        // actual RSSI, 0 means invalid and 1 means not supported.
-        if (this->wifi_connection_strength_sensor_ != nullptr) {
-            int8_t wifi_connection_strength = this->retrieved_key_turner_state_.wifiConnectionStrength;
-            if (wifi_connection_strength < 0) {
-                this->wifi_connection_strength_sensor_->publish_state(wifi_connection_strength);
-            } else {
-                this->wifi_connection_strength_sensor_->publish_state(NAN);
-            }
-        }
-        #endif
-        #ifdef USE_TEXT_SENSOR
-        if (this->door_sensor_state_text_sensor_ != nullptr){
-            memset(str, 0, sizeof(str));
-            door_sensor_state_to_string(this->retrieved_key_turner_state_.doorSensorState, str);
-            this->door_sensor_state_text_sensor_->publish_state(str);
-        }
-
-        if (this->last_lock_action_text_sensor_ != nullptr) {
-            memset(str, 0, sizeof(str));
-            lock_action_to_string(this->retrieved_key_turner_state_.lastLockAction, str);
-            this->last_lock_action_text_sensor_->publish_state(str);
-        }
-
-        if (this->last_lock_action_trigger_text_sensor_ != nullptr) {
-            memset(str, 0, sizeof(str));
-            trigger_to_string(this->retrieved_key_turner_state_.lastLockActionTrigger, str);
-            this->last_lock_action_trigger_text_sensor_->publish_state(str);
-        }
-
-        if (this->last_unlock_user_text_sensor_ != nullptr && this->retrieved_key_turner_state_.lastLockActionTrigger == NukiTrigger::Manual)
-        {
-            this->last_unlock_user_text_sensor_->publish_state("Manual");
-        }
-
-        // WiFi/MQTT/Thread connection status - only supported by Smart Lock 4th Generation
-        // and Ultra; 255 is the struct's default-init sentinel for "not received yet".
-        char status_str[80] = {0};
-        if (this->wifi_connection_status_text_sensor_ != nullptr &&
-            this->retrieved_key_turner_state_.wifiConnectionStatus != 255) {
-            wifi_connection_status_to_string(this->retrieved_key_turner_state_.wifiConnectionStatus, status_str);
-            this->wifi_connection_status_text_sensor_->publish_state(status_str);
-        }
-        if (this->mqtt_connection_status_text_sensor_ != nullptr &&
-            this->retrieved_key_turner_state_.mqttConnectionStatus != 255) {
-            mqtt_connection_status_to_string(this->retrieved_key_turner_state_.mqttConnectionStatus, status_str);
-            this->mqtt_connection_status_text_sensor_->publish_state(status_str);
-        }
-        if (this->thread_connection_status_text_sensor_ != nullptr &&
-            this->retrieved_key_turner_state_.threadConnectionStatus != 255) {
-            thread_connection_status_to_string(this->retrieved_key_turner_state_.threadConnectionStatus, status_str);
-            this->thread_connection_status_text_sensor_->publish_state(status_str);
-        }
-        #endif
-
-        if (this->retrieved_key_turner_state_.lockState == LockState::Locking ||
-            this->retrieved_key_turner_state_.lockState == LockState::Unlocking ||
-            this->retrieved_key_turner_state_.lockState == LockState::Calibration) {
-            // Schedule a status update without waiting for the next advertisement because the lock
-            // is in a transition state. This will speed up the feedback.
-            this->status_update_ = true;
-            
-            if (this->send_events_) {
-                this->event_log_update_ = true;
-            }
-        }
+        this->process_key_turner_state();
     } else {
         ESP_LOGE(TAG, "request_key_turner_state has resulted in %s (%d)", str, cmd_result);
 
@@ -479,7 +488,7 @@ void NukiLockComponent::process_auth_data() {
         return;
     }
 
-    ESP_LOGD(TAG, "Authorization Entry Count: %d", authEntries.size());
+    ESP_LOGD(TAG, "Authorization Entry Count: %zu", authEntries.size());
 
     std::sort(authEntries.begin(), authEntries.end(), [](const AuthorizationEntry& a, const AuthorizationEntry& b) {
         return a.authId < b.authId;
@@ -501,7 +510,7 @@ void NukiLockComponent::process_auth_data() {
         strncpy(auth_entry.name, reinterpret_cast<const char*>(entry.name), MAX_NAME_LEN - 1);
         auth_entry.name[MAX_NAME_LEN - 1] = '\0';
 
-        ESP_LOGD(TAG, "Authorization entry[%d] type: %d name: %s", entry.authId, entry.idType, entry.name);
+        ESP_LOGD(TAG, "Authorization entry[%" PRIu32 "] type: %d name: %s", entry.authId, entry.idType, entry.name);
 
         this->auth_entries_count_++;
     }
@@ -607,7 +616,7 @@ void NukiLockComponent::process_log_entries() {
         return;
     }
 
-    ESP_LOGD(TAG, "Log Entry Count: %d", log_entries.size());
+    ESP_LOGD(TAG, "Log Entry Count: %zu", log_entries.size());
 
     if (log_entries.size() > MAX_EVENT_LOG_ENTRIES) {
         log_entries.resize(MAX_EVENT_LOG_ENTRIES);
@@ -654,10 +663,10 @@ void NukiLockComponent::process_log_entries() {
         }
 
         if (this->send_events_) {
-            snprintf(num_buffer, sizeof(num_buffer), "%u", log.index);
+            snprintf(num_buffer, sizeof(num_buffer), "%" PRIu32, log.index);
             event_data["index"] = num_buffer;
 
-            snprintf(num_buffer, sizeof(num_buffer), "%u", log.authId);
+            snprintf(num_buffer, sizeof(num_buffer), "%" PRIu32, log.authId);
             event_data["authorizationId"] = num_buffer;
 
             const char* authName = get_auth_name(log.authId);
@@ -727,6 +736,9 @@ void NukiLockComponent::process_log_entries() {
                         default: event_data["action"] = "Unknown"; break;
                     }
                     break;
+
+                default:
+                    break;
             }
 
             if (log.index > this->last_rolling_log_id) {
@@ -790,10 +802,12 @@ void NukiLockComponent::execute_lock_action_step() {
         this->auto_unlock_ = false;
         this->name_suffix_.clear();
         this->lock_action_in_flight_ = true;
+        // Only states the lock pushes during this action count, see the success case below
+        this->nuki_lock_.clear_pushed_key_turner_state();
 
         char currentlock_action_as_string[30] = {0};
         lock_action_to_string(this->executing_lock_action_, currentlock_action_as_string);
-        ESP_LOGD(TAG, "Executing lock action %s (%d)... (%d attempts left)", currentlock_action_as_string, this->executing_lock_action_, this->action_attempts_);
+        ESP_LOGD(TAG, "Executing lock action %s (%d)... (%d attempts left)", currentlock_action_as_string, (int)this->executing_lock_action_, this->action_attempts_);
 
         this->publish_assumed_lock_state(this->executing_lock_action_);
     }
@@ -820,7 +834,7 @@ void NukiLockComponent::execute_lock_action_step() {
 
     bool is_execution_successful = (result == CmdResult::Success);
     if (is_execution_successful) {
-        ESP_LOGI(TAG, "lock_action %s (%d) has resulted in %s (%d)", lock_action_as_string, this->executing_lock_action_, result_as_string, result);
+        ESP_LOGI(TAG, "lock_action %s (%d) has resulted in %s (%d)", lock_action_as_string, (int)this->executing_lock_action_, result_as_string, result);
 
         if (this->lock_action_ == this->executing_lock_action_) {
             // Stop action attempts only if no new action was received in the meantime.
@@ -828,7 +842,7 @@ void NukiLockComponent::execute_lock_action_step() {
             this->action_attempts_ = 0;
         }
     } else {
-        ESP_LOGE(TAG, "lock_action %s (%d) has resulted in %s (%d)", lock_action_as_string, this->executing_lock_action_, result_as_string, result);
+        ESP_LOGE(TAG, "lock_action %s (%d) has resulted in %s (%d)", lock_action_as_string, (int)this->executing_lock_action_, result_as_string, result);
 
         if (this->action_attempts_ == 0) {
             this->connected_ = false;
@@ -845,19 +859,33 @@ void NukiLockComponent::execute_lock_action_step() {
         }
     }
 
-    // Schedule a status update without waiting for the next advertisement for a faster feedback
-    this->status_update_ = true;
+    // The lock pushes its state during the action, the final one right before "complete". Use
+    // that instead of requesting it: some locks don't answer a status request on the same
+    // connection right after the action (#117). The advertisement then flags this very state
+    // change too, which would trigger the same request - ignore that for a moment.
+    if (is_execution_successful && this->nuki_lock_.take_pushed_key_turner_state(&this->retrieved_key_turner_state_)) {
+        ESP_LOGD(TAG, "Using the state pushed by the lock during the action");
+        this->process_key_turner_state();
+        this->ignore_status_beacon_until_ = millis() + IGNORE_STATUS_BEACON_AFTER_ACTION_MILLIS;
+        if (this->send_events_) {
+            this->event_log_update_ = true;
+        }
+    } else {
+        // Schedule a status update without waiting for the next advertisement for a faster feedback
+        this->status_update_ = true;
+    }
 
-    // Success already confirms completion; read the actual state before BLE idles out.
-    // Failed attempts still use the configured retry delay.
-    this->command_cooldown_millis = is_execution_successful ? 0 : this->command_retry_delay_millis_;
+    // Give the lock a moment before the next command. COOLDOWN_COMMANDS_MILLIS stays below
+    // BLE_DISCONNECT_TIMEOUT, so a status request is still sent on the same connection.
+    // Failed attempts use the configured retry delay.
+    this->command_cooldown_millis = is_execution_successful ? COOLDOWN_COMMANDS_MILLIS : this->command_retry_delay_millis_;
 }
 
 void NukiLockComponent::set_security_pin(uint32_t new_pin) {
-    ESP_LOGI(TAG, "Setting security pin: %u", new_pin);
+    ESP_LOGI(TAG, "Setting security pin: %" PRIu32, new_pin);
 
     if (new_pin > 999999) {
-        ESP_LOGE(TAG, "Invalid pin: %u (max. 6 digits/999999) - abort.", new_pin);
+        ESP_LOGE(TAG, "Invalid pin: %" PRIu32 " (max. 6 digits/999999) - abort.", new_pin);
         return;
     }
 
@@ -982,7 +1010,7 @@ void NukiLockComponent::process_pending_nuki_command() {
 
     if (result != CmdResult::Success && this->pending_command_retries_left_ > 0) {
         this->pending_command_retries_left_--;
-        ESP_LOGW(TAG, "Queued Nuki command failed (result %d), retrying in %ums (%d attempts left)",
+        ESP_LOGW(TAG, "Queued Nuki command failed (result %d), retrying in %" PRIu32 "ms (%d attempts left)",
             result, this->command_retry_delay_millis_, this->pending_command_retries_left_);
         this->command_cooldown_millis = this->command_retry_delay_millis_;
         return;  // pending_nuki_command_/_done_ stay set - process_pending_nuki_command()
@@ -1050,6 +1078,7 @@ void NukiLockComponent::loop()
         // are also true) until it reaches a terminal result; only then can a new
         // operation be picked, in priority order: PIN validation, lock actions, queued
         // entity/service commands, then the various periodic polls.
+        bool idle = false;
         if (this->nuki_op_active_) {
             this->nuki_op_step_();
         } else if (this->pin_validation_pending_) {
@@ -1111,6 +1140,8 @@ void NukiLockComponent::loop()
             this->nuki_op_step_ = [this] { this->update_battery_report(); };
             this->nuki_op_step_();
             command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
+        } else {
+            idle = true;
         }
 
         // Process retrieved data
@@ -1122,7 +1153,11 @@ void NukiLockComponent::loop()
             this->event_log_ready_time_ = 0;
         }
 
-        last_command_executed_time_ = millis();
+        // The cooldown only applies after an operation actually ran - restarting it on idle
+        // ticks too would delay every new command (e.g. a lock action) by up to a second
+        if (!idle) {
+            last_command_executed_time_ = millis();
+        }
 
     } else {
         this->connected_ = false;
@@ -1215,10 +1250,10 @@ void NukiLockComponent::setup() {
     uint32_t pin_to_use = 0;
     if (this->security_pin_ != 0) {
         ESP_LOGW(TAG, "Note: Using security pin override, not yaml config pin!");
-        ESP_LOGD(TAG, "Security pin: %u (override)", this->security_pin_);
+        ESP_LOGD(TAG, "Security pin: %" PRIu32 " (override)", this->security_pin_);
         pin_to_use = this->security_pin_;
     } else if(this->security_pin_config_.value_or(0) != 0) {
-        ESP_LOGD(TAG, "Security pin: %u (yaml config)", this->security_pin_config_.value_or(0));
+        ESP_LOGD(TAG, "Security pin: %" PRIu32 " (yaml config)", this->security_pin_config_.value_or(0));
         pin_to_use = this->security_pin_config_.value_or(0);
     } else {
         this->pin_state_ = PinState::NotSet;
@@ -1231,16 +1266,16 @@ void NukiLockComponent::setup() {
             this->pin_state_ = PinState::Invalid;
             this->save_settings();
         } else {
-            ESP_LOGD(TAG, "Set security pin before init: %u", pin_to_use);
+            ESP_LOGD(TAG, "Set security pin before init: %" PRIu32, pin_to_use);
             this->nuki_lock_.save_ultra_pincode((unsigned int)pin_to_use, false);
         }
     }
 
-    this->nuki_lock_.set_debug_connect(true);
-    this->nuki_lock_.set_debug_communication(false);
-    this->nuki_lock_.set_debug_readable_data(false);
-    this->nuki_lock_.set_debug_hex_data(false);
-    this->nuki_lock_.set_debug_command(false);
+    this->nuki_lock_.set_debug_connect(this->debug_connect_);
+    this->nuki_lock_.set_debug_communication(this->debug_communication_);
+    this->nuki_lock_.set_debug_readable_data(this->debug_readable_data_);
+    this->nuki_lock_.set_debug_hex_data(this->debug_hex_data_);
+    this->nuki_lock_.set_debug_command(this->debug_command_);
 
     // nuki_lock_ is not registered with App as its own Component, so its own
     // Component::setup() override (BLEClientBase::setup(), which assigns its
@@ -1340,7 +1375,7 @@ void NukiLockComponent::setup_lock(bool new_pairing) {
             ESP_LOGE(TAG, "Invalid security pin detected! Maximum is 6 digits (999999)");
             this->pin_state_ = PinState::Invalid;
         } else if (!this->nuki_lock_.is_lock_ultra() && pin_to_use > 65535) {
-            ESP_LOGE(TAG, "Security pin exceeds maximum of 65535 for 1st to 4th Gen Smart Locks", pin_to_use);
+            ESP_LOGE(TAG, "Security pin exceeds maximum of 65535 for 1st to 4th Gen Smart Locks");
             this->pin_state_ = PinState::Invalid;
         } else {
             const bool result = this->nuki_lock_.is_lock_ultra() ? this->nuki_lock_.save_ultra_pincode(pin_to_use) : this->nuki_lock_.save_security_pincode(static_cast<uint16_t>(pin_to_use));
@@ -1449,7 +1484,7 @@ void NukiLockComponent::control(const lock::LockCall &call) {
     char lock_action_as_string[30] = {0};
     lock_action_to_string(this->lock_action_, lock_action_as_string);
     lock_action_as_string[sizeof(lock_action_as_string) - 1] = '\0';
-    ESP_LOGI(TAG, "New lock action received: %s (%d)", lock_action_as_string, this->lock_action_);
+    ESP_LOGI(TAG, "New lock action received: %s (%d)", lock_action_as_string, (int)this->lock_action_);
 
     #ifdef USE_NUKI_LOCK_HYBRID
     if (this->hybrid_send_lock_action(this->lock_action_)) {
@@ -1489,19 +1524,19 @@ void NukiLockComponent::dump_config() {
     #ifdef USE_NUKI_LOCK_HYBRID
     ESP_LOGCONFIG(TAG, "  Hybrid mode: %s", this->hybrid_topic_prefix_len_ == 0 ? "waiting for Nuki ID" : this->hybrid_topic_prefix_);
     ESP_LOGCONFIG(TAG, "    Send actions: %s", YESNO(this->hybrid_send_actions_));
-    ESP_LOGCONFIG(TAG, "    BLE fallback: %s (after %ums)", YESNO(this->hybrid_ble_fallback_), this->hybrid_fallback_timeout_millis_);
-    ESP_LOGCONFIG(TAG, "    Offline update interval: %us", this->hybrid_offline_update_interval_);
+    ESP_LOGCONFIG(TAG, "    BLE fallback: %s (after %" PRIu32 "ms)", YESNO(this->hybrid_ble_fallback_), this->hybrid_fallback_timeout_millis_);
+    ESP_LOGCONFIG(TAG, "    Offline update interval: %" PRIu32 "s", this->hybrid_offline_update_interval_);
     #endif
 
-    ESP_LOGCONFIG(TAG, "  Pairing mode timeout: %us", this->pairing_mode_timeout_);
-    ESP_LOGCONFIG(TAG, "  Configuration query interval: %us", this->query_interval_config_);
-    ESP_LOGCONFIG(TAG, "  Auth Data query interval: %us", this->query_interval_auth_data_);
-    ESP_LOGCONFIG(TAG, "  Battery Report query interval: %us", this->query_interval_battery_report_);
-    ESP_LOGCONFIG(TAG, "  BLE general timeout: %us", this->ble_general_timeout_);
-    ESP_LOGCONFIG(TAG, "  BLE command timeout: %us", this->ble_command_timeout_);
+    ESP_LOGCONFIG(TAG, "  Pairing mode timeout: %" PRIu32 "s", this->pairing_mode_timeout_);
+    ESP_LOGCONFIG(TAG, "  Configuration query interval: %" PRIu32 "s", this->query_interval_config_);
+    ESP_LOGCONFIG(TAG, "  Auth Data query interval: %" PRIu32 "s", this->query_interval_auth_data_);
+    ESP_LOGCONFIG(TAG, "  Battery Report query interval: %" PRIu32 "s", this->query_interval_battery_report_);
+    ESP_LOGCONFIG(TAG, "  BLE general timeout: %" PRIu32 "s", this->ble_general_timeout_);
+    ESP_LOGCONFIG(TAG, "  BLE command timeout: %" PRIu32 "s", this->ble_command_timeout_);
     ESP_LOGCONFIG(TAG, "  Command retries: %u", this->command_retries_);
-    ESP_LOGCONFIG(TAG, "  Command retry delay: %ums", this->command_retry_delay_millis_);
-    ESP_LOGCONFIG(TAG, "  Config cache TTL: %us", this->config_cache_ttl_);
+    ESP_LOGCONFIG(TAG, "  Command retry delay: %" PRIu32 "ms", this->command_retry_delay_millis_);
+    ESP_LOGCONFIG(TAG, "  Config cache TTL: %" PRIu32 "s", this->config_cache_ttl_);
 
     char pin_state_as_string[30] = {0};
     nuki_lock::pin_state_to_string(this->pin_state_, pin_state_as_string);
@@ -1588,7 +1623,7 @@ void NukiLockComponent::dump_config() {
 }
 
 void NukiLockComponent::notify(EventType event_type) {
-    ESP_LOGI(TAG, "Event notified %d", event_type);
+    ESP_LOGI(TAG, "Event notified %d", (int)event_type);
 
     if(event_type == EventType::KeyTurnerStatusReset) {
         // IDK
@@ -1598,9 +1633,9 @@ void NukiLockComponent::notify(EventType event_type) {
         ESP_LOGW(TAG, "Nuki reported an invalid security PIN");
 
         ESP_LOGD(TAG, "NVS PIN 1st-4th Gen: %d", this->nuki_lock_.get_security_pincode());
-        ESP_LOGD(TAG, "NVS PIN 5th Gen (Ultra / Go / Pro): %d", this->nuki_lock_.get_ultra_pincode());
-        ESP_LOGD(TAG, "ESPHome PIN (override): %d", this->security_pin_);
-        ESP_LOGD(TAG, "ESPHome PIN (YAML): %d", this->security_pin_config_.value_or(0));
+        ESP_LOGD(TAG, "NVS PIN 5th Gen (Ultra / Go / Pro): %" PRIu32, this->nuki_lock_.get_ultra_pincode());
+        ESP_LOGD(TAG, "ESPHome PIN (override): %" PRIu32, this->security_pin_);
+        ESP_LOGD(TAG, "ESPHome PIN (YAML): %" PRIu32, this->security_pin_config_.value_or(0));
 
         const uint32_t saved_pin = this->nuki_lock_.is_lock_ultra() ? this->nuki_lock_.get_ultra_pincode() : this->nuki_lock_.get_security_pincode();
         const uint32_t actual_pin = this->security_pin_ != 0 ? this->security_pin_ : this->security_pin_config_.value_or(0);
@@ -1614,6 +1649,13 @@ void NukiLockComponent::notify(EventType event_type) {
         this->publish_pin_state();
     } else if(event_type == EventType::KeyTurnerStatusUpdated) {
         ESP_LOGD(TAG, "KeyTurnerStatusUpdated");
+
+        if ((int32_t)(millis() - this->ignore_status_beacon_until_) < 0) {
+            // Flags the state change of our own lock action, already published from the
+            // state the lock pushed during it
+            ESP_LOGD(TAG, "Ignoring status update flag right after lock action");
+            return;
+        }
 
         #ifdef USE_NUKI_LOCK_HYBRID
         if (this->hybrid_connected_) {
@@ -1712,7 +1754,7 @@ void NukiLockComponent::set_pairing_mode(bool enabled) {
     cancel_timeout("pairing_mode_timeout");
 
     if (enabled) {
-        ESP_LOGI(TAG, "Pairing Mode turned on for %d seconds", this->pairing_mode_timeout_);
+        ESP_LOGI(TAG, "Pairing Mode turned on for %" PRIu32 " seconds", this->pairing_mode_timeout_);
         this->pairing_mode_on_callback_.call();
 
         if (this->security_pin_ != 0) {
@@ -1724,9 +1766,9 @@ void NukiLockComponent::set_pairing_mode(bool enabled) {
         }
 
         ESP_LOGD(TAG, "NVS PIN 1st-4th Gen: %d", this->nuki_lock_.get_security_pincode());
-        ESP_LOGD(TAG, "NVS PIN 5th Gen (Ultra / Go / Pro): %d", this->nuki_lock_.get_ultra_pincode());
-        ESP_LOGD(TAG, "ESPHome PIN (override): %d", this->security_pin_);
-        ESP_LOGD(TAG, "ESPHome PIN (YAML): %d", this->security_pin_config_.value_or(0));
+        ESP_LOGD(TAG, "NVS PIN 5th Gen (Ultra / Go / Pro): %" PRIu32, this->nuki_lock_.get_ultra_pincode());
+        ESP_LOGD(TAG, "ESPHome PIN (override): %" PRIu32, this->security_pin_);
+        ESP_LOGD(TAG, "ESPHome PIN (YAML): %" PRIu32, this->security_pin_config_.value_or(0));
 
         ESP_LOGI(TAG, "Waiting for Nuki to enter pairing mode...");
 

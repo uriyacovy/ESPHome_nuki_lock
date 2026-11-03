@@ -406,7 +406,10 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
      *
      * @param active Set to true while pairing mode is active
      */
-    void set_pairing_mode_active(bool active) { this->pairing_mode_active_ = active; }
+    void set_pairing_mode_active(bool active) {
+      this->pairing_mode_active_ = active;
+      this->pairing_wait_logged_ = false;
+    }
 
   protected:
     // Connects (if needed) to the service relevant for `pairing` (pairing service/GDIO vs.
@@ -534,6 +537,13 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
     // takes several seconds). Reset by connect_ble() whenever a fresh connect() is kicked
     // off, so the next wait logs its one line again.
     bool not_connected_logged_ = false;
+    // The lock's GATT services are cached in NVS (CONFIG_BT_GATTC_CACHE_NVS_FLASH, see
+    // lock.py), so reconnects skip the full service discovery. Set when the cached services
+    // don't fit the lock (characteristic missing, subscribing failed, invalid handle - e.g.
+    // after a lock firmware update); on_disconnect_complete() then drops the cache so the
+    // next connection discovers the services again.
+    bool service_cache_invalid_ = false;
+    void invalidate_service_cache();
     esphome::esp32_ble_client::BLECharacteristic *gdio_char_ = nullptr;
     esphome::esp32_ble_client::BLECharacteristic *usdio_char_ = nullptr;
 
@@ -571,6 +581,8 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
     // parse_device()'s unpaired-device branch only reacts to pairing-mode advertisements
     // while we're actually trying to pair.
     bool pairing_mode_active_ = false;
+    // "Waiting for a lock in pairing mode" was logged for the current wait
+    bool pairing_wait_logged_ = false;
 
     // All NukiBle instances (one per nuki_lock: block), so pairing can skip locks another
     // instance is already paired with - see is_paired_by_other_instance()
@@ -737,7 +749,9 @@ CmdResult NukiBle::cmd_state_machine(const TDeviceAction action) {
       break;
     }
     case CommandState::CmdSent: {
-      if ((esp_timer_get_time() / 1000) - this->time_now_ > this->command_timeout_duration_) {
+      // Only data requests (key turner state, battery report, ...) use this state machine -
+      // no motor movement, so the general timeout applies instead of the command timeout
+      if ((esp_timer_get_time() / 1000) - this->time_now_ > this->general_timeout_duration_) {
         ESP_LOGW(HPP_TAG, "Command failed: timeout");
         this->disconnect();
         this->nuki_command_state_ = CommandState::Idle;

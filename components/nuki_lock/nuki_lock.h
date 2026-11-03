@@ -48,6 +48,9 @@ static const uint16_t BLE_DISCONNECT_TIMEOUT = 2000;
 static const uint8_t MAX_TOLERATED_UPDATES_ERRORS = 5;
 
 static const uint32_t COOLDOWN_COMMANDS_MILLIS = 1000;
+// How long the advertisement's status-changed flag is ignored after a lock action whose
+// final state the lock pushed (see execute_lock_action_step())
+static const uint32_t IGNORE_STATUS_BEACON_AFTER_ACTION_MILLIS = 3000;
 
 static const uint8_t MAX_AUTH_DATA_ENTRIES = 10;
 static const uint8_t MAX_EVENT_LOG_ENTRIES = 3;
@@ -186,6 +189,14 @@ class NukiLockComponent :
         void set_command_retries(uint8_t command_retries) { this->command_retries_ = command_retries; }
         void set_command_retry_delay(uint32_t command_retry_delay_millis) { this->command_retry_delay_millis_ = command_retry_delay_millis; }
         void set_config_cache_ttl(uint32_t config_cache_ttl) { this->config_cache_ttl_ = config_cache_ttl; }
+        // Extra debug logging of the BLE protocol, see the `debug:` options in lock.py
+        void set_debug(bool connect, bool communication, bool readable_data, bool hex_data, bool command) {
+            this->debug_connect_ = connect;
+            this->debug_communication_ = communication;
+            this->debug_readable_data_ = readable_data;
+            this->debug_hex_data_ = hex_data;
+            this->debug_command_ = command;
+        }
         // Door sensor report (0x0092) configuration
 #ifdef USE_BINARY_SENSOR
         void set_door_sensor_input(binary_sensor::BinarySensor* door_sensor_input) { this->door_sensor_input_ = door_sensor_input; }
@@ -319,6 +330,7 @@ class NukiLockComponent :
         // to call repeatedly (once per loop() tick) until it completes - see
         // nuki_op_active_ above.
         void update_status();
+        void process_key_turner_state();
         void update_config();
         void update_advanced_config();
         void update_event_logs();
@@ -448,6 +460,7 @@ class NukiLockComponent :
         // Timing & Intervals
         uint32_t last_command_executed_time_ = 0;
         uint32_t command_cooldown_millis = 0;
+        uint32_t ignore_status_beacon_until_ = 0;
         uint32_t query_interval_auth_data_ = 0;
         uint32_t query_interval_config_ = 0;
         uint32_t query_interval_battery_report_ = 0;
@@ -457,6 +470,13 @@ class NukiLockComponent :
         uint8_t command_retries_ = 5;
         uint32_t command_retry_delay_millis_ = 1000;
         uint32_t config_cache_ttl_ = 60;
+
+        // Debug logging, applied to nuki_lock_ in setup()
+        bool debug_connect_{false};
+        bool debug_communication_{false};
+        bool debug_readable_data_{false};
+        bool debug_hex_data_{false};
+        bool debug_command_{false};
 
         // Event Logs
         uint32_t last_rolling_log_id = 0;

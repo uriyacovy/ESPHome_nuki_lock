@@ -87,6 +87,15 @@ void NukiLock::retrieve_key_tuner_state(KeyTurnerState* retrievedKeyTurnerState)
   memcpy(retrievedKeyTurnerState, &this->key_turner_state_, sizeof(KeyTurnerState));
 }
 
+bool NukiLock::take_pushed_key_turner_state(KeyTurnerState* retrievedKeyTurnerState) {
+  if (!this->key_turner_state_pushed_) {
+    return false;
+  }
+  this->key_turner_state_pushed_ = false;
+  memcpy(retrievedKeyTurnerState, &this->key_turner_state_, sizeof(KeyTurnerState));
+  return true;
+}
+
 CmdResult NukiLock::request_battery_report(BatteryReport* retrievedBatteryReport) {
   NukiAction action{};
   uint16_t payload = (uint16_t)Command::BatteryReport;
@@ -610,7 +619,7 @@ CmdResult NukiLock::add_time_control_entry(NewTimeControlEntry newTimeControlEnt
   CmdResult result = this->execute_action(action);
   if (result == CmdResult::Success) {
     if (this->debug_nuki_readable_data_) {      
-      ESP_LOGD(TAG, "add_time_control_entry, payloadlen: %d", sizeof(NewTimeControlEntry));
+      ESP_LOGD(TAG, "add_time_control_entry, payloadlen: %zu", sizeof(NewTimeControlEntry));
       print_buffer(action.payload, sizeof(NewTimeControlEntry), false, "new time control content: ", this->debug_nuki_hex_data_);
       log_new_time_control_entry(newTimeControlEntry, true);
     }
@@ -632,7 +641,7 @@ CmdResult NukiLock::update_time_control_entry(TimeControlEntry TimeControlEntry)
   CmdResult result = this->execute_action(action);
   if (result == CmdResult::Success) {
     if (this->debug_nuki_readable_data_) {      
-      ESP_LOGD(TAG, "add_time_control_entry, payloadlen: %d", sizeof(TimeControlEntry));
+      ESP_LOGD(TAG, "add_time_control_entry, payloadlen: %zu", sizeof(TimeControlEntry));
       print_buffer(action.payload, sizeof(TimeControlEntry), false, "updated time control content: ", this->debug_nuki_hex_data_);
       log_time_control_entry(TimeControlEntry, true);
     }
@@ -903,6 +912,7 @@ void NukiLock::handle_return_message(Command returnCode, unsigned char* data, ui
     case Command::KeyturnerStates : {
       print_buffer((uint8_t*)data, dataLen, false, "keyturnerStates", this->debug_nuki_hex_data_);
       memcpy(&this->key_turner_state_, data, dataLen);
+      this->key_turner_state_pushed_ = true;
       if (this->debug_nuki_readable_data_) {
         log_keyturner_state(this->key_turner_state_, true);
       }

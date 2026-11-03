@@ -53,6 +53,16 @@ class NukiLock : public NukiBle {
      */
     void retrieve_key_tuner_state(KeyTurnerState* retrievedKeyTurnerState);
 
+    /**
+     * @brief During a lock action the lock pushes Keyturner States on its own (the final one
+     * right before "complete"). Hands out the latest one received since
+     * clear_pushed_key_turner_state(), once.
+     *
+     * @return true if a state was pushed and copied to retrievedKeyTurnerState
+     */
+    bool take_pushed_key_turner_state(KeyTurnerState* retrievedKeyTurnerState);
+    void clear_pushed_key_turner_state() { this->key_turner_state_pushed_ = false; }
+
     
     /**
      * @brief Requests battery status from Lock via BLE
@@ -573,6 +583,7 @@ class NukiLock : public NukiBle {
     CmdResult commit_advanced_config_write();
 
     KeyTurnerState key_turner_state_;
+    bool key_turner_state_pushed_{false};
     BatteryReport battery_report_;
     // No count notification precedes these entries, so the final size isn't known up
     // front - std::vector still avoids std::list's per-node allocation churn.

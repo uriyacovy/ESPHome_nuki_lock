@@ -44,6 +44,12 @@ lock:
     query_interval_auth_data: 7200s
     ble_general_timeout: 3s
     ble_command_timeout: 3s
+    debug:
+      connect: true
+      communication: true
+      readable_data: true
+      hex_data: true
+      command: true
 
     unpair:
       name: "Unpair Device"
