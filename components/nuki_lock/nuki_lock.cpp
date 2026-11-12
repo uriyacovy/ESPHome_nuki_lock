@@ -1796,75 +1796,40 @@ void NukiLockRequestCalibrationButton::press_action() {
 #ifdef USE_SELECT
 void NukiLockSingleButtonPressActionSelect::control(const std::string &value) {
     ButtonPressAction action = nuki_lock::button_press_action_to_enum(value.c_str());
-    this->parent_->queue_nuki_command([this, action] { return this->parent_->get_nuki_lock()->set_single_button_press_action(action); }, [this, action, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->singleButtonPressAction = action;
-            this->publish_state(value.c_str());
-        }
-    });
+    this->parent_->queue_nuki_command([this, action] { return this->parent_->get_nuki_lock()->set_single_button_press_action(action); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 
 void NukiLockDoubleButtonPressActionSelect::control(const std::string &value) {
     ButtonPressAction action = nuki_lock::button_press_action_to_enum(value.c_str());
-    this->parent_->queue_nuki_command([this, action] { return this->parent_->get_nuki_lock()->set_double_button_press_action(action); }, [this, action, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->doubleButtonPressAction = action;
-            this->publish_state(value.c_str());
-        }
-    });
+    this->parent_->queue_nuki_command([this, action] { return this->parent_->get_nuki_lock()->set_double_button_press_action(action); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 
 void NukiLockFobAction1Select::control(const std::string &value) {
     const uint8_t action = nuki_lock::fob_action_to_int(value.c_str());
     if (action == 99) return;
-    this->parent_->queue_nuki_command([this, action] { return this->parent_->get_nuki_lock()->set_fob_action(1, action); }, [this, action, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_config()->fobAction1 = action;
-            this->publish_state(value.c_str());
-        }
-    });
+    this->parent_->queue_nuki_command([this, action] { return this->parent_->get_nuki_lock()->set_fob_action(1, action); }, [this](CmdResult) { this->parent_->request_config_read(); });
 }
 
 void NukiLockFobAction2Select::control(const std::string &value) {
     const uint8_t action = nuki_lock::fob_action_to_int(value.c_str());
     if (action == 99) return;
-    this->parent_->queue_nuki_command([this, action] { return this->parent_->get_nuki_lock()->set_fob_action(2, action); }, [this, action, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_config()->fobAction2 = action;
-            this->publish_state(value.c_str());
-        }
-    });
+    this->parent_->queue_nuki_command([this, action] { return this->parent_->get_nuki_lock()->set_fob_action(2, action); }, [this](CmdResult) { this->parent_->request_config_read(); });
 }
 
 void NukiLockFobAction3Select::control(const std::string &value) {
     const uint8_t action = nuki_lock::fob_action_to_int(value.c_str());
     if (action == 99) return;
-    this->parent_->queue_nuki_command([this, action] { return this->parent_->get_nuki_lock()->set_fob_action(3, action); }, [this, action, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_config()->fobAction3 = action;
-            this->publish_state(value.c_str());
-        }
-    });
+    this->parent_->queue_nuki_command([this, action] { return this->parent_->get_nuki_lock()->set_fob_action(3, action); }, [this](CmdResult) { this->parent_->request_config_read(); });
 }
 
 void NukiLockTimeZoneSelect::control(const std::string &value) {
     TimeZoneId tzid = nuki_lock::timezone_to_enum(value.c_str());
-    this->parent_->queue_nuki_command([this, tzid] { return this->parent_->get_nuki_lock()->set_time_zone_id(tzid); }, [this, tzid, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_config()->timeZoneId = tzid;
-            this->publish_state(value.c_str());
-        }
-    });
+    this->parent_->queue_nuki_command([this, tzid] { return this->parent_->get_nuki_lock()->set_time_zone_id(tzid); }, [this](CmdResult) { this->parent_->request_config_read(); });
 }
 
 void NukiLockAdvertisingModeSelect::control(const std::string &value) {
     AdvertisingMode mode = nuki_lock::advertising_mode_to_enum(value.c_str());
-    this->parent_->queue_nuki_command([this, mode] { return this->parent_->get_nuki_lock()->set_advertising_mode(mode); }, [this, mode, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_config()->advertisingMode = mode;
-            this->publish_state(value.c_str());
-        }
-    });
+    this->parent_->queue_nuki_command([this, mode] { return this->parent_->get_nuki_lock()->set_advertising_mode(mode); }, [this](CmdResult) { this->parent_->request_config_read(); });
 }
 
 void NukiLockBatteryTypeSelect::control(const std::string &value) {
@@ -1873,12 +1838,7 @@ void NukiLockBatteryTypeSelect::control(const std::string &value) {
         return;
     }
     BatteryType type = nuki_lock::battery_type_to_enum(value.c_str());
-    this->parent_->queue_nuki_command([this, type] { return this->parent_->get_nuki_lock()->set_battery_type(type); }, [this, type, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->batteryType = type;
-            this->publish_state(value.c_str());
-        }
-    });
+    this->parent_->queue_nuki_command([this, type] { return this->parent_->get_nuki_lock()->set_battery_type(type); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 
 void NukiLockMotorSpeedSelect::control(const std::string &value) {
@@ -1887,12 +1847,7 @@ void NukiLockMotorSpeedSelect::control(const std::string &value) {
         return;
     }
     MotorSpeed speed = nuki_lock::motor_speed_to_enum(value.c_str());
-    this->parent_->queue_nuki_command([this, speed] { return this->parent_->get_nuki_lock()->set_motor_speed(speed); }, [this, speed, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->motorSpeed = speed;
-            this->publish_state(value.c_str());
-        }
-    });
+    this->parent_->queue_nuki_command([this, speed] { return this->parent_->get_nuki_lock()->set_motor_speed(speed); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 #endif
 
@@ -1902,129 +1857,59 @@ void NukiLockPairingModeSwitch::write_state(bool state) {
 }
 
 void NukiLockBluetoothPairingEnabledSwitch::write_state(bool state) {
-    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_pairing(state); }, [this, state](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_config()->pairing_enabled = state;
-            this->publish_state(state);
-        }
-    });
+    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_pairing(state); }, [this](CmdResult) { this->parent_->request_config_read(); });
 }
 
 void NukiLockAutoUnlatchEnabledSwitch::write_state(bool state) {
-    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_auto_unlatch(state); }, [this, state](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_config()->autoUnlatch = state;
-            this->publish_state(state);
-        }
-    });
+    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_auto_unlatch(state); }, [this](CmdResult) { this->parent_->request_config_read(); });
 }
 
 void NukiLockButtonEnabledSwitch::write_state(bool state) {
-    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_button(state); }, [this, state](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_config()->buttonEnabled = state;
-            this->publish_state(state);
-        }
-    });
+    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_button(state); }, [this](CmdResult) { this->parent_->request_config_read(); });
 }
 
 void NukiLockLedEnabledSwitch::write_state(bool state) {
-    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_led_flash(state); }, [this, state](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_config()->ledEnabled = state;
-            this->publish_state(state);
-        }
-    });
+    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_led_flash(state); }, [this](CmdResult) { this->parent_->request_config_read(); });
 }
 
 void NukiLockNightModeEnabledSwitch::write_state(bool state) {
-    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_night_mode(state); }, [this, state](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->nightModeEnabled = state;
-            this->publish_state(state);
-        }
-    });
+    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_night_mode(state); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 
 void NukiLockNightModeAutoLockEnabledSwitch::write_state(bool state) {
-    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_night_mode_auto_lock(state); }, [this, state](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->nightModeAutoLockEnabled = state;
-            this->publish_state(state);
-        }
-    });
+    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_night_mode_auto_lock(state); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 
 void NukiLockNightModeAutoUnlockDisabledSwitch::write_state(bool state) {
-    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->disable_night_mode_auto_unlock(state); }, [this, state](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->nightModeAutoUnlockDisabled = state;
-            this->publish_state(state);
-        }
-    });
+    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->disable_night_mode_auto_unlock(state); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 
 void NukiLockNightModeImmediateLockOnStartEnabledSwitch::write_state(bool state) {
-    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_night_mode_immediate_lock_on_start(state); }, [this, state](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->nightModeImmediateLockOnStart = state;
-            this->publish_state(state);
-        }
-    });
+    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_night_mode_immediate_lock_on_start(state); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 
 void NukiLockAutoLockEnabledSwitch::write_state(bool state) {
-    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_auto_lock(state); }, [this, state](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->autoLockEnabled = state;
-            this->publish_state(state);
-        }
-    });
+    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_auto_lock(state); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 
 void NukiLockAutoUnlockDisabledSwitch::write_state(bool state) {
-    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->disable_auto_unlock(state); }, [this, state](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->autoUnLockDisabled = state;
-            this->publish_state(state);
-        }
-    });
+    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->disable_auto_unlock(state); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 
 void NukiLockImmediateAutoLockEnabledSwitch::write_state(bool state) {
-    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_immediate_auto_lock(state); }, [this, state](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->immediateAutoLockEnabled = state;
-            this->publish_state(state);
-        }
-    });
+    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_immediate_auto_lock(state); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 
 void NukiLockAutoUpdateEnabledSwitch::write_state(bool state) {
-    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_auto_update(state); }, [this, state](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->autoUpdateEnabled = state;
-            this->publish_state(state);
-        }
-    });
+    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_auto_update(state); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 
 void NukiLockSingleLockEnabledSwitch::write_state(bool state) {
-    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_single_lock(state); }, [this, state](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_config()->singleLock = state;
-            this->publish_state(state);
-        }
-    });
+    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_single_lock(state); }, [this](CmdResult) { this->parent_->request_config_read(); });
 }
 
 void NukiLockDstModeEnabledSwitch::write_state(bool state) {
-    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_dst(state); }, [this, state](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_config()->dstMode = state;
-            this->publish_state(state);
-        }
-    });
+    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_dst(state); }, [this](CmdResult) { this->parent_->request_config_read(); });
 }
 
 void NukiLockAutoBatteryTypeDetectionEnabledSwitch::write_state(bool state) {
@@ -2032,12 +1917,7 @@ void NukiLockAutoBatteryTypeDetectionEnabledSwitch::write_state(bool state) {
         ESP_LOGE(TAG, "Auto Battery Type Detection is not supported for 5th Gen Smart Locks (Ultra / Go / Pro)");
         return;
     }
-    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_auto_battery_type_detection(state); }, [this, state](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->automaticBatteryTypeDetection = state;
-            this->publish_state(state);
-        }
-    });
+    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_auto_battery_type_detection(state); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 
 void NukiLockSlowSpeedDuringNightModeEnabledSwitch::write_state(bool state) {
@@ -2045,20 +1925,10 @@ void NukiLockSlowSpeedDuringNightModeEnabledSwitch::write_state(bool state) {
         ESP_LOGE(TAG, "Slow Speed During Night Mode is only supported for 5th Gen Smart Locks (Ultra / Go / Pro)");
         return;
     }
-    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_slow_speed_during_night_mode(state); }, [this, state](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->enable_slow_speed_during_night_mode = state;
-            this->publish_state(state);
-        }
-    });
+    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_slow_speed_during_night_mode(state); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 void NukiLockDetachedCylinderEnabledSwitch::write_state(bool state) {
-    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_detached_cylinder(state); }, [this, state](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->detachedCylinder = state;
-            this->publish_state(state);
-        }
-    });
+    this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_detached_cylinder(state); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 void NukiLockLoggingEnabledSwitch::write_state(bool state) {
     this->parent_->queue_nuki_command([this, state] { return this->parent_->get_nuki_lock()->enable_logging(state); }, [this, state](CmdResult result) {
@@ -2071,84 +1941,39 @@ void NukiLockLoggingEnabledSwitch::write_state(bool state) {
 
 #ifdef USE_NUMBER
 void NukiLockLedBrightnessNumber::control(float value) {
-    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_led_brightness(value); }, [this, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_config()->ledBrightness = value;
-            this->publish_state(value);
-        }
-    });
+    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_led_brightness(value); }, [this](CmdResult) { this->parent_->request_config_read(); });
 }
 void NukiLockTimeZoneOffsetNumber::control(float value) {
     if (value < -60 || value > 60) return;
-    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_time_zone_offset(value); }, [this, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_config()->timeZoneOffset = value;
-            this->publish_state(value);
-        }
-    });
+    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_time_zone_offset(value); }, [this](CmdResult) { this->parent_->request_config_read(); });
 }
 void NukiLockLockNGoTimeoutNumber::control(float value) {
     if (value < 5 || value > 60) return;
-    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_lock_ngo_timeout(value); }, [this, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->lockNgoTimeout = value;
-            this->publish_state(value);
-        }
-    });
+    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_lock_ngo_timeout(value); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 void NukiLockAutoLockTimeoutNumber::control(float value) {
     if (value < 30 || value > 1800) return;
-    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_auto_lock_time_out(value); }, [this, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->autoLockTimeOut = value;
-            this->publish_state(value);
-        }
-    });
+    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_auto_lock_time_out(value); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 void NukiLockUnlatchDurationNumber::control(float value) {
     if (value < 1 || value > 30) return;
-    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_unlatch_duration(value); }, [this, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->unlatchDuration = value;
-            this->publish_state(value);
-        }
-    });
+    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_unlatch_duration(value); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 void NukiLockUnlockedPositionOffsetDegreesNumber::control(float value) {
     if (value < -90 || value > 180) return;
-    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_unlocked_position_offset_degrees(value); }, [this, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->unlockedPositionOffsetDegrees = value;
-            this->publish_state(value);
-        }
-    });
+    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_unlocked_position_offset_degrees(value); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 void NukiLockLockedPositionOffsetDegreesNumber::control(float value) {
     if (value < -180 || value > 90) return;
-    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_locked_position_offset_degrees(value); }, [this, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->lockedPositionOffsetDegrees = value;
-            this->publish_state(value);
-        }
-    });
+    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_locked_position_offset_degrees(value); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 void NukiLockSingleLockedPositionOffsetDegreesNumber::control(float value) {
     if (value < -180 || value > 180) return;
-    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_single_locked_position_offset_degrees(value); }, [this, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->singleLockedPositionOffsetDegrees = value;
-            this->publish_state(value);
-        }
-    });
+    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_single_locked_position_offset_degrees(value); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 void NukiLockUnlockedToLockedTransitionOffsetDegreesNumber::control(float value) {
     if (value < -180 || value > 180) return;
-    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_unlocked_to_locked_transition_offset_degrees(value); }, [this, value](CmdResult result) {
-        if (result == CmdResult::Success) {
-            this->parent_->get_nuki_lock_advanced_config()->unlockedToLockedTransitionOffsetDegrees = value;
-            this->publish_state(value);
-        }
-    });
+    this->parent_->queue_nuki_command([this, value] { return this->parent_->get_nuki_lock()->set_unlocked_to_locked_transition_offset_degrees(value); }, [this](CmdResult) { this->parent_->request_advanced_config_read(); });
 }
 #endif
 
