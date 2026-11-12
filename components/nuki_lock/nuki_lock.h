@@ -337,6 +337,10 @@ class NukiLockComponent :
         void update_auth_data();
         void update_battery_report();
         void report_door_sensor_step();
+        // The door state to report next, if any (open is set to it), and whether it is due now
+        bool door_report_next(bool *open);
+        bool door_report_due();
+        bool door_report_held(bool open);
         void validate_pin();
         void validate_pin_step();
         void execute_lock_action_step();
@@ -432,12 +436,23 @@ class NukiLockComponent :
 #ifdef USE_BINARY_SENSOR
         binary_sensor::BinarySensor* door_sensor_input_{nullptr};
 #endif
-        // Set by door_sensor_input_'s state callback: latest door state not reported yet
-        bool door_sensor_report_pending_{false};
+        // Latest door state, set by door_sensor_input_'s state callback
         bool door_sensor_report_open_{false};
-        // Snapshot of door_sensor_report_open_ for the report in flight, so a change during
-        // it is reported afterwards instead of altering the command being sent
+        // The door state the lock was last told (or showed in a status read); unset at boot
+        optional<bool> door_report_lock_open_{};
+        // The door opened since the lock last accepted OPEN: the lock re-latches on that
+        // transition, so OPEN is sent before any later CLOSED
+        bool door_report_open_owed_{false};
+        // Snapshot of the state for the report in flight, so a change during it is
+        // reported afterwards instead of altering the command being sent
         bool door_sensor_report_sending_open_{false};
+        bool door_report_in_flight_{false};
+        uint8_t door_report_retries_used_{0};
+        uint32_t door_report_retry_at_{0};
+        uint32_t door_report_held_since_{0};
+        uint32_t door_report_accepted_at_{0};
+        uint32_t door_report_failing_since_{0};
+        LockState last_lock_state_{LockState::Undefined};
 
         // Action flags
         bool open_latch_{false};

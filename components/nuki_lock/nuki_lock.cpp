@@ -59,6 +59,20 @@ void NukiLockComponent::process_key_turner_state() {
     this->publish_state(nuki_lock::nuki_to_lock_state(this->retrieved_key_turner_state_.lockState));
 
     #ifdef USE_BINARY_SENSOR
+    bool unlatch_state = current_lock_state == LockState::Unlatching || current_lock_state == LockState::Unlatched;
+    bool was_unlatch_state = this->last_lock_state_ == LockState::Unlatching || this->last_lock_state_ == LockState::Unlatched;
+    // Leaving the unlatch states means the latch is back: an OPEN still owed has nothing to
+    // release, so just report the sensor's current state.
+    if (was_unlatch_state && !unlatch_state && this->door_report_open_owed_) {
+        ESP_LOGI(TAG, "Re-latched before the door report landed: dropping the owed OPEN");
+        this->door_report_open_owed_ = false;
+        this->door_report_retry_at_ = 0;
+    }
+    #endif
+
+    this->last_lock_state_ = current_lock_state;
+
+    #ifdef USE_BINARY_SENSOR
     if (this->connected_binary_sensor_ != nullptr) {
         this->connected_binary_sensor_->publish_state(this->connected_);
     }
@@ -96,6 +110,21 @@ void NukiLockComponent::process_key_turner_state() {
         validate_pin();
     }
     
+    // A report that failed for good leaves the lock with the wrong door state; any
+    // later status read shows it, so send the sensor's state again.
+    DoorSensorState lock_door_state = this->retrieved_key_turner_state_.doorSensorState;
+    bool next_open;
+    if (this->door_sensor_input_ != nullptr && !this->door_report_next(&next_open) &&
+        !this->door_report_in_flight_ && millis() - this->door_report_accepted_at_ > 2000 &&
+        (lock_door_state == DoorSensorState::DoorOpened || lock_door_state == DoorSensorState::DoorClosed)) {
+        bool sensor_open = this->door_sensor_report_open_;
+        if (sensor_open != (lock_door_state == DoorSensorState::DoorOpened)) {
+            ESP_LOGI(TAG, "Lock thinks the door is %s; reporting %s again", sensor_open ? "closed" : "open",
+                     sensor_open ? "OPEN" : "CLOSED");
+            this->door_report_lock_open_ = !sensor_open;
+        }
+    }
+
     if (this->door_sensor_binary_sensor_ != nullptr) {
         DoorSensorState door_sensor_state = this->retrieved_key_turner_state_.doorSensorState;
         if(door_sensor_state != DoorSensorState::Unavailable) {
@@ -551,21 +580,102 @@ void NukiLockComponent::update_battery_report() {
     }
 }
 
+bool NukiLockComponent::door_report_next(bool *open) {
+#ifdef USE_BINARY_SENSOR
+    if (this->door_sensor_input_ == nullptr || !this->door_sensor_input_->has_state()) {
+        return false;
+    }
+    if (this->door_report_open_owed_) {
+        // The lock re-latches on OPEN: a door that opened is reported OPEN, even if it has closed since
+        *open = true;
+        return true;
+    }
+    *open = this->door_sensor_report_open_;
+    return !this->door_report_lock_open_.has_value() || *this->door_report_lock_open_ != *open;
+#else
+    return false;
+#endif
+}
+
+bool NukiLockComponent::door_report_due() {
+    bool open;
+    return this->door_report_next(&open) &&
+           (this->door_report_retry_at_ == 0 || (int32_t) (millis() - this->door_report_retry_at_) >= 0);
+}
+
 void NukiLockComponent::report_door_sensor_step() {
-    CmdResult result = this->nuki_lock_.report_door_sensor_state(this->door_sensor_report_sending_open_);
+    // A busy lock can take seconds to answer. Cutting it off mid-command seems to upset
+    // it, so the report gets the normal command timeout.
+    bool open = this->door_sensor_report_sending_open_;
+    this->door_report_in_flight_ = true;
+    CmdResult result = this->nuki_lock_.report_door_sensor_state(open);
     if (result == CmdResult::Working) {
         return;  // still in flight on the single Nuki command slot; retry next tick
     }
+    this->door_report_in_flight_ = false;
     this->nuki_op_active_ = false;
 
     App.feed_wdt();
 
-    const char *state = this->door_sensor_report_sending_open_ ? "OPEN" : "CLOSED";
+    const char *state = open ? "OPEN" : "CLOSED";
+    // The lock answers some reports and ignores others in the same state, so a failed
+    // report is sent again (door_report_next() keeps sending an OPEN that never arrived, since
+    // that is what releases the latch). Retry sooner when the lock says its
+    // state changed, or at once on a new door event. Stop after the lock's unlatch hold;
+    // the next status read catches the lock up from there.
+    static const uint32_t RETRY_DELAY_FIRST_MS = 1000;
+    static const uint32_t RETRY_DELAY_MS = 3000;
+    // The lock's own Unlatch Duration (1-30s); 255 until the advanced config has been read.
+    uint8_t unlatch_duration = this->nuki_lock_advanced_config_.unlatchDuration;
+    const uint32_t RETRY_WINDOW_MS = (unlatch_duration >= 1 && unlatch_duration <= 30 ? unlatch_duration : 30) * 1000;
     if (result == CmdResult::Success) {
         ESP_LOGI(TAG, "Door sensor report: %s -> accepted", state);
-    } else {
-        ESP_LOGW(TAG, "Door sensor report: %s -> failed (%d)", state, result);
+        this->door_report_lock_open_ = open;
+        if (open) {
+            this->door_report_open_owed_ = false;
+        }
+        this->door_report_retries_used_ = 0;
+        this->door_report_retry_at_ = 0;
+        this->door_report_failing_since_ = 0;
+        this->door_report_accepted_at_ = millis();
+        return;
     }
+    if (this->door_report_failing_since_ == 0) {
+        this->door_report_failing_since_ = millis() | 1;
+    }
+    if (millis() - this->door_report_failing_since_ < RETRY_WINDOW_MS) {
+        uint32_t delay = this->door_report_retries_used_ == 0 ? RETRY_DELAY_FIRST_MS : RETRY_DELAY_MS;
+        this->door_report_retries_used_++;
+        ESP_LOGW(TAG, "Door sensor report: %s -> failed (%d), retry %u in %" PRIu32 "ms or on the next lock event",
+                 state, result, this->door_report_retries_used_, delay);
+        this->door_report_retry_at_ = (millis() + delay) | 1;
+    } else {
+        ESP_LOGW(TAG, "Door sensor report: %s -> failed (%d), giving up after %" PRIu32 "ms", state, result,
+                 millis() - this->door_report_failing_since_);
+        // Assume the lock has the sensor's state; the next status read shows if it doesn't
+        this->door_report_lock_open_ = this->door_sensor_report_open_;
+        this->door_report_open_owed_ = false;
+        this->door_report_retries_used_ = 0;
+        this->door_report_retry_at_ = 0;
+        this->door_report_failing_since_ = 0;
+    }
+}
+
+bool NukiLockComponent::door_report_held(bool open) {
+    // CLOSED reports sent while the motor ran went unanswered, so wait for it to stop. OPEN
+    // releases the latch and never waits. The lock state can be stale, hence the cap.
+    static const uint32_t MAX_HOLD_MS = 5000;
+    bool moving = this->last_lock_state_ == LockState::Locking || this->last_lock_state_ == LockState::Unlocking ||
+                  this->last_lock_state_ == LockState::Unlatching;
+    if (open || !moving) {
+        this->door_report_held_since_ = 0;
+        return false;
+    }
+    if (this->door_report_held_since_ == 0) {
+        ESP_LOGD(TAG, "Holding the CLOSED report while the lock is busy");
+        this->door_report_held_since_ = millis() | 1;
+    }
+    return millis() - this->door_report_held_since_ < MAX_HOLD_MS;
 }
 
 void NukiLockComponent::update_event_logs() {
@@ -1043,6 +1153,12 @@ void NukiLockComponent::loop()
     // more often (50ms) in that case so multi-step handshakes progress close to BLE speed.
     uint32_t current_time = millis();
     uint32_t loop_interval = this->nuki_op_active_ ? 50 : 500;
+#ifdef USE_BINARY_SENSOR
+    // The lock can hold the latch back after an unlatch until it hears the door open.
+    if (this->door_report_due()) {
+        loop_interval = 0;
+    }
+#endif
     if (current_time - this->last_loop_time_ < loop_interval) {
         return;
     }
@@ -1064,7 +1180,11 @@ void NukiLockComponent::loop()
     // Once a Nuki BLE operation is in flight (nuki_op_active_), it must keep being
     // re-driven every tick regardless of the cooldown below - the cooldown only applies
     // *between* completed operations, never while one is still working towards a result.
-    if (!this->nuki_op_active_ && millis() - last_command_executed_time_ < command_cooldown_millis) {
+    bool skip_cooldown = false;
+#ifdef USE_BINARY_SENSOR
+    skip_cooldown = this->door_report_due();
+#endif
+    if (!this->nuki_op_active_ && !skip_cooldown && millis() - last_command_executed_time_ < command_cooldown_millis) {
         // Give the lock time to terminate the previous command
         uint64_t millisSinceLastExecution = millis() - last_command_executed_time_;
         uint64_t millisLeft = (millisSinceLastExecution < command_cooldown_millis) ? command_cooldown_millis - millisSinceLastExecution : 1;
@@ -1076,15 +1196,28 @@ void NukiLockComponent::loop()
         // Only one Nuki BLE command can be in flight at a time. Whichever operation is
         // already active keeps being re-invoked (regardless of which other flags below
         // are also true) until it reaches a terminal result; only then can a new
-        // operation be picked, in priority order: PIN validation, lock actions, queued
+        // operation be picked, in priority order: PIN validation, door report, lock actions, queued
         // entity/service commands, then the various periodic polls.
         bool idle = false;
+        if (!this->nuki_op_active_) {
+            this->door_report_in_flight_ = false;  // in case the report was cut short elsewhere
+        }
         if (this->nuki_op_active_) {
             this->nuki_op_step_();
         } else if (this->pin_validation_pending_) {
             this->nuki_op_active_ = true;
             this->nuki_op_step_ = [this] { this->validate_pin_step(); };
             this->nuki_op_step_();
+        } else if (bool door_open; this->door_report_due() && this->door_report_next(&door_open) &&
+                   !this->door_report_held(door_open)) {
+            // Door reports go before our own commands.
+            ESP_LOGD(TAG, "Reporting door sensor state...");
+            this->door_report_retry_at_ = 0;
+            this->door_sensor_report_sending_open_ = door_open;
+            this->nuki_op_active_ = true;
+            this->nuki_op_step_ = [this] { this->report_door_sensor_step(); };
+            this->nuki_op_step_();
+            command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
         } else if (this->action_attempts_ > 0) {
             this->nuki_op_active_ = true;
             this->nuki_op_step_ = [this] { this->execute_lock_action_step(); };
@@ -1096,14 +1229,6 @@ void NukiLockComponent::loop()
             this->nuki_op_step_();
             // command_cooldown_millis is set by process_pending_nuki_command() itself -
             // it differs between success, a retry-after-failure, and exhausted retries.
-        } else if (this->door_sensor_report_pending_) {
-            ESP_LOGD(TAG, "Reporting door sensor state...");
-            this->door_sensor_report_sending_open_ = this->door_sensor_report_open_;
-            this->door_sensor_report_pending_ = false;
-            this->nuki_op_active_ = true;
-            this->nuki_op_step_ = [this] { this->report_door_sensor_step(); };
-            this->nuki_op_step_();
-            command_cooldown_millis = COOLDOWN_COMMANDS_MILLIS;
         } else if (this->status_update_) {
             ESP_LOGD(TAG, "Requesting status...");
             this->nuki_op_active_ = true;
@@ -1296,14 +1421,25 @@ void NukiLockComponent::setup() {
     // has its state (set up before us) is reported right away.
     if (this->door_sensor_input_ != nullptr) {
         this->door_sensor_input_->add_full_state_callback([this](optional<bool> previous, optional<bool> current) {
-            if (current.has_value()) {
-                this->door_sensor_report_open_ = *current;
-                this->door_sensor_report_pending_ = true;
+            if (!current.has_value()) {
+                return;
+            }
+            bool changed = previous.has_value() && *previous != *current;
+            this->door_sensor_report_open_ = *current;
+            if (*current) {
+                // The lock re-latches on this transition: it must hear OPEN even if the door
+                // closes again before the report lands.
+                this->door_report_open_owed_ = true;
+            }
+            if (changed) {
+                // A new door event goes out now, not after a pending retry delay
+                this->door_report_retry_at_ = 0;
+                this->door_report_retries_used_ = 0;
+                this->door_report_failing_since_ = 0;
             }
         });
         if (this->door_sensor_input_->has_state()) {
             this->door_sensor_report_open_ = this->door_sensor_input_->state;
-            this->door_sensor_report_pending_ = true;
         }
     }
     #endif
@@ -1649,6 +1785,13 @@ void NukiLockComponent::notify(EventType event_type) {
         this->publish_pin_state();
     } else if(event_type == EventType::KeyTurnerStatusUpdated) {
         ESP_LOGD(TAG, "KeyTurnerStatusUpdated");
+
+#ifdef USE_BINARY_SENSOR
+        // The lock's state moved on (e.g. the motor stopped), so it may take the report now.
+        if (this->door_report_retry_at_ != 0) {
+            this->door_report_retry_at_ = millis() | 1;
+        }
+#endif
 
         if ((int32_t)(millis() - this->ignore_status_beacon_until_) < 0) {
             // Flags the state change of our own lock action, already published from the
