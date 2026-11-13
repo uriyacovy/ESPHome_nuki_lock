@@ -471,7 +471,6 @@ void NukiLockComponent::update_auth_data() {
         this->auth_data_ready_time_ = millis() + 5000;
     } else {
         ESP_LOGE(TAG, "retrieve_authorization_entries has resulted in %s (%d)", auth_data_req_result_as_string, auth_data_req_result);
-        this->auth_data_update_ = true;
     }
 }
 
