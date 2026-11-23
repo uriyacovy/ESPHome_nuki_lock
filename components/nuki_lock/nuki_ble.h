@@ -101,6 +101,21 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
      * @param timeoutMs
      */
     void set_command_timeout(uint32_t timeoutMs);
+
+    /**
+     * @brief Set how long an accepted action (lock, unlock, open, ...) may take to complete, in
+     * milliseconds. The device answers "accepted" at once and "complete" when the action is
+     * through, an Opener for example only after the electric strike was released again.
+     *
+     * @param timeoutMs
+     */
+    void set_action_timeout(uint32_t timeoutMs) { this->action_timeout_duration_ = timeoutMs; }
+
+    /**
+     * @brief Ask for a short connection interval (7.5-15 ms) once connected, which makes
+     * commands faster at the price of more radio time while the connection is open.
+     */
+    void set_fast_connection(bool enable) { this->fast_connection_ = enable; }
     
     /**
      * @brief Set the BLE Connect Timeout in seconds.
@@ -411,6 +426,44 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
       this->pairing_wait_logged_ = false;
     }
 
+    /**
+     * @brief Stores a pairing made elsewhere (for example by Nuki Hub on the same ESP32) as
+     * this device's pairing, so the Nuki device doesn't have to be paired again. Call after
+     * initialize().
+     *
+     * @param ble_address the 6 bytes of the Nuki device's Bluetooth address, first byte first
+     * @param secret_key the 32 byte long-term key of the pairing
+     * @param authorization_id the 4 byte authorization id, as stored by NukiBleEsp32
+     * @param pin_code the security PIN, 0 if none
+     * @return true if the credentials were stored
+     */
+    /**
+     * @brief Forgets the command in flight. For a caller that stops stepping a command before
+     * it reported a result (its own deadline passed, the pairing was removed): without this the
+     * next command would continue where the abandoned one stood.
+     */
+    virtual void abort_command();
+
+    /**
+     * @brief Ends the connection, or the wait for one. BLEClientBase forgets the address of a
+     * client it is asked to disconnect while that client still waits for its turn to connect
+     * (it does so for clients that connect to changing devices). This client always talks to
+     * the same device and would never find it again, so the address is kept.
+     */
+    void disconnect() override;
+
+    /// The error code of the last error report of the device (see the ErrorCode enums)
+    uint8_t get_last_error_code() const { return this->error_code_; }
+    void set_last_error_code(uint8_t code) { this->error_code_ = code; }
+
+    /// The id the device gave the keypad code added last, 0 if it sent none
+    uint16_t get_last_keypad_code_id() const { return this->last_keypad_code_id_; }
+    size_t get_fingerprint_entry_list_size() const { return this->list_of_fingerprint_entries_.size(); }
+    void clear_last_keypad_code_id() { this->last_keypad_code_id_ = 0; }
+
+    bool import_credentials(const uint8_t* ble_address, const uint8_t* secret_key, const uint8_t* authorization_id,
+                            uint32_t pin_code, bool ultra = false);
+
   protected:
     // Connects (if needed) to the service relevant for `pairing` (pairing service/GDIO vs.
     // device service/USDIO - see register_on_gdio_char()/register_on_usdio_char()) and returns
@@ -444,6 +497,19 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
 
     Command last_msg_code_received_ = Command::Empty;
 
+    // What arrived since the command in flight was sent. The command state machines look at
+    // these instead of last_msg_code_received_: several messages can arrive between two of
+    // their steps (the device pushes its state right after "accepted"), and only the last
+    // one would be seen.
+    bool status_accepted_seen_ = false;
+    bool status_complete_seen_ = false;
+    bool error_report_seen_ = false;
+    void clear_seen_responses_() {
+      this->status_accepted_seen_ = false;
+      this->status_complete_seen_ = false;
+      this->error_report_seen_ = false;
+    }
+
     bool debug_nuki_connect_ = false;
     bool debug_nuki_communication_ = false;
     bool debug_nuki_readable_data_ = false;
@@ -459,6 +525,11 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
     uint32_t timeout_duration_ = 1000;
     uint32_t general_timeout_duration_ = 10000;
     uint32_t command_timeout_duration_ = 3000;
+    uint32_t action_timeout_duration_ = 15000;
+    bool fast_connection_ = false;
+    // The address of the paired device, to restore it if the client base drops it
+    uint64_t paired_address_ = 0;
+    void save_paired_address_();
     // Kept (and still settable) for API compatibility with nuki_lock.cpp's setup(); no
     // longer consumed internally - BLEClientBase::connect() is a single non-blocking
     // attempt per call, and the existing execute_action()-driven retry-via-repeated-calls
@@ -482,6 +553,9 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
     int64_t keypad_retrieval_time_now_ = 0;
     // Codes the lock sends for the requested offset/count: min(count, total - offset)
     uint16_t expected_keypad_codes_ = 0;
+    // offset/count of the request in flight, for expected_keypad_codes_
+    uint16_t keypad_request_offset_ = 0;
+    uint16_t keypad_request_count_ = 0;
     // nr_of_received_keypad_codes_ at the last timeout restart, so the timeout restarts per code
     uint16_t last_received_keypad_codes_ = 0;
     // RequestKeypadCodes uses cmd_chall_state_machine(), whose "success" detection is satisfied
@@ -509,6 +583,8 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
     // Some locks send fewer entries than the count they report, so the Status COMPLETE
     // that follows the last entry also ends the retrieval.
     bool auth_entries_complete_received_ = false;
+    // Entries received at the last timeout restart, so the timeout restarts per entry
+    size_t auth_entries_last_size_ = 0;
     // Guards the clear/reset above against the same Idle-state-keeps-getting-re-polled
     // problem described for keypad_request_sent.
     bool auth_entries_request_sent_ = false;
@@ -633,6 +709,7 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
     unsigned char sent_nonce_[crypto_secretbox_NONCEBYTES] = {};
 
     uint16_t nr_of_keypad_codes_ = 0;
+    uint16_t last_keypad_code_id_ = 0;
     uint16_t nr_of_received_keypad_codes_ = 0;
     bool keypad_code_count_received_ = false;
     uint16_t log_entry_count_ = 0;
@@ -652,6 +729,7 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
     // No count notification precedes fingerprint entries, so the final size isn't known
     // up front - std::vector still avoids std::list's per-node allocations.
     std::vector<FingerprintEntry> list_of_fingerprint_entries_;
+    bool fingerprint_request_started_ = false;
     esphome::FixedVector<AuthorizationEntry> list_of_authorization_entries_;
     AuthorizationIdType authorization_id_type_ = AuthorizationIdType::Bridge;
 };
@@ -987,6 +1065,7 @@ CmdResult NukiBle::cmd_chall_acc_state_machine(const TDeviceAction action) {
       memcpy(payload, action.payload, action.payloadLen);
       memcpy(&payload[action.payloadLen], this->challenge_nonce_k_, sizeof(this->challenge_nonce_k_));
 
+      this->clear_seen_responses_();
       if (this->send_encrypted_message(action.command, payload, action.payloadLen + sizeof(this->challenge_nonce_k_))) {
         this->time_now_ = (esp_timer_get_time() / 1000);
         this->nuki_command_state_ = CommandState::CmdSent;
@@ -1016,11 +1095,21 @@ CmdResult NukiBle::cmd_chall_acc_state_machine(const TDeviceAction action) {
         this->disconnect();
         this->nuki_command_state_ = CommandState::Idle;
         return CmdResult::TimeOut;
-      } else if (this->last_msg_code_received_ == Command::Status && (CommandStatus)this->received_status_ == CommandStatus::Accepted) {
+      } else if (this->error_report_seen_) {
+        // Refused right away (busy, not allowed, ...), no "accepted" will follow
+        if (this->debug_nuki_communication_) {
+          ESP_LOGD(HPP_TAG, "Command refused");
+        }
+        const bool busy = this->error_code_ == 69;
+        this->disconnect();
+        this->nuki_command_state_ = CommandState::Idle;
+        this->last_msg_code_received_ = Command::Empty;
+        return busy ? CmdResult::Lock_Busy : CmdResult::Failed;
+      } else if (this->status_accepted_seen_) {
         this->time_now_ = (esp_timer_get_time() / 1000);
         this->nuki_command_state_ = CommandState::CmdAccepted;
         this->last_msg_code_received_ = Command::Empty;
-      } else if (this->last_msg_code_received_ == Command::Status && (CommandStatus)this->received_status_ == CommandStatus::Complete) {
+      } else if (this->status_complete_seen_) {
         //accept was skipped on lock because ie unlock command when lock allready unlocked?
         if (this->debug_nuki_communication_) {
           ESP_LOGD(HPP_TAG, "Command success (skipped)");
@@ -1035,12 +1124,12 @@ CmdResult NukiBle::cmd_chall_acc_state_machine(const TDeviceAction action) {
       if (this->debug_nuki_communication_) {
         ESP_LOGD(HPP_TAG, "Receiving complete");
       }
-      if ((esp_timer_get_time() / 1000) - this->time_now_ > this->command_timeout_duration_) {
+      if ((esp_timer_get_time() / 1000) - this->time_now_ > this->action_timeout_duration_) {
         ESP_LOGW(HPP_TAG, "Command failed: timeout");
         this->disconnect();
         this->nuki_command_state_ = CommandState::Idle;
         return CmdResult::TimeOut;
-      } else if (this->last_msg_code_received_ == Command::ErrorReport && this->error_code_ != 69) {
+      } else if (this->error_report_seen_ && this->error_code_ != 69) {
         if (this->debug_nuki_communication_) {
             ESP_LOGD(HPP_TAG, "Sending command failed");
         }
@@ -1048,7 +1137,7 @@ CmdResult NukiBle::cmd_chall_acc_state_machine(const TDeviceAction action) {
         this->nuki_command_state_ = CommandState::Idle;
         this->last_msg_code_received_ = Command::Empty;
         return CmdResult::Failed;
-      } else if (this->last_msg_code_received_ == Command::ErrorReport && this->error_code_ == 69) {
+      } else if (this->error_report_seen_ && this->error_code_ == 69) {
         if (this->debug_nuki_communication_) {
           ESP_LOGD(HPP_TAG, "Command failed: lock busy");
         }
@@ -1056,7 +1145,7 @@ CmdResult NukiBle::cmd_chall_acc_state_machine(const TDeviceAction action) {
         this->nuki_command_state_ = CommandState::Idle;
         this->last_msg_code_received_ = Command::Empty;
         return CmdResult::Lock_Busy;
-      } else if (this->last_msg_code_received_ == Command::Status && (CommandStatus)this->received_status_ == CommandStatus::Complete) {
+      } else if (this->status_complete_seen_) {
         if (this->debug_nuki_communication_) {
           ESP_LOGD(HPP_TAG, "Command success");
         }

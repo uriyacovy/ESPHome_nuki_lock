@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <cstdint>
+#include <algorithm>
 #include <cstring>
 #include <string>
 
@@ -670,9 +671,18 @@ CmdResult NukiLock::retrieve_time_control_entries() {
   action.command = Command::RequestTimeControlEntries;
   action.payloadLen = 0;
 
-  this->list_of_time_control_entries_.clear();
+  // Called once per tick until done: clear the list when the request starts only, entries
+  // can arrive before the tick that reports success
+  if (!this->time_control_request_started_) {
+    this->list_of_time_control_entries_.clear();
+    this->time_control_request_started_ = true;
+  }
 
-  return this->execute_action(action);
+  CmdResult result = this->execute_action(action);
+  if (result != CmdResult::Working) {
+    this->time_control_request_started_ = false;
+  }
+  return result;
 }
 
 void NukiLock::get_time_control_entries(std::vector<TimeControlEntry>* requestedTimeControlEntries) {
@@ -711,9 +721,18 @@ CmdResult NukiLock::retrieve_log_entries(const uint32_t startIndex, const uint16
   memcpy(action.payload, &payload, sizeof(payload));
   action.payloadLen = sizeof(payload);
 
-  this->list_of_log_entries_.clear();
+  // Called once per tick until done: clear the list when the request starts only, entries
+  // can arrive before the tick that reports success
+  if (!this->log_request_started_) {
+    this->list_of_log_entries_.clear();
+    this->log_request_started_ = true;
+  }
 
-  return this->execute_action(action);
+  CmdResult result = this->execute_action(action);
+  if (result != CmdResult::Working) {
+    this->log_request_started_ = false;
+  }
+  return result;
 }
 
 bool NukiLock::is_battery_critical() {
@@ -911,7 +930,7 @@ void NukiLock::handle_return_message(Command returnCode, unsigned char* data, ui
   switch (returnCode) {
     case Command::KeyturnerStates : {
       print_buffer((uint8_t*)data, dataLen, false, "keyturnerStates", this->debug_nuki_hex_data_);
-      memcpy(&this->key_turner_state_, data, dataLen);
+      memcpy(&this->key_turner_state_, data, std::min<size_t>(dataLen, sizeof(this->key_turner_state_)));
       this->key_turner_state_pushed_ = true;
       if (this->debug_nuki_readable_data_) {
         log_keyturner_state(this->key_turner_state_, true);
@@ -920,14 +939,14 @@ void NukiLock::handle_return_message(Command returnCode, unsigned char* data, ui
     }
     case Command::BatteryReport : {
       print_buffer((uint8_t*)data, dataLen, false, "battery_report", this->debug_nuki_hex_data_);
-      memcpy(&this->battery_report_, data, dataLen);
+      memcpy(&this->battery_report_, data, std::min<size_t>(dataLen, sizeof(this->battery_report_)));
       if (this->debug_nuki_readable_data_) {
         log_battery_report(this->battery_report_, true);
       }
       break;
     }
     case Command::Config : {
-      memcpy(&this->config_, data, dataLen);
+      memcpy(&this->config_, data, std::min<size_t>(dataLen, sizeof(this->config_)));
       this->config_fetched_at_ms_ = esp_timer_get_time() / 1000;
       if (this->debug_nuki_readable_data_) {
         log_config(this->config_, true);
@@ -936,7 +955,7 @@ void NukiLock::handle_return_message(Command returnCode, unsigned char* data, ui
       break;
     }
     case Command::AdvancedConfig : {
-      memcpy(&this->advanced_config_, data, dataLen);
+      memcpy(&this->advanced_config_, data, std::min<size_t>(dataLen, sizeof(this->advanced_config_)));
       this->advanced_config_fetched_at_ms_ = esp_timer_get_time() / 1000;
       if (this->debug_nuki_readable_data_) {
         log_advanced_config(this->advanced_config_, true);
@@ -946,15 +965,15 @@ void NukiLock::handle_return_message(Command returnCode, unsigned char* data, ui
     }
     case Command::TimeControlEntry : {
       print_buffer((uint8_t*)data, dataLen, false, "timeControlEntry", this->debug_nuki_hex_data_);
-      TimeControlEntry timeControlEntry;
-      memcpy(&timeControlEntry, data, dataLen);
+      TimeControlEntry timeControlEntry{};
+      memcpy(&timeControlEntry, data, std::min<size_t>(dataLen, sizeof(timeControlEntry)));
       this->list_of_time_control_entries_.push_back(timeControlEntry);
       break;
     }
     case Command::LogEntry : {
       print_buffer((uint8_t*)data, dataLen, false, "logEntry", this->debug_nuki_hex_data_);
-      LogEntry logEntry;
-      memcpy(&logEntry, data, dataLen);
+      LogEntry logEntry{};
+      memcpy(&logEntry, data, std::min<size_t>(dataLen, sizeof(logEntry)));
       this->list_of_log_entries_.push_back(logEntry);
       if (this->debug_nuki_readable_data_) {
         log_log_entry(logEntry, true);
@@ -963,8 +982,8 @@ void NukiLock::handle_return_message(Command returnCode, unsigned char* data, ui
     }
     case Command::InternalLogEntry : {
       print_buffer((uint8_t*)data, dataLen, false, "internalLogEntry", this->debug_nuki_hex_data_);
-      InternalLogEntry internalLogEntry;
-      memcpy(&internalLogEntry, data, dataLen);
+      InternalLogEntry internalLogEntry{};
+      memcpy(&internalLogEntry, data, std::min<size_t>(dataLen, sizeof(internalLogEntry)));
       this->list_of_internal_log_entries_.push_back(internalLogEntry);
       if (this->debug_nuki_readable_data_) {
         log_internal_log_entry(internalLogEntry, true);
@@ -972,14 +991,14 @@ void NukiLock::handle_return_message(Command returnCode, unsigned char* data, ui
       break;
     }
     case Command::MqttConfig :
-      memcpy(&this->mqtt_config_, data, dataLen);
+      memcpy(&this->mqtt_config_, data, std::min<size_t>(dataLen, sizeof(this->mqtt_config_)));
       if (this->debug_nuki_readable_data_) {
         log_mqtt_config(this->mqtt_config_, true);
       }
       print_buffer((uint8_t*)data, dataLen, false, "mqtt_config", this->debug_nuki_hex_data_);
       break;
     case Command::MqttConfigForMigration : {
-      memcpy(&this->mqtt_config_for_migration_, data, dataLen);
+      memcpy(&this->mqtt_config_for_migration_, data, std::min<size_t>(dataLen, sizeof(this->mqtt_config_for_migration_)));
       if (this->debug_nuki_readable_data_) {
         log_mqtt_config_for_migration(this->mqtt_config_for_migration_, true);
       }
@@ -988,8 +1007,8 @@ void NukiLock::handle_return_message(Command returnCode, unsigned char* data, ui
     }
     case Command::WifiScanEntry : {
       print_buffer((uint8_t*)data, dataLen, false, "wifiScanEntry", this->debug_nuki_hex_data_);
-      WifiScanEntry wifiScanEntry;
-      memcpy(&wifiScanEntry, data, dataLen);
+      WifiScanEntry wifiScanEntry{};
+      memcpy(&wifiScanEntry, data, std::min<size_t>(dataLen, sizeof(wifiScanEntry)));
       this->list_of_wifi_scan_entries_.push_back(wifiScanEntry);
       if (this->debug_nuki_readable_data_) {
         log_wifi_scan_entry(wifiScanEntry, true);
@@ -997,7 +1016,7 @@ void NukiLock::handle_return_message(Command returnCode, unsigned char* data, ui
       break;
     }
     case Command::WifiConfig : {
-      memcpy(&this->wifi_config_, data, dataLen);
+      memcpy(&this->wifi_config_, data, std::min<size_t>(dataLen, sizeof(this->wifi_config_)));
       if (this->debug_nuki_readable_data_) {
         log_wifi_config(this->wifi_config_, true);
       }
@@ -1005,7 +1024,7 @@ void NukiLock::handle_return_message(Command returnCode, unsigned char* data, ui
       break;
     }
     case Command::WifiConfigForMigration : {
-      memcpy(&this->wifi_config_for_migration_, data, dataLen);
+      memcpy(&this->wifi_config_for_migration_, data, std::min<size_t>(dataLen, sizeof(this->wifi_config_for_migration_)));
       if (this->debug_nuki_readable_data_) {
         log_wifi_config_for_migration(this->wifi_config_for_migration_, true);
       }
@@ -1021,7 +1040,7 @@ void NukiLock::handle_return_message(Command returnCode, unsigned char* data, ui
       break;
     }
     case Command::GeneralStatistics : {
-      memcpy(&this->general_statistics_, data, dataLen);
+      memcpy(&this->general_statistics_, data, std::min<size_t>(dataLen, sizeof(this->general_statistics_)));
       if (this->debug_nuki_readable_data_) {
         log_general_statistics(this->general_statistics_, true);
       }
@@ -1029,7 +1048,7 @@ void NukiLock::handle_return_message(Command returnCode, unsigned char* data, ui
       break;
     }
     case Command::DailyStatistics : {
-      memcpy(&this->daily_statistics_, data, dataLen);
+      memcpy(&this->daily_statistics_, data, std::min<size_t>(dataLen, sizeof(this->daily_statistics_)));
       if (this->debug_nuki_readable_data_) {
         log_daily_statistics(this->daily_statistics_, true);
       }
@@ -1037,7 +1056,7 @@ void NukiLock::handle_return_message(Command returnCode, unsigned char* data, ui
       break;
     }
     case Command::AccessoryInfo : {
-      memcpy(&this->accessory_info_, data, dataLen);
+      memcpy(&this->accessory_info_, data, std::min<size_t>(dataLen, sizeof(this->accessory_info_)));
       if (this->debug_nuki_readable_data_) {
         log_accessory_info(this->accessory_info_, true);
       }
@@ -1045,7 +1064,7 @@ void NukiLock::handle_return_message(Command returnCode, unsigned char* data, ui
       break;
     }
     case Command::DoorSensorConfig : {
-      memcpy(&this->door_sensor_config_, data, dataLen);
+      memcpy(&this->door_sensor_config_, data, std::min<size_t>(dataLen, sizeof(this->door_sensor_config_)));
       if (this->debug_nuki_readable_data_) {
         log_door_sensor_config(this->door_sensor_config_, true);
       }
@@ -1056,6 +1075,14 @@ void NukiLock::handle_return_message(Command returnCode, unsigned char* data, ui
       NukiBle::handle_return_message(returnCode, data, dataLen);
   }
   this->last_msg_code_received_ = returnCode;
+}
+
+void NukiLock::abort_command() {
+  NukiBle::abort_command();
+  this->config_write_pending_ = false;
+  this->advanced_config_write_pending_ = false;
+  this->time_control_request_started_ = false;
+  this->log_request_started_ = false;
 }
 
 void NukiLock::log_error_code(uint8_t error_code) {
