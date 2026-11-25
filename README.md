@@ -156,6 +156,7 @@ lock:
     query_interval_battery_report: 3600s
     ble_general_timeout: 3s
     ble_command_timeout: 10s
+    ble_action_timeout: 15s
     command_retries: 5
     command_retry_delay: 1s
     config_cache_ttl: 1min
@@ -387,7 +388,8 @@ Recommendation: 1st–4th Gen without official bridge → **bridge**. Ultra / 5t
 | `query_interval_auth_data` | How often the user list (for `Last Unlock User`) is read | `3600s` |
 | `query_interval_battery_report` | How often battery voltage, drain and motor current are read | `3600s` |
 | `ble_general_timeout` | Timeout for BLE responses | `3s` |
-| `ble_command_timeout` | Timeout for a command to complete (includes motor movement) | `10s` |
+| `ble_command_timeout` | Timeout for the device to answer a command | `10s` |
+| `ble_action_timeout` | Timeout for an accepted action to complete (includes motor movement) | `15s` |
 | `command_retries` | Retries for a failed lock action or setting change (not for connection errors) | `5` |
 | `command_retry_delay` | Delay between retries | `1s` |
 | `config_cache_ttl` | Changing a setting reuses lock settings read within this time instead of reading them again (fewer BLE round-trips, but can overwrite a change made in the Nuki app in that window). `0s` always reads fresh. | `1min` |

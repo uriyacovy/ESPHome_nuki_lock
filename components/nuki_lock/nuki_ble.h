@@ -427,17 +427,6 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
     }
 
     /**
-     * @brief Stores a pairing made elsewhere (for example by Nuki Hub on the same ESP32) as
-     * this device's pairing, so the Nuki device doesn't have to be paired again. Call after
-     * initialize().
-     *
-     * @param ble_address the 6 bytes of the Nuki device's Bluetooth address, first byte first
-     * @param secret_key the 32 byte long-term key of the pairing
-     * @param authorization_id the 4 byte authorization id, as stored by NukiBleEsp32
-     * @param pin_code the security PIN, 0 if none
-     * @return true if the credentials were stored
-     */
-    /**
      * @brief Forgets the command in flight. For a caller that stops stepping a command before
      * it reported a result (its own deadline passed, the pairing was removed): without this the
      * next command would continue where the abandoned one stood.
@@ -461,6 +450,17 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
     size_t get_fingerprint_entry_list_size() const { return this->list_of_fingerprint_entries_.size(); }
     void clear_last_keypad_code_id() { this->last_keypad_code_id_ = 0; }
 
+    /**
+     * @brief Stores a pairing made elsewhere (for example by Nuki Hub on the same ESP32) as
+     * this device's pairing, so the Nuki device doesn't have to be paired again. Call after
+     * initialize().
+     *
+     * @param ble_address the 6 bytes of the Nuki device's Bluetooth address, first byte first
+     * @param secret_key the 32 byte long-term key of the pairing
+     * @param authorization_id the 4 byte authorization id, as stored by NukiBleEsp32
+     * @param pin_code the security PIN, 0 if none
+     * @return true if the credentials were stored
+     */
     bool import_credentials(const uint8_t* ble_address, const uint8_t* secret_key, const uint8_t* authorization_id,
                             uint32_t pin_code, bool ultra = false);
 

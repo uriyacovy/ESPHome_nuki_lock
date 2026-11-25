@@ -44,6 +44,7 @@ lock:
     query_interval_auth_data: 7200s
     ble_general_timeout: 3s
     ble_command_timeout: 3s
+    ble_action_timeout: 15s
     debug:
       connect: true
       communication: true

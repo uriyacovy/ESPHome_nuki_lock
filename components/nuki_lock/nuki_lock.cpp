@@ -1287,6 +1287,7 @@ void NukiLockComponent::setup() {
     this->nuki_lock_.set_disconnect_timeout(BLE_DISCONNECT_TIMEOUT);
     this->nuki_lock_.set_general_timeout(this->ble_general_timeout_ * 1000);
     this->nuki_lock_.set_command_timeout(this->ble_command_timeout_ * 1000);
+    this->nuki_lock_.set_action_timeout(this->ble_action_timeout_ * 1000);
     this->nuki_lock_.set_config_cache_ttl(this->config_cache_ttl_ * 1000);
 
     #ifdef USE_BINARY_SENSOR
@@ -1533,6 +1534,7 @@ void NukiLockComponent::dump_config() {
     ESP_LOGCONFIG(TAG, "  Battery Report query interval: %" PRIu32 "s", this->query_interval_battery_report_);
     ESP_LOGCONFIG(TAG, "  BLE general timeout: %" PRIu32 "s", this->ble_general_timeout_);
     ESP_LOGCONFIG(TAG, "  BLE command timeout: %" PRIu32 "s", this->ble_command_timeout_);
+    ESP_LOGCONFIG(TAG, "  BLE action timeout: %" PRIu32 "s", this->ble_action_timeout_);
     ESP_LOGCONFIG(TAG, "  Command retries: %u", this->command_retries_);
     ESP_LOGCONFIG(TAG, "  Command retry delay: %" PRIu32 "ms", this->command_retry_delay_millis_);
     ESP_LOGCONFIG(TAG, "  Config cache TTL: %" PRIu32 "s", this->config_cache_ttl_);
