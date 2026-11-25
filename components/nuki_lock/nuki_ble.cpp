@@ -464,6 +464,10 @@ CmdResult NukiBle::retrieve_authorization_entries(const uint16_t offset, const u
     if (!this->auth_entries_request_sent_) {
       this->authorization_entry_count_received_ = false;
       this->expected_authorization_entry_count_ = 0;
+      this->auth_entries_complete_received_ = false;
+      // Sized before sending: entries can arrive before the count is handled here, and
+      // init() after that point would drop them.
+      this->list_of_authorization_entries_.init(count);
       this->auth_entries_request_sent_ = true;
     }
 
@@ -492,9 +496,9 @@ CmdResult NukiBle::retrieve_authorization_entries(const uint16_t offset, const u
     if (!this->authorization_entry_count_received_) {
       return CmdResult::Working;
     }
-    // Count is known now (just arrived in the notification), so size the buffer for it in
-    // one allocation instead of growing node-by-node as entries arrive.
-    this->list_of_authorization_entries_.init(this->expected_authorization_entry_count_);
+    if (this->expected_authorization_entry_count_ > count) {
+      this->expected_authorization_entry_count_ = count;
+    }
     this->auth_entries_retrieval_state_ = EntryRetrievalState::AwaitingEntries;
     this->auth_entries_retrieval_time_now_ = (esp_timer_get_time() / 1000);
   }
@@ -506,8 +510,14 @@ CmdResult NukiBle::retrieve_authorization_entries(const uint16_t offset, const u
     this->disconnect();
     return CmdResult::TimeOut;
   }
-  if (this->list_of_authorization_entries_.size() < this->expected_authorization_entry_count_) {
+  if (this->list_of_authorization_entries_.size() < this->expected_authorization_entry_count_ &&
+      !this->auth_entries_complete_received_) {
     return CmdResult::Working;
+  }
+  if (this->list_of_authorization_entries_.size() < this->expected_authorization_entry_count_) {
+    ESP_LOGD(TAG, "Lock reported %u authorization entries but sent %u",
+             (unsigned) this->expected_authorization_entry_count_,
+             (unsigned) this->list_of_authorization_entries_.size());
   }
 
   this->auth_entries_retrieval_state_ = EntryRetrievalState::Idle;
@@ -1521,6 +1531,10 @@ void NukiBle::handle_return_message(Command returnCode, unsigned char* data, uin
     case Command::Status : {
       print_buffer((uint8_t*)data, dataLen, false, "status", this->debug_nuki_hex_data_);
       this->received_status_ = data[0];
+      if (this->received_status_ == 0 && this->authorization_entry_count_received_ &&
+          this->auth_entries_retrieval_state_ != EntryRetrievalState::Idle) {
+        this->auth_entries_complete_received_ = true;
+      }
       if (this->debug_nuki_communication_) {
         if (this->received_status_ == 0) {
           ESP_LOGD(TAG, "command COMPLETE");

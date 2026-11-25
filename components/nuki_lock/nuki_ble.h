@@ -506,6 +506,9 @@ class NukiBle : public esphome::esp32_ble_client::BLEClientBase {
     int64_t auth_entries_retrieval_time_now_ = 0;
     bool authorization_entry_count_received_ = false;
     uint16_t expected_authorization_entry_count_ = 0;
+    // Some locks send fewer entries than the count they report, so the Status COMPLETE
+    // that follows the last entry also ends the retrieval.
+    bool auth_entries_complete_received_ = false;
     // Guards the clear/reset above against the same Idle-state-keeps-getting-re-polled
     // problem described for keypad_request_sent.
     bool auth_entries_request_sent_ = false;
