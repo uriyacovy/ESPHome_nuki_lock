@@ -1255,10 +1255,6 @@ async def to_code(config):
             path=str(NUKI_SODIUM_DIR),
         )
 
-    add_idf_component(
-        name="crc16",
-        repo="https://github.com/AzonInc/Crc16.git",
-    )
     # NukiBleEsp32 (lock-only subset, Opener files excluded) is vendored directly as
     # component sources instead of a fetched IDF component, see nuki_ble.cpp/.h,
     # nuki_lock_protocol.cpp/.h etc. in this directory. It now talks to the lock via
