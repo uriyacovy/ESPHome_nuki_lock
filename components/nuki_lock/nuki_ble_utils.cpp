@@ -1,7 +1,6 @@
 #include "nuki_ble_utils.h"
 
 #include <sodium.h>
-#include "Crc16.h"
 
 #include <cstdint>
 #include <cstring>
@@ -93,10 +92,15 @@ void generate_nonce(unsigned char* hexArray, uint8_t nrOfBytes, bool debug) {
 }
 
 unsigned int calculate_crc(uint8_t* data, uint8_t start, uint16_t length) {
-  Crc16 crcObj;
-  crcObj.clearCrc();
-  // CCITT-False:	width=16 poly=0x1021 init=0xffff refin=false refout=false xorout=0x0000 check=0x29b1
-  return crcObj.fastCrc(data, start, length, false, false, 0x1021, 0xffff, 0x0000, 0x8000, 0xffff);
+  // CRC-16/CCITT-FALSE: poly=0x1021 init=0xffff refin=false refout=false xorout=0x0000 check=0x29b1
+  uint16_t crc = 0xffff;
+  for (uint16_t i = start; i < start + length; i++) {
+    crc ^= (uint16_t) data[i] << 8;
+    for (uint8_t bit = 0; bit < 8; bit++) {
+      crc = (crc & 0x8000) ? (uint16_t) ((crc << 1) ^ 0x1021) : (uint16_t) (crc << 1);
+    }
+  }
+  return crc;
 }
 
 bool crc_valid(uint8_t* pData, uint16_t length, bool debug) {
