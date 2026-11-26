@@ -211,6 +211,7 @@ CONF_DEBUG_COMMAND = "command"
 CONF_DOOR_SENSOR_INPUT = "door_sensor_input"
 CONF_BLE_GENERAL_TIMEOUT = "ble_general_timeout"
 CONF_BLE_COMMAND_TIMEOUT = "ble_command_timeout"
+CONF_BLE_ACTION_TIMEOUT = "ble_action_timeout"
 CONF_PAIRING_MODE_TIMEOUT = "pairing_mode_timeout"
 CONF_EVENT = "event"
 
@@ -684,6 +685,10 @@ CONFIG_SCHEMA = cv.All(
             # testing to cost a full wasted connection retry cycle when hit. 10s gives enough
             # margin without making a genuine failure take too long to surface.
             cv.Optional(CONF_BLE_COMMAND_TIMEOUT, default="10s"): cv.positive_time_period_seconds,
+            # How long an accepted action may take until the device reports it complete. Its
+            # own option because an Opener only reports complete once the electric strike was
+            # released again, which takes longer than a command that changes a setting.
+            cv.Optional(CONF_BLE_ACTION_TIMEOUT, default="15s"): cv.positive_time_period_seconds,
             # Applies to lock actions (lock/unlock/...) and queued commands (switches, numbers,
             # selects, keypad management) alike if the lock reports a failure (not a BLE
             # connection/timeout error, which is handled separately above).
@@ -839,6 +844,9 @@ async def to_code(config):
 
     if CONF_BLE_COMMAND_TIMEOUT in config:
         cg.add(var.set_ble_command_timeout(config[CONF_BLE_COMMAND_TIMEOUT]))
+
+    if CONF_BLE_ACTION_TIMEOUT in config:
+        cg.add(var.set_ble_action_timeout(config[CONF_BLE_ACTION_TIMEOUT]))
 
     if CONF_COMMAND_RETRIES in config:
         cg.add(var.set_command_retries(config[CONF_COMMAND_RETRIES]))

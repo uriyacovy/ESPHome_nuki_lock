@@ -175,6 +175,8 @@ CmdResult NukiBle::retrieve_keypad_entries(const uint16_t offset, const uint16_t
     if (!this->keypad_request_sent_) {
       this->nr_of_received_keypad_codes_ = 0;
       this->keypad_code_count_received_ = false;
+      this->keypad_request_offset_ = offset;
+      this->keypad_request_count_ = count;
       this->keypad_request_sent_ = true;
     }
 
@@ -206,12 +208,8 @@ CmdResult NukiBle::retrieve_keypad_entries(const uint16_t offset, const uint16_t
     if (this->debug_nuki_command_) {
       ESP_LOGD(TAG, "Keypad code count %d", this->get_keypad_entry_count());
     }
-    // The count is the lock's total, but it only sends the codes within offset/count
-    uint16_t total = this->get_keypad_entry_count();
-    this->expected_keypad_codes_ = std::min<uint16_t>(total > offset ? total - offset : 0, count);
-    // Count is known now (just arrived in the notification handled above), so size the
-    // buffer for it in one allocation instead of growing node-by-node as entries arrive.
-    this->list_of_key_pad_entries_.init(this->expected_keypad_codes_);
+    // expected_keypad_codes_ and the buffer were set when the count arrived, see
+    // NukiBle::handle_return_message(): codes may already be in by now
     this->keypad_retrieval_state_ = KeypadRetrievalState::AwaitingCodes;
     this->keypad_retrieval_time_now_ = (esp_timer_get_time() / 1000);
     this->last_received_keypad_codes_ = 0;
@@ -318,9 +316,17 @@ CmdResult NukiBle::retrieve_fingerprint_entries() {
   action.cmdType = CommandType::CommandWithChallengeAndPin;
   action.command = Command::RequestFingerprintEntries;
 
-  this->list_of_fingerprint_entries_.clear();
+  // Called once per tick until done: clear the list when the request starts only
+  if (!this->fingerprint_request_started_) {
+    this->list_of_fingerprint_entries_.clear();
+    this->fingerprint_request_started_ = true;
+  }
 
-  return this->execute_action(action);
+  CmdResult result = this->execute_action(action);
+  if (result != CmdResult::Working) {
+    this->fingerprint_request_started_ = false;
+  }
+  return result;
 }
 
 CmdResult NukiLock::get_accessory_info(const uint8_t accessoryType) {

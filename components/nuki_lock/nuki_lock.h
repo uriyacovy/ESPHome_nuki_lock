@@ -183,6 +183,7 @@ class NukiLockComponent :
         void set_query_interval_battery_report(uint32_t query_interval_battery_report) { this->query_interval_battery_report_ = query_interval_battery_report; }
         void set_ble_general_timeout(uint32_t ble_general_timeout) { this->ble_general_timeout_ = ble_general_timeout; }
         void set_ble_command_timeout(uint32_t ble_command_timeout) { this->ble_command_timeout_ = ble_command_timeout; }
+        void set_ble_action_timeout(uint32_t ble_action_timeout) { this->ble_action_timeout_ = ble_action_timeout; }
         // Applies to lock actions (lock/unlock/...) and queued commands (switches, numbers,
         // selects, keypad management) alike - see execute_lock_action_step()/
         // process_pending_nuki_command() in nuki_lock.cpp.
@@ -466,6 +467,7 @@ class NukiLockComponent :
         uint32_t query_interval_battery_report_ = 0;
         uint32_t ble_general_timeout_ = 0;
         uint32_t ble_command_timeout_ = 0;
+        uint32_t ble_action_timeout_ = 15;
         uint32_t pairing_mode_timeout_ = 0;
         uint8_t command_retries_ = 5;
         uint32_t command_retry_delay_millis_ = 1000;

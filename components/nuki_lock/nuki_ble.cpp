@@ -174,6 +174,7 @@ PairingResult NukiBle::pair_nuki(AuthorizationIdType idType) {
   PairingResult result;
   if (this->pairing_state_ == PairingState::Success) {
     this->save_credentials();
+    this->save_paired_address_();
     result = PairingResult::Success;
     this->last_heartbeat_ = (esp_timer_get_time() / 1000);
   } else {
@@ -192,6 +193,7 @@ PairingResult NukiBle::pair_nuki(AuthorizationIdType idType) {
 
 void NukiBle::unpair_nuki() {
   this->delete_credentials();
+  this->paired_address_ = 0;
   this->is_paired_ = false;
   if (this->debug_nuki_connect_) {
     ESP_LOGD(TAG, "[%s] Credentials deleted", this->device_name_.c_str());
@@ -220,6 +222,10 @@ bool NukiBle::connect_ble(bool pairing) {
   }
 
   if (this->state() == esphome::esp32_ble_tracker::ClientState::IDLE) {
+    if (!pairing && this->get_address() == 0 && this->paired_address_ != 0) {
+      // Lost on the way (see disconnect()): this client only ever talks to its paired device
+      this->set_address(this->paired_address_);
+    }
     this->pairing_mode_ = pairing;
     this->notify_registered_ = false;
     this->not_connected_logged_ = false;
@@ -501,17 +507,23 @@ CmdResult NukiBle::retrieve_authorization_entries(const uint16_t offset, const u
     }
     this->auth_entries_retrieval_state_ = EntryRetrievalState::AwaitingEntries;
     this->auth_entries_retrieval_time_now_ = (esp_timer_get_time() / 1000);
+    this->auth_entries_last_size_ = 0;
   }
 
   //wait for return of Authorization Entries (0x000A)
-  if ((esp_timer_get_time() / 1000) - this->auth_entries_retrieval_time_now_ > this->general_timeout_duration_) {
-    ESP_LOGW(TAG, "Receive authorization entries timeout");
-    this->auth_entries_retrieval_state_ = EntryRetrievalState::Idle;
-    this->disconnect();
-    return CmdResult::TimeOut;
+  const size_t received = this->list_of_authorization_entries_.size();
+  if (received != this->auth_entries_last_size_) {
+    this->auth_entries_last_size_ = received;
+    this->auth_entries_retrieval_time_now_ = (esp_timer_get_time() / 1000);
   }
-  if (this->list_of_authorization_entries_.size() < this->expected_authorization_entry_count_ &&
-      !this->auth_entries_complete_received_) {
+  if (received < this->expected_authorization_entry_count_ && !this->auth_entries_complete_received_) {
+    // The timeout counts from the last entry that came in, not from the count
+    if ((esp_timer_get_time() / 1000) - this->auth_entries_retrieval_time_now_ > this->general_timeout_duration_) {
+      ESP_LOGW(TAG, "Receive authorization entries timeout");
+      this->auth_entries_retrieval_state_ = EntryRetrievalState::Idle;
+      this->disconnect();
+      return CmdResult::TimeOut;
+    }
     return CmdResult::Working;
   }
   if (this->list_of_authorization_entries_.size() < this->expected_authorization_entry_count_) {
@@ -881,6 +893,33 @@ bool NukiBle::migrate_legacy_credentials() {
   return true;
 }
 
+bool NukiBle::import_credentials(const uint8_t* ble_address, const uint8_t* secret_key, const uint8_t* authorization_id,
+                                 uint32_t pin_code, bool ultra) {
+  uint8_t address[6];
+  uint8_t key[32];
+  uint8_t auth_id[4];
+  memcpy(address, ble_address, sizeof(address));
+  memcpy(key, secret_key, sizeof(key));
+  memcpy(auth_id, authorization_id, sizeof(auth_id));
+  if (is_char_array_empty(key, sizeof(key)) || is_char_array_empty(auth_id, sizeof(auth_id))) {
+    return false;
+  }
+  uint16_t pin = ultra ? 0 : (uint16_t) pin_code;
+  uint32_t ultra_pin = ultra ? pin_code : 0;
+  if (!(this->ble_address_pref_.save(&address)
+        && this->secret_key_pref_.save(&key)
+        && this->auth_id_pref_.save(&auth_id)
+        && this->security_pincode_pref_.save(&pin)
+        && this->ultra_pincode_pref_.save(&ultra_pin)
+        && this->is_ultra_pref_.save(&ultra)
+        && esphome::global_preferences->sync())) {
+    ESP_LOGE(TAG, "[%s] Failed to store the imported credentials", this->device_name_.c_str());
+    return false;
+  }
+  this->is_paired_ = this->retrieve_credentials();
+  return this->is_paired_;
+}
+
 bool NukiBle::retrieve_credentials() {
   //TODO check on empty (invalid) credentials?
   unsigned char buff[6];
@@ -894,6 +933,7 @@ bool NukiBle::retrieve_credentials() {
       address = (address << 8) | buff[i];
     }
     this->set_address(address);
+    this->paired_address_ = address;
 
     // unpair_nuki() leaves the credentials empty
     if (is_char_array_empty(this->secret_key_k_, sizeof(this->secret_key_k_)) || is_char_array_empty(this->authorization_id_, sizeof(this->authorization_id_))) {
@@ -1367,6 +1407,12 @@ bool NukiBle::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gatt
     case ESP_GATTC_OPEN_EVT: {
       if (param->open.status == ESP_GATT_OK || param->open.status == ESP_GATT_ALREADY_OPEN) {
         this->extend_disconnect_timeout();
+        if (this->fast_connection_) {
+          // A command is a handful of short messages back and forth, each waiting for the next
+          // connection event: with the default interval (30-50 ms) that wait is most of the
+          // time a command takes. The connection only lasts a few seconds.
+          this->update_conn_params_(0x06, 0x0C, 0, 400, "fast");
+        }
       }
       break;
     }
@@ -1520,8 +1566,8 @@ void NukiBle::handle_return_message(Command returnCode, unsigned char* data, uin
     }
     case Command::AuthorizationEntry : {
       print_buffer((uint8_t*)data, dataLen, false, "authorizationEntry", this->debug_nuki_hex_data_);
-      AuthorizationEntry authEntry;
-      memcpy(&authEntry, data, dataLen);
+      AuthorizationEntry authEntry{};
+      memcpy(&authEntry, data, std::min<size_t>(dataLen, sizeof(authEntry)));
       this->list_of_authorization_entries_.push_back(authEntry);
       if (this->debug_nuki_readable_data_) {
         log_authorization_entry(authEntry, true);
@@ -1531,9 +1577,18 @@ void NukiBle::handle_return_message(Command returnCode, unsigned char* data, uin
     case Command::Status : {
       print_buffer((uint8_t*)data, dataLen, false, "status", this->debug_nuki_hex_data_);
       this->received_status_ = data[0];
+      // The count, the entries and this COMPLETE can all be handled before
+      // retrieve_authorization_entries() gets its next turn and leaves Idle, so the sent
+      // request counts as well.
       if (this->received_status_ == 0 && this->authorization_entry_count_received_ &&
-          this->auth_entries_retrieval_state_ != EntryRetrievalState::Idle) {
+          (this->auth_entries_request_sent_ ||
+           this->auth_entries_retrieval_state_ != EntryRetrievalState::Idle)) {
         this->auth_entries_complete_received_ = true;
+      }
+      if ((CommandStatus) this->received_status_ == CommandStatus::Accepted) {
+        this->status_accepted_seen_ = true;
+      } else if ((CommandStatus) this->received_status_ == CommandStatus::Complete) {
+        this->status_complete_seen_ = true;
       }
       if (this->debug_nuki_communication_) {
         if (this->received_status_ == 0) {
@@ -1552,6 +1607,7 @@ void NukiBle::handle_return_message(Command returnCode, unsigned char* data, uin
     case Command::ErrorReport : {
       ESP_LOGE(TAG, "Error: %02x for command: %02x:%02x", data[0], data[2], data[1]);
       memcpy(&this->error_code_, &data[0], sizeof(this->error_code_));
+      this->error_report_seen_ = true;
       this->log_error_code(data[0]);
       if ((uint8_t)data[0] == (uint8_t)0x21) {
         if (this->event_handler_) {
@@ -1599,6 +1655,9 @@ void NukiBle::handle_return_message(Command returnCode, unsigned char* data, uin
     }
     case Command::KeypadCodeId : {
       print_buffer((uint8_t*)data, dataLen, false, "keypadCodeId", this->debug_nuki_hex_data_);
+      if (dataLen >= 2) {
+        memcpy(&this->last_keypad_code_id_, data, 2);
+      }
       break;
     }
     case Command::MostRecentCommand : {
@@ -1611,6 +1670,14 @@ void NukiBle::handle_return_message(Command returnCode, unsigned char* data, uin
     }
     case Command::KeypadCodeCount : {
       memcpy(&this->nr_of_keypad_codes_, data, 2);
+      // The count is the lock's total, but it only sends the codes within offset/count. Size
+      // the buffer right here: the codes can arrive before retrieve_keypad_entries() gets
+      // its next turn
+      this->expected_keypad_codes_ = std::min<uint16_t>(
+          this->nr_of_keypad_codes_ > this->keypad_request_offset_ ? this->nr_of_keypad_codes_ - this->keypad_request_offset_ : 0,
+          this->keypad_request_count_);
+      this->list_of_key_pad_entries_.init(this->expected_keypad_codes_);
+      this->nr_of_received_keypad_codes_ = 0;
       this->keypad_code_count_received_ = true;
       print_buffer((uint8_t*)data, dataLen, false, "keypadCodeCount", this->debug_nuki_hex_data_);
       if (this->debug_nuki_readable_data_) {
@@ -1622,8 +1689,8 @@ void NukiBle::handle_return_message(Command returnCode, unsigned char* data, uin
       break;
     }
     case Command::FingerprintEntry : {
-      FingerprintEntry fingerprintEntry;
-      memcpy(&fingerprintEntry, data, dataLen);
+      FingerprintEntry fingerprintEntry{};
+      memcpy(&fingerprintEntry, data, std::min<size_t>(dataLen, sizeof(fingerprintEntry)));
       this->list_of_fingerprint_entries_.push_back(fingerprintEntry);
 
       print_buffer((uint8_t*)data, dataLen, false, "fingerprintEntry", this->debug_nuki_hex_data_);
@@ -1633,8 +1700,8 @@ void NukiBle::handle_return_message(Command returnCode, unsigned char* data, uin
       break;
     }
     case Command::KeypadCode : {
-      KeypadEntry keypadEntry;
-      memcpy(&keypadEntry, data, dataLen);
+      KeypadEntry keypadEntry{};
+      memcpy(&keypadEntry, data, std::min<size_t>(dataLen, sizeof(keypadEntry)));
       this->list_of_key_pad_entries_.push_back(keypadEntry);
       this->nr_of_received_keypad_codes_++;
 
@@ -1651,6 +1718,27 @@ void NukiBle::handle_return_message(Command returnCode, unsigned char* data, uin
     default:
       ESP_LOGE(TAG, "UNKNOWN RETURN COMMAND: %04x", (unsigned int)returnCode);
   }
+}
+
+void NukiBle::disconnect() {
+  const uint64_t address = this->get_address();
+  esphome::esp32_ble_client::BLEClientBase::disconnect();
+  if (address != 0 && this->get_address() == 0) {
+    this->set_address(address);
+  }
+}
+
+void NukiBle::save_paired_address_() { this->paired_address_ = this->get_address(); }
+
+void NukiBle::abort_command() {
+  this->nuki_command_state_ = CommandState::Idle;
+  this->last_msg_code_received_ = Command::Empty;
+  this->clear_seen_responses_();
+  this->keypad_retrieval_state_ = KeypadRetrievalState::Idle;
+  this->keypad_request_sent_ = false;
+  this->auth_entries_retrieval_state_ = EntryRetrievalState::Idle;
+  this->auth_entries_request_sent_ = false;
+  this->fingerprint_request_started_ = false;
 }
 
 void NukiBle::set_event_handler(SmartlockEventHandler* handler) {
