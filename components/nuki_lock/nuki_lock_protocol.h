@@ -598,7 +598,8 @@ class NukiLock : public NukiBle {
     // Holds the config snapshot between begin_config_write()/begin_advanced_config_write()
     // fetching it and commit_config_write()/commit_advanced_config_write() sending the
     // modified copy back, across however many repeated calls that takes - separate from
-    // config_/advanced_config_ above, which track the lock's last-reported state instead.
+    // config_/advanced_config_ above, which track the lock's last-reported state instead
+    // (plus any successful write since, so the next cached write builds on it).
     bool config_write_pending_ = false;
     Config config_write_buffer_;
     bool advanced_config_write_pending_ = false;
