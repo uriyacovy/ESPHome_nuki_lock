@@ -875,6 +875,14 @@ CmdResult NukiLock::commit_config_write() {
   CmdResult result = this->set_from_config(this->config_write_buffer_);
   if (result != CmdResult::Working) {
     this->config_write_pending_ = false;
+    if (result == CmdResult::Success) {
+      // The next write within the cache TTL starts from config_, so it has to include this
+      // change, or that write would send the old value again
+      this->config_ = this->config_write_buffer_;
+    } else {
+      // The lock may or may not have applied it: fetch it again for the next write
+      this->config_fetched_at_ms_ = -1;
+    }
   }
   return result;
 }
@@ -901,6 +909,12 @@ CmdResult NukiLock::commit_advanced_config_write() {
   CmdResult result = this->set_from_advanced_config(this->advanced_config_write_buffer_);
   if (result != CmdResult::Working) {
     this->advanced_config_write_pending_ = false;
+    if (result == CmdResult::Success) {
+      // See commit_config_write()
+      this->advanced_config_ = this->advanced_config_write_buffer_;
+    } else {
+      this->advanced_config_fetched_at_ms_ = -1;
+    }
   }
   return result;
 }
