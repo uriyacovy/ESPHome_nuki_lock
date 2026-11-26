@@ -278,6 +278,9 @@ class NukiLockComponent :
         // Only one queued command (and at most one other Nuki operation: a lock action,
         // status/config poll, etc.) can be in flight at a time - see nuki_op_active_ in loop().
         void queue_nuki_command(std::function<CmdResult()> command, std::function<void(CmdResult)> on_done);
+        // After a settings write, read the config back so entities show what the lock kept.
+        void request_config_read() { this->config_update_ = true; }
+        void request_advanced_config_read() { this->advanced_config_update_ = true; }
 
     protected:
         CallbackManager<void()> pairing_mode_on_callback_;
